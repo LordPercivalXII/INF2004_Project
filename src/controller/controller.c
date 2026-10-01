@@ -40,6 +40,7 @@ static void controller_task(void *argument)
     float obstacle_cm = 0.0f;
     uint32_t barcode = 0U;
     uint32_t fault_code = 0U;
+    bool imu_healthy = false;
     AvoidancePhase avoidance_phase = AVOIDANCE_NONE;
     int8_t avoidance_direction = 1;
     TickType_t avoidance_deadline = 0U;
@@ -48,6 +49,10 @@ static void controller_task(void *argument)
     TelemetryMessage telemetry;
     TickType_t last_telemetry = xTaskGetTickCount();
 
+#if ROBOT_SIMULATION
+    state = MISSION_FOLLOWING;
+    xEventGroupSetBits(g_system_event_group, SYSTEM_BIT_MISSION_RUN);
+#endif
     xEventGroupSetBits(g_system_event_group, SYSTEM_BIT_READY);
     for (;;) {
         if (xQueueReceive(g_control_command_queue, &user_command, 0) == pdPASS) {
@@ -67,16 +72,20 @@ static void controller_task(void *argument)
                 base_speed = fminf(ROBOT_MAX_SPEED, fmaxf(0.10f, user_command.value));
                 break;
             case CONTROL_CLEAR_FAULT:
-                fault_code = 0U;
-                state = MISSION_IDLE;
-                xEventGroupClearBits(g_system_event_group, SYSTEM_BIT_FAULT);
+                if (imu_healthy) {
+                    fault_code = 0U;
+                    state = MISSION_IDLE;
+                    xEventGroupClearBits(g_system_event_group,
+                                         SYSTEM_BIT_FAULT | SYSTEM_BIT_MISSION_RUN);
+                }
                 break;
             default:
                 break;
             }
         }
 
-        if (xQueueReceive(g_system_event_queue, &event, pdMS_TO_TICKS(5)) == pdPASS) {
+        if (xQueueReceive(g_system_event_queue, &event, pdMS_TO_TICKS(2)) == pdPASS) {
+            do {
             switch (event.type) {
             case SYSTEM_EVENT_LINE:
                 current_line_error = event.data.line.line_error;
@@ -104,14 +113,17 @@ static void controller_task(void *argument)
                 break;
             case SYSTEM_EVENT_IMU:
                 if (event.data.imu.sensor_valid) {
+                    imu_healthy = true;
                     hump_m = event.data.imu.estimated_hump_height_m;
                     if (event.data.imu.shock_detected) {
                         base_speed = fminf(base_speed, ROBOT_BASE_SPEED * 0.7f);
                     }
                 } else {
+                    imu_healthy = false;
                     fault_code = 2U;
                     state = MISSION_FAULT;
                     xEventGroupSetBits(g_system_event_group, SYSTEM_BIT_FAULT);
+                    xEventGroupClearBits(g_system_event_group, SYSTEM_BIT_MISSION_RUN);
                     stop_motion();
                 }
                 break;
@@ -135,11 +147,13 @@ static void controller_task(void *argument)
                 fault_code = 1U;
                 state = MISSION_FAULT;
                 xEventGroupSetBits(g_system_event_group, SYSTEM_BIT_FAULT);
+                xEventGroupClearBits(g_system_event_group, SYSTEM_BIT_MISSION_RUN);
                 stop_motion();
                 break;
             default:
                 break;
             }
+            } while (xQueueReceive(g_system_event_queue, &event, 0U) == pdPASS);
         }
 
         if (state == MISSION_AVOIDING && (int32_t)(xTaskGetTickCount() - avoidance_deadline) >= 0) {
@@ -166,6 +180,7 @@ static void controller_task(void *argument)
                 avoidance_phase = AVOIDANCE_NONE;
                 xEventGroupSetBits(g_system_event_group, SYSTEM_BIT_FAULT);
                 xEventGroupClearBits(g_system_event_group, SYSTEM_BIT_OBSTACLE);
+                xEventGroupClearBits(g_system_event_group, SYSTEM_BIT_MISSION_RUN);
                 stop_motion();
                 break;
             default:

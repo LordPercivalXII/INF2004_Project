@@ -11,7 +11,7 @@
 
 static volatile uint32_t echo_rise_us;
 static volatile uint32_t echo_width_us;
-static TaskHandle_t echo_wait_task;
+static TaskHandle_t volatile echo_wait_task;
 
 static void echo_irq(uint gpio, uint32_t events)
 {

@@ -39,19 +39,19 @@ static void motor_hardware_init(void)
 #if !ROBOT_SIMULATION
     const uint pwm_pins[] = { PIN_MOTOR_LEFT_PWM, PIN_MOTOR_RIGHT_PWM };
     const uint dir_pins[] = { PIN_MOTOR_LEFT_DIR, PIN_MOTOR_RIGHT_DIR };
-    for (unsigned i = 0U; i < 2U; ++i) {
-        gpio_set_function(pwm_pins[i], GPIO_FUNC_PWM);
-        gpio_init(dir_pins[i]);
-        gpio_set_dir(dir_pins[i], GPIO_OUT);
-        pwm_set_wrap(pwm_gpio_to_slice_num(pwm_pins[i]), 65535U);
-        pwm_set_enabled(pwm_gpio_to_slice_num(pwm_pins[i]), true);
+    for (unsigned index = 0U; index < 2U; ++index) {
+        gpio_set_function(pwm_pins[index], GPIO_FUNC_PWM);
+        gpio_init(dir_pins[index]);
+        gpio_set_dir(dir_pins[index], GPIO_OUT);
+        pwm_set_wrap(pwm_gpio_to_slice_num(pwm_pins[index]), 65535U);
+        pwm_set_enabled(pwm_gpio_to_slice_num(pwm_pins[index]), true);
     }
     const uint encoders[] = { PIN_ENCODER_LEFT_A, PIN_ENCODER_LEFT_B,
                               PIN_ENCODER_RIGHT_A, PIN_ENCODER_RIGHT_B };
-    for (unsigned i = 0U; i < 4U; ++i) {
-        gpio_init(encoders[i]);
-        gpio_set_dir(encoders[i], GPIO_IN);
-        gpio_pull_up(encoders[i]);
+    for (unsigned index = 0U; index < 4U; ++index) {
+        gpio_init(encoders[index]);
+        gpio_set_dir(encoders[index], GPIO_IN);
+        gpio_pull_up(encoders[index]);
     }
     (void)Robot_GpioIrqRegister(PIN_ENCODER_LEFT_A, GPIO_IRQ_EDGE_RISE, &encoder_irq);
     (void)Robot_GpioIrqRegister(PIN_ENCODER_RIGHT_A, GPIO_IRQ_EDGE_RISE, &encoder_irq);
@@ -74,6 +74,8 @@ static void motion_task(void *argument)
     int32_t previous_right = 0;
     float left_integral = 0.0f;
     float right_integral = 0.0f;
+    float previous_left_error = 0.0f;
+    float previous_right_error = 0.0f;
     float total_distance = 0.0f;
     TickType_t last_wake = xTaskGetTickCount();
 
@@ -109,11 +111,19 @@ static void motion_task(void *argument)
             const float right_error = requested.right_speed - measured_right;
             left_integral = fminf(1.0f, fmaxf(-1.0f, left_integral + left_error * interval_s));
             right_integral = fminf(1.0f, fmaxf(-1.0f, right_integral + right_error * interval_s));
-            left_output = requested.left_speed + MOTOR_PID_KP * left_error + MOTOR_PID_KI * left_integral;
-            right_output = requested.right_speed + MOTOR_PID_KP * right_error + MOTOR_PID_KI * right_integral;
+            const float left_derivative = (left_error - previous_left_error) / interval_s;
+            const float right_derivative = (right_error - previous_right_error) / interval_s;
+            left_output = requested.left_speed + MOTOR_PID_KP * left_error +
+                          MOTOR_PID_KI * left_integral + MOTOR_PID_KD * left_derivative;
+            right_output = requested.right_speed + MOTOR_PID_KP * right_error +
+                           MOTOR_PID_KI * right_integral + MOTOR_PID_KD * right_derivative;
+            previous_left_error = left_error;
+            previous_right_error = right_error;
         } else {
             left_integral = 0.0f;
             right_integral = 0.0f;
+            previous_left_error = 0.0f;
+            previous_right_error = 0.0f;
         }
 #if !ROBOT_SIMULATION
         set_motor(PIN_MOTOR_LEFT_PWM, PIN_MOTOR_LEFT_DIR, left_output);

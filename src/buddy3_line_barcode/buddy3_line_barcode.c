@@ -10,10 +10,10 @@ static void line_hardware_init(void)
 {
 #if !ROBOT_SIMULATION
     const uint pins[] = { PIN_IR_LEFT, PIN_IR_CENTER, PIN_IR_BARCODE };
-    for (unsigned i = 0U; i < 3U; ++i) {
-        gpio_init(pins[i]);
-        gpio_set_dir(pins[i], GPIO_IN);
-        gpio_pull_up(pins[i]);
+    for (unsigned index = 0U; index < 3U; ++index) {
+        gpio_init(pins[index]);
+        gpio_set_dir(pins[index], GPIO_IN);
+        gpio_pull_up(pins[index]);
     }
 #endif
 }
