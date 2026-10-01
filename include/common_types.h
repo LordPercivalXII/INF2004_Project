@@ -37,6 +37,7 @@ typedef enum {
 
 typedef struct {
     float line_error;
+    bool line_detected;
     bool junction;
     bool barcode_valid;
     uint16_t barcode;

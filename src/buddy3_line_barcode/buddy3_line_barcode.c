@@ -68,6 +68,7 @@ static void line_task(void *argument)
         }
         SystemEvent event = { .type = SYSTEM_EVENT_LINE, .timestamp_ms = now_ms };
         event.data.line.line_error = error;
+        event.data.line.line_detected = left || center;
         event.data.line.junction = left && center;
         event.data.line.barcode_valid = decoded;
         event.data.line.barcode = code;

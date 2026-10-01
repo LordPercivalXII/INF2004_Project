@@ -45,7 +45,4 @@
 #define INCLUDE_xTaskGetSchedulerState         1
 #define INCLUDE_uxTaskGetStackHighWaterMark    1
 
-#define configPRIORITY                        (configMAX_PRIORITIES - 1)
-#define configTICK_TYPE_WIDTH_IN_BITS          TICK_TYPE_WIDTH_32_BITS
-
 #endif

@@ -3,6 +3,7 @@
 #include "hardware/gpio.h"
 #include "hardware/pwm.h"
 #include "hardware/sync.h"
+#include "gpio_irq_router.h"
 #include "FreeRTOS.h"
 #include "task.h"
 #include "queue.h"
@@ -52,8 +53,8 @@ static void motor_hardware_init(void)
         gpio_set_dir(encoders[i], GPIO_IN);
         gpio_pull_up(encoders[i]);
     }
-    gpio_set_irq_enabled_with_callback(PIN_ENCODER_LEFT_A, GPIO_IRQ_EDGE_RISE, true, &encoder_irq);
-    gpio_set_irq_enabled(PIN_ENCODER_RIGHT_A, GPIO_IRQ_EDGE_RISE, true);
+    (void)Robot_GpioIrqRegister(PIN_ENCODER_LEFT_A, GPIO_IRQ_EDGE_RISE, &encoder_irq);
+    (void)Robot_GpioIrqRegister(PIN_ENCODER_RIGHT_A, GPIO_IRQ_EDGE_RISE, &encoder_irq);
 #endif
 }
 

@@ -18,9 +18,11 @@ set(FREERTOS_HEAP 4 CACHE STRING "FreeRTOS heap implementation")
 
 pico_sdk_init()
 add_subdirectory(${FREERTOS_KERNEL_PATH} ${CMAKE_BINARY_DIR}/FreeRTOS-Kernel)
+target_include_directories(freertos_kernel PUBLIC ${CMAKE_CURRENT_LIST_DIR})
 
 add_executable(robot_car
     src/main.c
+    src/gpio_irq_router.c
     src/controller/controller.c
     src/buddy1_telemetry/buddy1_telemetry.c
     src/buddy2_motion/buddy2_motion.c
@@ -29,7 +31,7 @@ add_executable(robot_car
     src/buddy5_obstacle/buddy5_obstacle.c
 )
 
-target_include_directories(robot_car PRIVATE include)
+target_include_directories(robot_car PRIVATE include ${CMAKE_CURRENT_LIST_DIR})
 target_compile_definitions(robot_car PRIVATE ROBOT_SIMULATION=$<BOOL:${ROBOT_SIMULATION}>)
 target_compile_options(robot_car PRIVATE -Wall -Wextra -Wpedantic -Wconversion -Wshadow)
 target_link_libraries(robot_car
@@ -39,6 +41,7 @@ target_link_libraries(robot_car
     hardware_adc
     hardware_gpio
     hardware_timer
+    hardware_irq
     freertos_kernel
 )
 

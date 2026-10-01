@@ -2,7 +2,7 @@
 #include "pico/stdlib.h"
 #include "hardware/gpio.h"
 #include "hardware/pwm.h"
-#include "hardware/sync.h"
+#include "gpio_irq_router.h"
 #include "FreeRTOS.h"
 #include "task.h"
 #include "config.h"
@@ -11,7 +11,7 @@
 
 static volatile uint32_t echo_rise_us;
 static volatile uint32_t echo_width_us;
-static volatile bool echo_complete;
+static TaskHandle_t echo_wait_task;
 
 static void echo_irq(uint gpio, uint32_t events)
 {
@@ -19,10 +19,13 @@ static void echo_irq(uint gpio, uint32_t events)
     const uint32_t now = time_us_32();
     if ((events & GPIO_IRQ_EDGE_RISE) != 0U) {
         echo_rise_us = now;
-        echo_complete = false;
     } else if ((events & GPIO_IRQ_EDGE_FALL) != 0U) {
         echo_width_us = now - echo_rise_us;
-        echo_complete = true;
+        if (echo_wait_task != NULL) {
+            BaseType_t higher_priority_task_woken = pdFALSE;
+            vTaskNotifyGiveFromISR(echo_wait_task, &higher_priority_task_woken);
+            portYIELD_FROM_ISR(higher_priority_task_woken);
+        }
     }
 }
 
@@ -34,8 +37,8 @@ static void obstacle_hardware_init(void)
     gpio_put(PIN_ULTRASONIC_TRIGGER, false);
     gpio_init(PIN_ULTRASONIC_ECHO);
     gpio_set_dir(PIN_ULTRASONIC_ECHO, GPIO_IN);
-    gpio_set_irq_enabled_with_callback(PIN_ULTRASONIC_ECHO,
-        GPIO_IRQ_EDGE_RISE | GPIO_IRQ_EDGE_FALL, true, &echo_irq);
+    (void)Robot_GpioIrqRegister(PIN_ULTRASONIC_ECHO,
+        GPIO_IRQ_EDGE_RISE | GPIO_IRQ_EDGE_FALL, &echo_irq);
     gpio_set_function(PIN_SCAN_SERVO, GPIO_FUNC_PWM);
     const uint slice = pwm_gpio_to_slice_num(PIN_SCAN_SERVO);
     pwm_set_clkdiv(slice, 125.0f);
@@ -61,23 +64,16 @@ static float measure_distance_cm(uint32_t sample)
 #if ROBOT_SIMULATION
     return sample % 9U == 0U ? 24.0f : 90.0f;
 #else
-    uint32_t start;
     uint32_t width = 0U;
-    uint32_t irq_state = save_and_disable_interrupts();
-    echo_complete = false;
-    restore_interrupts(irq_state);
+    echo_wait_task = xTaskGetCurrentTaskHandle();
+    (void)ulTaskNotifyTake(pdTRUE, 0U);
     gpio_put(PIN_ULTRASONIC_TRIGGER, false);
     busy_wait_us_32(2U);
     gpio_put(PIN_ULTRASONIC_TRIGGER, true);
     busy_wait_us_32(10U);
     gpio_put(PIN_ULTRASONIC_TRIGGER, false);
-    start = time_us_32();
-    while (!echo_complete && (uint32_t)(time_us_32() - start) < 30000U) {
-        taskYIELD();
-    }
-    irq_state = save_and_disable_interrupts();
-    if (echo_complete) width = echo_width_us;
-    restore_interrupts(irq_state);
+    if (ulTaskNotifyTake(pdTRUE, pdMS_TO_TICKS(30)) > 0U) width = echo_width_us;
+    echo_wait_task = NULL;
     if (width == 0U) return ULTRASONIC_MAX_CM;
     const float distance = (float)width * 0.01715f;
     return distance > ULTRASONIC_MAX_CM ? ULTRASONIC_MAX_CM : distance;
@@ -90,30 +86,50 @@ static void obstacle_task(void *argument)
     obstacle_hardware_init();
     TickType_t last_wake = xTaskGetTickCount();
     uint32_t sample = 0U;
-    uint8_t close_count = 0U;
     for (;;) {
         servo_set_angle(SERVO_CENTER_DEG);
         const float center_distance = measure_distance_cm(sample++);
         if (center_distance < OBSTACLE_TRIGGER_CM) {
             float left_min = ULTRASONIC_MAX_CM;
             float right_min = ULTRASONIC_MAX_CM;
-            float left_angle = (float)SERVO_MIN_DEG;
-            float right_angle = (float)SERVO_MAX_DEG;
-            for (unsigned angle = SERVO_MIN_DEG; angle <= SERVO_MAX_DEG; angle += 10U) {
+            unsigned obstacle_first_angle = SERVO_MAX_DEG;
+            unsigned obstacle_last_angle = SERVO_MIN_DEG;
+            bool profile_found = false;
+            for (unsigned angle = SERVO_MIN_DEG; angle <= SERVO_MAX_DEG; angle += 20U) {
                 servo_set_angle(angle);
                 vTaskDelay(pdMS_TO_TICKS(60));
                 const float distance = measure_distance_cm(sample++);
-                if (angle < SERVO_CENTER_DEG && distance < left_min) {
-                    left_min = distance;
-                    left_angle = (float)angle;
-                } else if (angle > SERVO_CENTER_DEG && distance < right_min) {
-                    right_min = distance;
-                    right_angle = (float)angle;
+                if (angle < SERVO_CENTER_DEG && distance < left_min) left_min = distance;
+                if (angle > SERVO_CENTER_DEG && distance < right_min) right_min = distance;
+                if (distance < OBSTACLE_TRIGGER_CM) {
+                    profile_found = true;
+                    if (angle < obstacle_first_angle) obstacle_first_angle = angle;
+                    if (angle > obstacle_last_angle) obstacle_last_angle = angle;
+                }
+            }
+            if (!profile_found) {
+                obstacle_first_angle = SERVO_CENTER_DEG - 15U;
+                obstacle_last_angle = SERVO_CENTER_DEG + 15U;
+                    }
+            const unsigned fine_start = obstacle_first_angle > SERVO_MIN_DEG + 10U
+                ? obstacle_first_angle - 10U : SERVO_MIN_DEG;
+            const unsigned fine_end = obstacle_last_angle < SERVO_MAX_DEG - 10U
+                ? obstacle_last_angle + 10U : SERVO_MAX_DEG;
+            for (unsigned angle = fine_start; angle <= fine_end; angle += 5U) {
+                servo_set_angle(angle);
+                vTaskDelay(pdMS_TO_TICKS(45));
+                const float distance = measure_distance_cm(sample++);
+                if (angle < SERVO_CENTER_DEG && distance < left_min) left_min = distance;
+                if (angle > SERVO_CENTER_DEG && distance < right_min) right_min = distance;
+                if (distance < OBSTACLE_TRIGGER_CM) {
+                    if (angle < obstacle_first_angle) obstacle_first_angle = angle;
+                    if (angle > obstacle_last_angle) obstacle_last_angle = angle;
                 }
             }
             const float left_clearance = left_min >= OBSTACLE_TRIGGER_CM ? left_min : 0.0f;
             const float right_clearance = right_min >= OBSTACLE_TRIGGER_CM ? right_min : 0.0f;
-            const float angular_width = fabsf(right_angle - left_angle) * 0.017453293f;
+            const float angular_width = obstacle_last_angle >= obstacle_first_angle
+                ? (float)(obstacle_last_angle - obstacle_first_angle) * 0.017453293f : 0.0f;
             SystemEvent event = { .type = SYSTEM_EVENT_OBSTACLE, .timestamp_ms = Robot_Millis() };
             event.data.obstacle.detected = true;
             event.data.obstacle.scan_complete = true;
@@ -131,9 +147,6 @@ static void obstacle_task(void *argument)
             event.data.obstacle.detected = false;
             event.data.obstacle.scan_complete = true;
             (void)Robot_PostEvent(&event);
-            close_count = 0U;
-        } else if (close_count < UINT8_MAX) {
-            ++close_count;
         }
         vTaskDelayUntil(&last_wake, pdMS_TO_TICKS(ROBOT_OBSTACLE_PERIOD_MS));
     }

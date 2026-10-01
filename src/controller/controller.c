@@ -9,6 +9,14 @@
 #include "interfaces/buddy1_telemetry.h"
 #include "interfaces/buddy2_motion.h"
 
+typedef enum {
+    AVOIDANCE_NONE = 0,
+    AVOIDANCE_TURN_OUT,
+    AVOIDANCE_PASS_OBSTACLE,
+    AVOIDANCE_TURN_BACK,
+    AVOIDANCE_REACQUIRE
+} AvoidancePhase;
+
 static void set_motion(float left, float right)
 {
     MotionCommand command = { .type = MOTION_DRIVE, .left_speed = left, .right_speed = right };
@@ -32,6 +40,9 @@ static void controller_task(void *argument)
     float obstacle_cm = 0.0f;
     uint32_t barcode = 0U;
     uint32_t fault_code = 0U;
+    AvoidancePhase avoidance_phase = AVOIDANCE_NONE;
+    int8_t avoidance_direction = 1;
+    TickType_t avoidance_deadline = 0U;
     SystemEvent event;
     ControlCommand user_command;
     TelemetryMessage telemetry;
@@ -81,6 +92,11 @@ static void controller_task(void *argument)
                 if (state == MISSION_FOLLOWING) {
                     const float correction = fminf(0.25f, fmaxf(-0.25f, current_line_error * 0.18f));
                     set_motion(base_speed + correction, base_speed - correction);
+                } else if (state == MISSION_AVOIDING && avoidance_phase == AVOIDANCE_REACQUIRE &&
+                           event.data.line.line_detected && fabsf(current_line_error) <= 0.5f) {
+                    state = MISSION_FOLLOWING;
+                    avoidance_phase = AVOIDANCE_NONE;
+                    xEventGroupClearBits(g_system_event_group, SYSTEM_BIT_OBSTACLE);
                 }
                 break;
             case SYSTEM_EVENT_MOTION:
@@ -94,6 +110,9 @@ static void controller_task(void *argument)
                     }
                 } else {
                     fault_code = 2U;
+                    state = MISSION_FAULT;
+                    xEventGroupSetBits(g_system_event_group, SYSTEM_BIT_FAULT);
+                    stop_motion();
                 }
                 break;
             case SYSTEM_EVENT_OBSTACLE:
@@ -101,20 +120,52 @@ static void controller_task(void *argument)
                 if (event.data.obstacle.detected && event.data.obstacle.scan_complete && state == MISSION_FOLLOWING) {
                     state = MISSION_AVOIDING;
                     xEventGroupSetBits(g_system_event_group, SYSTEM_BIT_OBSTACLE);
-                    if (event.data.obstacle.bypass_direction < 0) {
-                        set_motion(-base_speed * 0.45f, base_speed * 0.45f);
-                    } else {
-                        set_motion(base_speed * 0.45f, -base_speed * 0.45f);
-                    }
+                    avoidance_phase = AVOIDANCE_TURN_OUT;
+                    avoidance_direction = event.data.obstacle.bypass_direction < 0 ? -1 : 1;
+                    avoidance_deadline = xTaskGetTickCount() + pdMS_TO_TICKS(350U);
+                    set_motion((float)-avoidance_direction * base_speed * 0.45f,
+                               (float)avoidance_direction * base_speed * 0.45f);
                 } else if (!event.data.obstacle.detected && state == MISSION_AVOIDING) {
-                    xEventGroupClearBits(g_system_event_group, SYSTEM_BIT_OBSTACLE);
-                    state = MISSION_FOLLOWING;
+                    if (avoidance_phase == AVOIDANCE_REACQUIRE) {
+                        set_motion(base_speed * 0.35f, base_speed * 0.35f);
+                    }
                 }
                 break;
             case SYSTEM_EVENT_FAULT:
                 fault_code = 1U;
                 state = MISSION_FAULT;
                 xEventGroupSetBits(g_system_event_group, SYSTEM_BIT_FAULT);
+                stop_motion();
+                break;
+            default:
+                break;
+            }
+        }
+
+        if (state == MISSION_AVOIDING && (int32_t)(xTaskGetTickCount() - avoidance_deadline) >= 0) {
+            switch (avoidance_phase) {
+            case AVOIDANCE_TURN_OUT:
+                avoidance_phase = AVOIDANCE_PASS_OBSTACLE;
+                avoidance_deadline = xTaskGetTickCount() + pdMS_TO_TICKS(900U);
+                set_motion(base_speed * 0.55f, base_speed * 0.55f);
+                break;
+            case AVOIDANCE_PASS_OBSTACLE:
+                avoidance_phase = AVOIDANCE_TURN_BACK;
+                avoidance_deadline = xTaskGetTickCount() + pdMS_TO_TICKS(350U);
+                set_motion((float)avoidance_direction * base_speed * 0.45f,
+                           (float)-avoidance_direction * base_speed * 0.45f);
+                break;
+            case AVOIDANCE_TURN_BACK:
+                avoidance_phase = AVOIDANCE_REACQUIRE;
+                avoidance_deadline = xTaskGetTickCount() + pdMS_TO_TICKS(2500U);
+                set_motion(base_speed * 0.35f, base_speed * 0.35f);
+                break;
+            case AVOIDANCE_REACQUIRE:
+                fault_code = 3U;
+                state = MISSION_FAULT;
+                avoidance_phase = AVOIDANCE_NONE;
+                xEventGroupSetBits(g_system_event_group, SYSTEM_BIT_FAULT);
+                xEventGroupClearBits(g_system_event_group, SYSTEM_BIT_OBSTACLE);
                 stop_motion();
                 break;
             default:
