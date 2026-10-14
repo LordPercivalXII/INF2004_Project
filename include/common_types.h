@@ -35,12 +35,21 @@ typedef enum {
     MOTION_BRAKE
 } MotionCommandType;
 
+#define BARCODE_TEXT_MAX 8U
+
+typedef enum {
+    BARCODE_CMD_NONE = 0,     /* decoded, no turn: continue straight */
+    BARCODE_CMD_LEFT = 1,
+    BARCODE_CMD_RIGHT = 2
+} BarcodeCommand;
+
 typedef struct {
     float line_error;
     bool line_detected;
     bool junction;
     bool barcode_valid;
-    uint16_t barcode;
+    uint16_t barcode;                          /* BarcodeCommand when barcode_valid */
+    char barcode_text[BARCODE_TEXT_MAX + 1U];  /* decoded Code 39 payload, '\0'-terminated */
 } LineEvent;
 
 typedef struct {

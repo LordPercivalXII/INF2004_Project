@@ -1,3 +1,17 @@
+# == DO NOT EDIT THE FOLLOWING LINES for the Raspberry Pi Pico VS Code Extension to work ==
+if(WIN32)
+    set(USERHOME $ENV{USERPROFILE})
+else()
+    set(USERHOME $ENV{HOME})
+endif()
+set(sdkVersion 2.3.1)
+set(toolchainVersion 15_2_Rel1)
+set(picotoolVersion 2.3.1)
+set(picoVscode ${USERHOME}/.pico-sdk/cmake/pico-vscode.cmake)
+if (EXISTS ${picoVscode})
+    include(${picoVscode})
+endif()
+# ====================================================================================
 cmake_minimum_required(VERSION 3.13)
 
 set(PICO_BOARD pico CACHE STRING "Pico SDK board target")
@@ -17,6 +31,11 @@ set(FREERTOS_PORT GCC_ARM_CM0 CACHE STRING "FreeRTOS Cortex-M0+ port")
 set(FREERTOS_HEAP 4 CACHE STRING "FreeRTOS heap implementation")
 
 pico_sdk_init()
+
+add_library(freertos_config INTERFACE)
+target_include_directories(freertos_config SYSTEM INTERFACE ${CMAKE_CURRENT_SOURCE_DIR})
+target_compile_definitions(freertos_config INTERFACE projCOVERAGE_TEST=0)
+
 add_subdirectory(${FREERTOS_KERNEL_PATH} ${CMAKE_BINARY_DIR}/FreeRTOS-Kernel)
 target_include_directories(freertos_kernel PUBLIC ${CMAKE_CURRENT_LIST_DIR})
 
@@ -27,6 +46,7 @@ add_executable(robot_car
     src/buddy1_telemetry/buddy1_telemetry.c
     src/buddy2_motion/buddy2_motion.c
     src/buddy3_line_barcode/buddy3_line_barcode.c
+    src/buddy3_line_barcode/code39.c
     src/buddy4_imu/buddy4_imu.c
     src/buddy5_obstacle/buddy5_obstacle.c
 )

@@ -51,6 +51,24 @@
 #define MOTOR_PID_KI                 0.08f
 #define MOTOR_PID_KD                 0.00f
 
+/* ---- Buddy 3: line tracking (FR7, NFR6) ---- */
+#define IR_ANALOG_BLACK_IS_HIGH      1     /* AO voltage rises over black on most TCRT5000 modules: verify */
+#define IR_CALIBRATION_MS            3000U /* sweep sensors across line and floor during this window */
+#define IR_MIN_CONTRAST_COUNTS       400U  /* 12-bit ADC; below this calibration is rejected */
+#define IR_DEFAULT_WHITE_COUNTS      600U  /* fallback if calibration fails */
+#define IR_DEFAULT_BLACK_COUNTS      3000U
+#define IR_ON_LINE_THRESHOLD         0.5f  /* normalised 0 = white, 1 = black */
+#define JUNCTION_MIN_MS              150U  /* all three sensors black this long = junction */
+
+/* ---- Buddy 3: Code 39 barcode (FR8, FR9, NFR5) ---- */
+#define IR_BARCODE_BLACK_LEVEL       1U    /* gpio level on black bar (DO high on black): verify */
+#define BARCODE_GLITCH_US            500U  /* debounce: pulses shorter than this are noise */
+#define BARCODE_END_GAP_MIN_MS       150U  /* quiet time that ends a barcode read */
+#define BARCODE_END_GAP_FACTOR       4U    /* ...or 4x the widest element seen, if longer */
+#define BARCODE_EDGE_QUEUE_LENGTH    128U
+#define BARCODE_LEFT_CHAR            'L'   /* set these to the track's barcode convention */
+#define BARCODE_RIGHT_CHAR           'R'
+
 #define OBSTACLE_TRIGGER_CM          35.0f
 #define ULTRASONIC_MAX_CM            250.0f
 #define SERVO_MIN_DEG                25U
