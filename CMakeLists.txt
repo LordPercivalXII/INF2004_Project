@@ -75,3 +75,22 @@ target_link_libraries(wifi_smoke_test pico_stdlib pico_cyw43_arch_lwip_threadsaf
 pico_enable_stdio_usb(wifi_smoke_test 1)
 pico_enable_stdio_uart(wifi_smoke_test 0)
 pico_add_extra_outputs(wifi_smoke_test)
+
+# Buddy 1 MQTT smoke test
+add_executable(mqtt_smoke_test
+    tools/wifi_smoke_test/mqtt_smoke_test.c
+)
+
+target_include_directories(mqtt_smoke_test PRIVATE
+    tools/wifi_smoke_test
+)
+
+target_link_libraries(mqtt_smoke_test
+    pico_stdlib
+    pico_cyw43_arch_lwip_threadsafe_background
+    pico_lwip_mqtt
+)
+
+pico_enable_stdio_usb(mqtt_smoke_test 1)
+pico_enable_stdio_uart(mqtt_smoke_test 0)
+pico_add_extra_outputs(mqtt_smoke_test)
