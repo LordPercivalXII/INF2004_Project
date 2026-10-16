@@ -14,7 +14,7 @@ endif()
 # ====================================================================================
 cmake_minimum_required(VERSION 3.13)
 
-set(PICO_BOARD pico CACHE STRING "Pico SDK board target")
+set(PICO_BOARD pico_w CACHE STRING "Pico SDK board target")
 include(${CMAKE_CURRENT_LIST_DIR}/pico_sdk_import.cmake)
 
 project(inf2004_robot_car C CXX ASM)
@@ -68,3 +68,10 @@ target_link_libraries(robot_car
 pico_enable_stdio_usb(robot_car 1)
 pico_enable_stdio_uart(robot_car 0)
 pico_add_extra_outputs(robot_car)
+
+add_executable(wifi_smoke_test tools/wifi_smoke_test/wifi_smoke_test.c)
+target_include_directories(wifi_smoke_test PRIVATE tools/wifi_smoke_test)
+target_link_libraries(wifi_smoke_test pico_stdlib pico_cyw43_arch_lwip_threadsafe_background)
+pico_enable_stdio_usb(wifi_smoke_test 1)
+pico_enable_stdio_uart(wifi_smoke_test 0)
+pico_add_extra_outputs(wifi_smoke_test)
