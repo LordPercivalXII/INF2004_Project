@@ -2,7 +2,9 @@
  * Buddy 3 (Wicus): IR line tracking + Code 39 barcode decoding.
  *
  * Two RTOS tasks, matching the Design Review task table:
- *   LineTracking  - periodic 20 ms (NFR6). Reads left/middle IR on ADC0/ADC1 (GP26/27),
+ *   IR sample ISR - repeating hardware timer at IR_SAMPLE_RATE_HZ (1 kHz). Reads left/middle
+ *                   IR on ADC0/ADC1 (GP26/27) and the right IR level (GP28) into a ring buffer.
+ *   LineTracking  - periodic 20 ms (NFR6). Drains the ring buffer and averages the ~20 samples,
  *                   calibrates thresholds at boot (FR7), computes a continuous line error,
  *                   detects junctions, and posts SYSTEM_EVENT_LINE to the controller.
  *   Barcode       - event-driven (FR8). The GP28 edge ISR timestamps every transition in
@@ -16,6 +18,7 @@
 #include "pico/stdlib.h"
 #include "hardware/gpio.h"
 #include "hardware/adc.h"
+#include "hardware/sync.h"
 #include "FreeRTOS.h"
 #include "task.h"
 #include "queue.h"
@@ -210,10 +213,84 @@ static IrCalibration s_cal_left;
 static IrCalibration s_cal_center;
 
 #if !ROBOT_SIMULATION
-static uint16_t ir_read(uint channel)
+/* ---- IR sampling ISR -> ring buffer -------------------------------------
+ * Single producer (timer ISR) / single consumer (LineTracking task), lock-free:
+ * only the ISR writes s_ir_head, only the task writes s_ir_tail. The ISR is the
+ * only code that touches the ADC once sampling has started. */
+
+#if (IR_RING_SIZE & (IR_RING_SIZE - 1U)) != 0U
+#error "IR_RING_SIZE must be a power of two"
+#endif
+
+typedef struct {
+    uint16_t left;
+    uint16_t center;
+    uint8_t right_black;
+} IrSample;
+
+typedef struct {
+    uint32_t count;
+    uint32_t left_sum;
+    uint32_t center_sum;
+    uint32_t right_black_count;
+} IrWindow;
+
+static IrSample s_ir_ring[IR_RING_SIZE];
+static volatile uint32_t s_ir_head;      /* written by ISR only */
+static volatile uint32_t s_ir_tail;      /* written by task only */
+static volatile uint32_t s_ir_overruns;  /* samples dropped because the task fell behind */
+static repeating_timer_t s_ir_timer;
+
+/* Runs in the SDK alarm IRQ every 1 ms. No FreeRTOS calls, ~5 us of work. */
+static bool ir_sample_isr(repeating_timer_t *timer)
 {
-    adc_select_input(channel);
-    return adc_read();
+    (void)timer;
+    const uint32_t head = s_ir_head;
+    if ((head - s_ir_tail) >= IR_RING_SIZE) {
+        ++s_ir_overruns;                 /* buffer full: drop this sample, keep older ones */
+        return true;
+    }
+    IrSample *sample = &s_ir_ring[head & (IR_RING_SIZE - 1U)];
+    adc_select_input(ADC_CHANNEL_IR_LEFT);
+    sample->left = adc_read();
+    adc_select_input(ADC_CHANNEL_IR_CENTER);
+    sample->center = adc_read();
+    sample->right_black = barcode_pin_is_black();
+    __dmb();                             /* sample fully written before it is published */
+    s_ir_head = head + 1U;
+    return true;                         /* keep repeating */
+}
+
+static void ir_sampling_start(void)
+{
+    adc_init();
+    adc_gpio_init(PIN_IR_LEFT);
+    adc_gpio_init(PIN_IR_CENTER);
+    s_ir_head = 0U;
+    s_ir_tail = 0U;
+    /* Negative period = fixed interval between sample starts (no drift). */
+    const bool started = add_repeating_timer_us(-(int64_t)(1000000U / IR_SAMPLE_RATE_HZ),
+                                                ir_sample_isr, NULL, &s_ir_timer);
+    configASSERT(started);
+}
+
+/* Move every sample published since the last call into a summary window. */
+static void ir_drain(IrWindow *window)
+{
+    memset(window, 0, sizeof(*window));
+    const uint32_t head = s_ir_head;
+    __dmb();                             /* read samples only after seeing the new head */
+    uint32_t tail = s_ir_tail;
+    while (tail != head) {
+        const IrSample *sample = &s_ir_ring[tail & (IR_RING_SIZE - 1U)];
+        window->left_sum += sample->left;
+        window->center_sum += sample->center;
+        window->right_black_count += sample->right_black;
+        ++window->count;
+        ++tail;
+    }
+    __dmb();
+    s_ir_tail = tail;                    /* release the slots back to the ISR */
 }
 
 static void ir_calibration_apply(IrCalibration *cal, uint16_t min_counts, uint16_t max_counts)
@@ -229,19 +306,23 @@ static void ir_calibration_apply(IrCalibration *cal, uint16_t min_counts, uint16
     }
 }
 
-/* IR_CALIBRATION state: record min/max while the sensors are swept across line and floor. */
+/* IR_CALIBRATION state: sweep the sensors across line and floor. Min/max are taken over
+ * ~5-sample averages from the ISR buffer, so a single noisy sample cannot set a threshold. */
 static void ir_calibrate(void)
 {
     uint16_t left_min = 4095U, left_max = 0U, center_min = 4095U, center_max = 0U;
     const uint32_t start_ms = Robot_Millis();
     while ((Robot_Millis() - start_ms) < IR_CALIBRATION_MS) {
-        const uint16_t left = ir_read(ADC_CHANNEL_IR_LEFT);
-        const uint16_t center = ir_read(ADC_CHANNEL_IR_CENTER);
+        vTaskDelay(pdMS_TO_TICKS(5));
+        IrWindow window;
+        ir_drain(&window);
+        if (window.count == 0U) continue;
+        const uint16_t left = (uint16_t)(window.left_sum / window.count);
+        const uint16_t center = (uint16_t)(window.center_sum / window.count);
         if (left < left_min) left_min = left;
         if (left > left_max) left_max = left;
         if (center < center_min) center_min = center;
         if (center > center_max) center_max = center;
-        vTaskDelay(pdMS_TO_TICKS(5));
     }
     ir_calibration_apply(&s_cal_left, left_min, left_max);
     ir_calibration_apply(&s_cal_center, center_min, center_max);
@@ -268,10 +349,11 @@ static void line_task(void *argument)
     uint32_t next_sim_barcode_ms = Robot_Millis() + 5000U;
     bool sim_left_next = true;
 #else
-    adc_init();
-    adc_gpio_init(PIN_IR_LEFT);
-    adc_gpio_init(PIN_IR_CENTER);
+    ir_sampling_start();
     ir_calibrate();
+    uint16_t held_left = IR_DEFAULT_WHITE_COUNTS;     /* reused if a window is ever empty */
+    uint16_t held_center = IR_DEFAULT_WHITE_COUNTS;
+    bool held_right_black = false;
 #endif
 
     float last_error = 0.0f;
@@ -305,9 +387,17 @@ static void line_task(void *argument)
             next_sim_barcode_ms = now_ms + 10000U;
         }
 #else
-        raw_left = ir_read(ADC_CHANNEL_IR_LEFT);
-        raw_center = ir_read(ADC_CHANNEL_IR_CENTER);
-        right_black = barcode_pin_is_black() != 0U;
+        /* Average everything the ISR sampled since the last cycle (~20 samples at 1 kHz). */
+        IrWindow window;
+        ir_drain(&window);
+        if (window.count > 0U) {
+            held_left = (uint16_t)(window.left_sum / window.count);
+            held_center = (uint16_t)(window.center_sum / window.count);
+            held_right_black = (2U * window.right_black_count) > window.count;   /* majority */
+        }
+        raw_left = held_left;
+        raw_center = held_center;
+        right_black = held_right_black;
 #endif
 
         const float left = ir_normalise(raw_left, &s_cal_left);

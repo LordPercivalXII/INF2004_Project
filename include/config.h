@@ -19,6 +19,7 @@
 #define ROBOT_MAX_SPEED              0.70f
 
 /* Default pin map is an integration starting point; verify against the actual Robo Pico carrier. */
+// TODO: Update pin map to match the actual Robo Pico carrier.
 #define PIN_MOTOR_LEFT_PWM           16U
 #define PIN_MOTOR_RIGHT_PWM          17U
 #define PIN_MOTOR_LEFT_DIR           18U
