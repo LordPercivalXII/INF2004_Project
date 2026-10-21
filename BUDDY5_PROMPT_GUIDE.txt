@@ -1,205 +1,24 @@
-================================================================================
-HOW TO GIVE THIS PROMPT TO YOUR FRIEND
-================================================================================
+Buddy 5 Prompt Guide
+====================
 
-OPTION 1: DIRECT SHARE (EASIEST)
-================================================================================
+The current Buddy 5 scope is adaptive servo scanning with an HC-SR04 sensor.
+The authoritative implementation and test notes are:
 
-1. Share the file: BUDDY5_IMPLEMENTATION_PROMPT.txt
-   Location: /INF2004_Project/BUDDY5_IMPLEMENTATION_PROMPT.txt
-   Or on GitHub: https://github.com/LordPercivalXII/INF2004_Project/blob/main/BUDDY5_IMPLEMENTATION_PROMPT.txt
+  BUDDY5_IMPLEMENTATION.md
+  BUDDY5_TESTING_CHECKLIST.md
+  BUDDY5_ALIGNMENT_REVIEW.md
+  BUDDY5_IMPLEMENTATION_PROMPT.txt
 
-2. Your friend opens it and can copy-paste sections as needed
+Frozen hardware pins from the Group 19 Design Review:
+  TRIG  = GP17
+  ECHO  = GP16 (level-shift to 3.3 V)
+  Servo = GP15
 
-3. Or they can clone the repo and read it directly:
-   git clone https://github.com/LordPercivalXII/INF2004_Project.git
-   Open BUDDY5_IMPLEMENTATION_PROMPT.txt
+The required coarse sweep is -45, 0, and +45 degrees relative to servo center.
+When the coarse sweep detects an obstacle, refine that region and publish
+distance, width estimate, left/right clearance, and a bypass direction to the
+Vehicle Controller. The controller, not Buddy 5, issues motor commands.
 
-
-OPTION 2: PASTE INTO TERMINAL/AI CHAT (FOR GETTING AI HELP)
-================================================================================
-
-If your friend wants to give this to ChatGPT or another AI:
-
-1. Copy the entire content of BUDDY5_IMPLEMENTATION_PROMPT.txt
-
-2. Paste into AI chat with this intro:
-
-   ---COPY AND PASTE THIS---
-   
-   I need to implement Buddy 5 (HC-SR04 Ultrasonic Obstacle Detection) for an 
-   embedded systems project. Here's the complete specification and requirements:
-   
-   [PASTE THE ENTIRE BUDDY5_IMPLEMENTATION_PROMPT.txt CONTENT HERE]
-   
-   Please help me implement this. Start by:
-   1. Creating the necessary header and source files
-   2. Explaining the distance calculation algorithm
-   3. Showing FreeRTOS task structure
-   4. Providing the complete implementation
-   5. Creating documentation
-   
-   ---END PASTE---
-
-3. AI will read all requirements and provide comprehensive implementation
-
-
-OPTION 3: POINT TO GITHUB
-================================================================================
-
-Simply tell your friend:
-
-   "Check out BUDDY5_IMPLEMENTATION_PROMPT.txt in the repo:
-    https://github.com/LordPercivalXII/INF2004_Project
-    
-    Read through it completely, then follow the step-by-step checklist."
-
-
-OPTION 4: EMAIL/MESSAGE THE FILE
-================================================================================
-
-1. Save as BUDDY5_IMPLEMENTATION_PROMPT.txt
-2. Email to friend
-3. Friend reads and follows instructions
-4. Friend implements Buddy 5
-5. Friend commits and pushes to GitHub
-
-================================================================================
-
-KEY SECTIONS OF THE PROMPT
-================================================================================
-
-Your friend should focus on these sections in order:
-
-1. PROJECT CONTEXT (understand the overall project)
-2. DESIGN REVIEW REQUIREMENTS (know what to implement)
-   - FR12: Obstacle detection
-   - FR13: Distance measurement
-   - NFR8: 10Hz scan rate
-   - NFR9: ≤100ms latency
-3. HARDWARE CONFIGURATION (know the pinouts)
-   - TRIG = GP3
-   - ECHO = GP7
-4. IMPLEMENTATION CHECKLIST (step-by-step guide)
-5. REFERENCE IMPLEMENTATION PATTERNS (copy patterns from Buddy 4)
-6. BUILD & DEPLOYMENT (know how to test)
-7. SUCCESS CRITERIA (know when it's done)
-
-================================================================================
-
-WHAT THE PROMPT COVERS
-================================================================================
-
-✅ Complete Design Review requirements (FR12, FR13, NFR8, NFR9)
-✅ Hardware specifications (HC-SR04 pins, timing)
-✅ Algorithm explanation (distance = echo_time × 343 / 20000)
-✅ File structure (where to create files)
-✅ Constants to add to config.h
-✅ Event structure (ObstacleEvent)
-✅ FreeRTOS task pattern (10Hz periodic)
-✅ Distance measurement implementation
-✅ GPIO initialization
-✅ Event queue integration
-✅ Simulation mode support
-✅ Documentation requirements
-✅ Testing procedures
-✅ Git workflow
-✅ Timeline estimate (~4 hours)
-✅ Success criteria checklist
-✅ Troubleshooting tips
-
-================================================================================
-
-ESTIMATED EFFORT
-================================================================================
-
-If your friend follows the prompt exactly:
-- Setup: 15 min
-- Hardware interface: 30 min
-- Distance algorithm: 30 min
-- FreeRTOS task: 30 min
-- Build & test: 15 min
-- Documentation: 60 min
-- Testing & troubleshooting: 45 min
-- Git commit & push: 10 min
-
-TOTAL: ~4 hours (one afternoon of work)
-
-================================================================================
-
-WHAT YOUR FRIEND NEEDS
-================================================================================
-
-Before starting:
-✅ Access to the GitHub repository
-✅ C compiler & embedded systems knowledge
-✅ Understanding of FreeRTOS (similar to Buddy 4 pattern)
-✅ HC-SR04 ultrasonic sensor spec (in prompt)
-✅ Pico W pinout knowledge
-
-That's it! The prompt has everything else.
-
-================================================================================
-
-SUCCESS LOOKS LIKE
-================================================================================
-
-When your friend is done:
-
-✅ New files created:
-   - src/buddy5_ultrasonic/buddy5_ultrasonic.c
-   - include/interfaces/buddy5_ultrasonic.h
-
-✅ Files modified:
-   - include/config.h (added ULTRASONIC_* constants)
-   - src/main.c or src/robot.c (added task creation call)
-
-✅ Builds successfully:
-   - robot_car.uf2 (100-110 KB)
-   - Zero errors, zero warnings
-
-✅ Commits pushed to GitHub:
-   - Detailed commit message
-   - Code + documentation
-
-✅ Ready for integration:
-   - Vehicle Controller (Buddy 1) can consume ObstacleEvent
-   - Works with Buddy 4 (IMU) for collision handling
-
-================================================================================
-
-PROMPT FILE LOCATION
-================================================================================
-
-On your system:
-C:\Users\darre\INF2004 Embedded Project\INF2004_Project\BUDDY5_IMPLEMENTATION_PROMPT.txt
-
-On GitHub:
-https://github.com/LordPercivalXII/INF2004_Project/blob/main/BUDDY5_IMPLEMENTATION_PROMPT.txt
-
-File size: ~22 KB (comprehensive, self-contained)
-
-================================================================================
-
-TIPS FOR YOUR FRIEND
-================================================================================
-
-1. READ THE ENTIRE PROMPT FIRST (don't skip sections)
-2. Follow the implementation checklist in order
-3. Build incrementally (setup → hardware → algorithm → task → test)
-4. Use Buddy 4 as reference (same patterns and style)
-5. Test in simulation mode first (no hardware needed)
-6. Document as you go (don't leave for end)
-7. Ask questions if requirements unclear
-8. Commit early and often to GitHub
-
-================================================================================
-
-GOOD LUCK! 💪
-================================================================================
-
-This prompt has everything your friend needs to complete Buddy 5.
-If they follow it step-by-step, they'll have a working implementation
-in ~4 hours with full documentation and GitHub deployment.
-
-The project is on track. Great teamwork!
+Important: older copies of this guide specified GP3/GP7 and 10 Hz single-beam
+scanning. Those specifications are obsolete and conflict with the Design
+Review and HC-SR04 datasheet.

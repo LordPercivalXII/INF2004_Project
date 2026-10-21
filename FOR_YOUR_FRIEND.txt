@@ -1,175 +1,20 @@
-================================================================================
-BUDDY 5 IMPLEMENTATION - COMPLETE PROMPT FOR YOUR FRIEND
-================================================================================
+Buddy 5 Handoff
+===============
 
-Hi! Darren has completed Buddy 4 (IMU) and wants you to handle Buddy 5 
-(HC-SR04 Ultrasonic Obstacle Detection).
+Buddy 5 is the ultrasonic obstacle-scanning subsystem. Read
+BUDDY5_IMPLEMENTATION.md and BUDDY5_IMPLEMENTATION_PROMPT.txt before changing
+the implementation.
 
-We've created a COMPLETE, DETAILED prompt that tells you EXACTLY what to do.
+Use these project references:
+  - INF2004_Group19_Design Review (11).pdf
+  - Project Briefing (3).pdf
+  - Project Write-up.pdf
+  - HCSR04.pdf
 
-================================================================================
+The agreed pins are TRIG GP17, ECHO GP16, and servo PWM GP15. GP16 must receive
+a 3.3 V-safe ECHO signal through a divider or level shifter. The coarse servo
+scan is -45/0/+45 degrees, with a fine scan around detected obstacles.
 
-TWO FILES FOR YOU:
-
-1. BUDDY5_IMPLEMENTATION_PROMPT.txt (22 KB) - THE MAIN SPEC
-   - Design Review requirements (FR12, FR13, NFR8, NFR9)
-   - Hardware configuration (TRIG=GP3, ECHO=GP7)
-   - Algorithm explanation (distance calculation)
-   - File structure and what to create
-   - Step-by-step implementation checklist
-   - Reference patterns (from Buddy 4)
-   - Testing procedures
-   - Documentation requirements
-   - Success criteria
-
-2. BUDDY5_PROMPT_GUIDE.txt (7 KB) - HOW TO USE THE PROMPT
-   - Quick overview
-   - Timeline estimate (4 hours)
-   - Key sections to read first
-   - What you need beforehand
-   - Tips for success
-
-================================================================================
-
-QUICK START:
-
-1. Clone the repo:
-   git clone https://github.com/LordPercivalXII/INF2004_Project.git
-
-2. Read BUDDY5_IMPLEMENTATION_PROMPT.txt (complete reference)
-
-3. Follow the implementation checklist section (step-by-step guide)
-
-4. Build, test, document, commit, push
-
-That's it!
-
-================================================================================
-
-TIMELINE:
-- Reading prompt: 30 min
-- Implementation: 2-3 hours
-- Documentation: 1 hour
-- Build & test: 30 min
-- Git commit: 10 min
-
-TOTAL: ~4 hours (one afternoon)
-
-================================================================================
-
-DESIGN REVIEW REQUIREMENTS YOU NEED TO MEET:
-
-FR12: Detect obstacles at 30cm distance threshold
-FR13: Measure distance to obstacle (±2cm accuracy)
-NFR8: Scan at 10Hz (100ms periodic)
-NFR9: Less than or equal to 100ms from detection to halt
-
-All explained in detail in BUDDY5_IMPLEMENTATION_PROMPT.txt
-
-================================================================================
-
-HARDWARE YOU'LL WORK WITH:
-
-HC-SR04 Ultrasonic Sensor
-- TRIG pin: GP3 (digital output)
-- ECHO pin: GP7 (digital input)
-- Send 10 microsecond pulse → measure echo → calculate distance
-
-Formula: distance (cm) = (echo_time_microseconds * 343) / 20000
-
-Everything you need is in the prompt.
-
-================================================================================
-
-WHAT YOU'LL CREATE:
-
-Source Files:
-  * src/buddy5_ultrasonic/buddy5_ultrasonic.c (~200-300 lines)
-  * include/interfaces/buddy5_ultrasonic.h (~20 lines)
-
-Configuration:
-  * Add constants to include/config.h
-  * Add task creation call to src/main.c
-
-Documentation:
-  * BUDDY5_IMPLEMENTATION.md (technical reference)
-  * TESTING_CHECKLIST.md (test procedures)
-  * ALIGNMENT_REVIEW.md (requirements matrix)
-
-Binary:
-  * build/robot_car.uf2 (100-110 KB, ready to flash)
-
-================================================================================
-
-THE PROMPT INCLUDES:
-
-✓ Complete Design Review specification
-✓ Hardware pinout and timing details
-✓ Algorithm explanation (with formulas)
-✓ FreeRTOS task pattern (copy from Buddy 4)
-✓ Event queue integration example
-✓ Simulation mode support
-✓ Testing procedures
-✓ Documentation templates
-✓ Git workflow instructions
-✓ Troubleshooting guide
-✓ Success criteria checklist
-
-EVERYTHING YOU NEED IN ONE FILE!
-
-================================================================================
-
-REFERENCE IMPLEMENTATION:
-
-Look at src/buddy4_imu/buddy4_imu.c for patterns:
-- How to structure the task
-- How to post events to the queue
-- How to handle FreeRTOS delays
-- How to organize the code
-
-The prompt tells you exactly what to copy.
-
-================================================================================
-
-BUILD COMMAND:
-
-cd build
-cmake -GNinja ..
-ninja
-
-Output: build/robot_car.uf2
-
-================================================================================
-
-SUCCESS LOOKS LIKE:
-
-✓ Code compiles: Zero errors, zero warnings
-✓ Binary builds: robot_car.uf2 (100-110 KB)
-✓ Features work: 
-   - Detects obstacle at 30cm
-   - Measures distance 2cm accuracy
-   - Scans at 10Hz
-   - Posts events to queue
-✓ Documented: Technical docs created
-✓ Deployed: Committed and pushed to GitHub
-✓ Integrated: Works with Vehicle Controller (Buddy 1)
-
-================================================================================
-
-QUESTIONS? REFER TO:
-
-1. BUDDY5_IMPLEMENTATION_PROMPT.txt - Main specification
-2. src/buddy4_imu/buddy4_imu.c - Reference implementation
-3. GitHub issues - Ask Darren if stuck
-
-================================================================================
-
-YOU'VE GOT THIS! (muscle emoji)
-
-This is a well-defined, self-contained project.
-The prompt has everything you need.
-Approximately 4 hours of focused work and you're done.
-
-Good luck!
-
-================================================================================
+The subsystem publishes its profile and bypass direction to the Vehicle
+Controller. It must not command motors itself. See
+BUDDY5_TESTING_CHECKLIST.md for the software and physical checks still needed.

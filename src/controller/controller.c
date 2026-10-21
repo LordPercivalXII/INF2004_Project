@@ -130,13 +130,21 @@ static void controller_task(void *argument)
             case SYSTEM_EVENT_OBSTACLE:
                 obstacle_cm = event.data.obstacle.center_distance_cm;
                 if (event.data.obstacle.detected && event.data.obstacle.scan_complete && state == MISSION_FOLLOWING) {
-                    state = MISSION_AVOIDING;
                     xEventGroupSetBits(g_system_event_group, SYSTEM_BIT_OBSTACLE);
-                    avoidance_phase = AVOIDANCE_TURN_OUT;
-                    avoidance_direction = event.data.obstacle.bypass_direction < 0 ? -1 : 1;
-                    avoidance_deadline = xTaskGetTickCount() + pdMS_TO_TICKS(350U);
-                    set_motion((float)-avoidance_direction * base_speed * 0.45f,
-                               (float)avoidance_direction * base_speed * 0.45f);
+                    if (event.data.obstacle.bypass_direction == 0) {
+                        fault_code = 4U;
+                        state = MISSION_FAULT;
+                        xEventGroupSetBits(g_system_event_group, SYSTEM_BIT_FAULT);
+                        xEventGroupClearBits(g_system_event_group, SYSTEM_BIT_MISSION_RUN);
+                        stop_motion();
+                    } else {
+                        state = MISSION_AVOIDING;
+                        avoidance_phase = AVOIDANCE_TURN_OUT;
+                        avoidance_direction = event.data.obstacle.bypass_direction < 0 ? -1 : 1;
+                        avoidance_deadline = xTaskGetTickCount() + pdMS_TO_TICKS(350U);
+                        set_motion((float)-avoidance_direction * base_speed * 0.45f,
+                                   (float)avoidance_direction * base_speed * 0.45f);
+                    }
                 } else if (!event.data.obstacle.detected && state == MISSION_AVOIDING) {
                     if (avoidance_phase == AVOIDANCE_REACQUIRE) {
                         set_motion(base_speed * 0.35f, base_speed * 0.35f);
@@ -207,6 +215,6 @@ static void controller_task(void *argument)
 void Controller_CreateTask(void)
 {
     BaseType_t result = xTaskCreate(controller_task, "VehicleCtrl", ROBOT_TASK_STACK_WORDS,
-                                    NULL, tskIDLE_PRIORITY + 3U, NULL);
+                                    NULL, tskIDLE_PRIORITY + 4U, NULL);
     configASSERT(result == pdPASS);
 }

@@ -14,28 +14,41 @@
 #define ROBOT_LINE_PERIOD_MS         10U
 #define ROBOT_MOTION_PERIOD_MS       20U
 #define ROBOT_IMU_PERIOD_MS          10U
-#define ROBOT_OBSTACLE_PERIOD_MS     30U
 #define ROBOT_BASE_SPEED             0.35f
 #define ROBOT_MAX_SPEED              0.70f
 
-/* Default pin map is an integration starting point; verify against the actual Robo Pico carrier. */
-// TODO: Update pin map to match the actual Robo Pico carrier.
-#define PIN_MOTOR_LEFT_PWM           16U
-#define PIN_MOTOR_RIGHT_PWM          17U
-#define PIN_MOTOR_LEFT_DIR           18U
-#define PIN_MOTOR_RIGHT_DIR          19U
-#define PIN_ENCODER_LEFT_A           20U
-#define PIN_ENCODER_LEFT_B           21U
-#define PIN_ENCODER_RIGHT_A          22U
-#define PIN_ENCODER_RIGHT_B          23U
-#define PIN_IR_LEFT                  6U
-#define PIN_IR_CENTER                7U
-#define PIN_IR_BARCODE               8U
+/* Cytron Robo Pico pin map from the Group 19 Design Review. */
+#define PIN_MOTOR_LEFT_PWM           8U
+#define PIN_MOTOR_RIGHT_PWM          10U
+#define PIN_MOTOR_LEFT_DIR           9U
+#define PIN_MOTOR_RIGHT_DIR          11U
+#define PIN_ENCODER_LEFT_A           12U
+#define PIN_ENCODER_LEFT_B           13U
+#define PIN_ENCODER_RIGHT_A          14U
+#define PIN_ENCODER_RIGHT_B          19U
+#define PIN_IR_LEFT                  26U
+#define PIN_IR_CENTER                27U
+#define PIN_IR_BARCODE               28U
 #define PIN_I2C_SDA                  4U
 #define PIN_I2C_SCL                  5U
-#define PIN_ULTRASONIC_TRIGGER       14U
-#define PIN_ULTRASONIC_ECHO          15U
-#define PIN_SCAN_SERVO               13U
+#define PIN_IMU_INTERRUPT            2U
+#define PIN_ULTRASONIC_TRIGGER       17U
+#define PIN_ULTRASONIC_ECHO          16U
+#define PIN_SCAN_SERVO               15U
+
+#define ULTRASONIC_THRESHOLD_CM      30.0f
+#define ULTRASONIC_MIN_DISTANCE_CM   2.0f
+#define ULTRASONIC_MAX_DISTANCE_CM   400.0f
+#define ULTRASONIC_ECHO_TIMEOUT_MS   30U
+#define ULTRASONIC_MIN_PING_INTERVAL_MS 66U
+#define ULTRASONIC_ECHO_QUEUE_LENGTH 4U
+#define ULTRASONIC_SERVO_SETTLE_MS   50U
+#define ULTRASONIC_COARSE_LEFT_DEG   45U
+#define ULTRASONIC_COARSE_CENTER_DEG 90U
+#define ULTRASONIC_COARSE_RIGHT_DEG  135U
+#define ULTRASONIC_FINE_STEP_DEG     5U
+#define ULTRASONIC_FINE_MARGIN_DEG   20U
+#define ULTRASONIC_BEAM_WIDTH_DEG    15U
 
 #define I2C_PORT                     i2c0
 #define IMU_I2C_ADDRESS              0x68U
@@ -54,6 +67,10 @@
 #define MOTOR_PID_KD                 0.00f
 
 /* ---- Buddy 3: line tracking (FR7, NFR6) ---- */
+#define IR_RING_SIZE                64U   /* power-of-two ISR-to-task sample buffer */
+#define ADC_CHANNEL_IR_LEFT         0U    /* GP26 = ADC0 */
+#define ADC_CHANNEL_IR_CENTER       1U    /* GP27 = ADC1 */
+#define IR_SAMPLE_RATE_HZ           1000U /* Buddy 3 IR sampling timer */
 #define IR_ANALOG_BLACK_IS_HIGH      1     /* AO voltage rises over black on most TCRT5000 modules: verify */
 #define IR_CALIBRATION_MS            3000U /* sweep sensors across line and floor during this window */
 #define IR_MIN_CONTRAST_COUNTS       400U  /* 12-bit ADC; below this calibration is rejected */
