@@ -1,0 +1,574 @@
+================================================================================
+BUDDY 5 ULTRASONIC OBSTACLE DETECTION - IMPLEMENTATION PROMPT
+================================================================================
+
+PROJECT CONTEXT
+================================================================================
+
+You are implementing BUDDY 5 (Ultrasonic Obstacle Detection) for:
+- Project: INF2004 Embedded Systems Course
+- Team: Group 19 - Autonomous Robotic Car
+- Repository: https://github.com/LordPercivalXII/INF2004_Project
+- Your Role: Obstacle detection subsystem via HC-SR04 ultrasonic sensor
+
+The project uses:
+- Platform: Raspberry Pi Pico W (RP2040 microcontroller)
+- OS: FreeRTOS
+- Build System: CMake + Ninja
+- Language: C (embedded)
+
+================================================================================
+
+DESIGN REVIEW REQUIREMENTS (FROM ARCHITECTURE FREEZE DOCUMENT)
+================================================================================
+
+FUNCTIONAL REQUIREMENTS
+━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+
+FR12: Obstacle Detection
+  Specification: HC-SR04 ultrasonic sensor continuously scans for obstacles
+  Threshold: Detection distance ≤ 30cm (configurable)
+  Output: Binary detected/not-detected signal to Vehicle Controller
+  When triggered: Vehicle should halt immediately (integrated with Buddy 4)
+
+FR13: Obstacle Distance Measurement
+  Specification: Measure distance to nearest obstacle in cm
+  Range: 2cm to 400cm typical (HC-SR04 spec)
+  Accuracy: ±2cm (sensor specification)
+  Output: Publish distance value for telemetry logging
+
+NON-FUNCTIONAL REQUIREMENTS
+━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+
+NFR8: Scan Rate
+  Specification: 10Hz scanning rate (100ms period)
+  Trigger: Periodic FreeRTOS task
+  Consistency: Uniform sampling across test runs
+
+NFR9: Obstacle Halt Latency
+  Specification: ≤100ms from detection to halt command
+  Constraint: Coordinate with Buddy 4 (IMU) shock detection
+  Both should trigger motor halt with priorities TBD
+
+HARDWARE CONFIGURATION
+━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+
+Sensor: HC-SR04 Ultrasonic Distance Sensor
+  - TRIG pin: GP3 (output, pulse trigger)
+  - ECHO pin: GP7 (input, pulse response)
+  - VCC: 5V
+  - GND: GND
+  - Operation: Send 10µs pulse → measure echo width → calculate distance
+
+Signal Processing:
+  - Pulse frequency: 40kHz (ultrasonic, inaudible)
+  - Echo pulse width: 150µs to 25ms (proportional to distance)
+  - Distance = (echo_time_us * 343) / 20000 (speed of sound)
+  - Require burst reads/GPIO edge detection
+
+Electrical Interface:
+  - TRIG: Simple GPIO digital output (push-pull)
+  - ECHO: GPIO edge detection (rising → falling to measure pulse width)
+  - Consider: RP2040 can measure pulse width via PWM input or by polling GPIO
+
+================================================================================
+
+PROJECT STRUCTURE & CODEBASE REFERENCE
+================================================================================
+
+Repository Layout:
+  .
+  ├── src/
+  │   ├── buddy4_imu/
+  │   │   └── buddy4_imu.c                    (reference implementation)
+  │   ├── buddy5_ultrasonic/
+  │   │   └── buddy5_ultrasonic.c             (YOUR FILE - CREATE THIS)
+  │   ├── buddy1_controller/
+  │   ├── buddy2_line_follower/
+  │   ├── buddy3_power/
+  │   ├── main.c                              (task creation/initialization)
+  │   └── robot.c                             (system entry point)
+  │
+  ├── include/
+  │   ├── common_types.h                      (event structures - EXTEND THIS)
+  │   ├── config.h                            (sensor config constants)
+  │   └── interfaces/
+  │       ├── buddy5_ultrasonic.h             (YOUR HEADER - CREATE THIS)
+  │       └── ...
+  │
+  ├── build/
+  │   └── robot_car.uf2                       (compiled firmware)
+  │
+  └── CMakeLists.txt                          (build configuration)
+
+KEY FILES YOU'LL WORK WITH
+━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+
+1. include/interfaces/buddy5_ultrasonic.h (CREATE)
+   Purpose: Public API for ultrasonic subsystem
+   Required Function: void Buddy5Ultrasonic_CreateTask(void);
+   
+   Example structure:
+   ```c
+   #ifndef BUDDY5_ULTRASONIC_H
+   #define BUDDY5_ULTRASONIC_H
+   
+   void Buddy5Ultrasonic_CreateTask(void);
+   
+   #endif
+   ```
+
+2. src/buddy5_ultrasonic/buddy5_ultrasonic.c (CREATE)
+   Purpose: Ultrasonic sensor driver + FreeRTOS task
+   Responsibilities:
+   - Initialize GPIO pins (TRIG=GP3, ECHO=GP7)
+   - Implement distance measurement via echo pulse width
+   - Run 10Hz periodic scanning task
+   - Post ObstacleEvent to event queue
+   - Coordinate with Buddy 4 for halt logic
+
+3. include/common_types.h (EXTEND)
+   Current: Has ObstacleEvent structure (see below)
+   Your task: Verify ObstacleEvent has all needed fields
+   
+   Reference structure (likely already exists):
+   ```c
+   typedef struct {
+       bool detected;                  // Obstacle within threshold?
+       bool scan_complete;             // Full scan finished?
+       float center_distance_cm;       // Distance to nearest obstacle
+       float estimated_width_cm;       // Obstacle width estimate (if available)
+       float left_clearance_cm;        // Left side clearance
+       float right_clearance_cm;       // Right side clearance
+       int8_t bypass_direction;        // Suggested avoidance: -1=left, 0=center, +1=right
+   } ObstacleEvent;
+   ```
+   
+   NOTE: Current HC-SR04 is single-distance sensor (mononar, not scanning)
+   Consider: Keep simple for now, expand if using servo for scanning
+
+4. include/config.h (EXTEND)
+   Add these constants:
+   ```c
+   #define ULTRASONIC_TRIG_PIN         3U          // GP3
+   #define ULTRASONIC_ECHO_PIN         7U          // GP7
+   #define ULTRASONIC_THRESHOLD_CM     30U         // Detection threshold (FR12)
+   #define ULTRASONIC_SCAN_PERIOD_MS   100U        // 10Hz (NFR8)
+   #define ULTRASONIC_MAX_DISTANCE_CM  400U        // HC-SR04 max range
+   #define ULTRASONIC_MIN_DISTANCE_CM  2U          // HC-SR04 min range
+   #define ULTRASONIC_PULSE_TIMEOUT_US 30000U      // Max echo wait time (400cm @ speed of sound)
+   ```
+
+5. src/main.c or src/robot.c (MODIFY)
+   Find task creation section, add:
+   ```c
+   Buddy5Ultrasonic_CreateTask();  // Create ultrasonic monitoring task
+   ```
+   
+   Look for similar calls like:
+   - Buddy4Imu_CreateTask();
+   - Buddy2LineFollower_CreateTask();
+   etc.
+
+================================================================================
+
+IMPLEMENTATION CHECKLIST
+================================================================================
+
+PHASE 1: SETUP & INITIALIZATION
+□ Create file: include/interfaces/buddy5_ultrasonic.h
+□ Create file: src/buddy5_ultrasonic/buddy5_ultrasonic.c
+□ Add constants to include/config.h
+□ Verify ObstacleEvent structure in include/common_types.h
+□ Add Buddy5Ultrasonic_CreateTask() call to src/main.c or src/robot.c
+
+PHASE 2: GPIO & HARDWARE INTERFACE
+□ Implement GPIO initialization (TRIG as output, ECHO as input)
+□ Implement TRIG pulse generation (10µs pulse)
+□ Implement ECHO pulse measurement (capture rising/falling edges)
+   Option A: Use RP2040 PWM input capture mode
+   Option B: Poll GPIO in tight loop and measure time
+   Option C: Use interrupt-based edge detection
+□ Test distance calculation: distance = (echo_time_us * 343) / 20000
+□ Implement timing timeout to handle no-echo scenarios
+
+PHASE 3: SENSOR DRIVER
+□ Create ultrasonic_measure_distance_cm() function
+□ Implement burst measurement (multiple readings, average for noise reduction)
+□ Add range validation (2cm to 400cm)
+□ Handle timeout cases (no obstacle, sensor failure)
+□ Return distance in cm as float
+
+PHASE 4: FREERTOS TASK
+□ Create ultrasonic_task() function
+□ Implement 10Hz periodic timing (vTaskDelayUntil with 100ms period)
+□ Read distance every cycle
+□ Compare against ULTRASONIC_THRESHOLD_CM
+□ Create and post ObstacleEvent to event queue
+□ Populate event fields:
+   - detected: true if distance < threshold
+   - scan_complete: true (single sensor, always complete)
+   - center_distance_cm: measured distance
+   - estimated_width_cm: 0 (not applicable, single sensor)
+   - left_clearance_cm: same as center (single beam)
+   - right_clearance_cm: same as center (single beam)
+   - bypass_direction: 0 (single sensor, no directional info)
+
+PHASE 5: BUILD & TEST
+□ Add buddy5_ultrasonic.c to CMakeLists.txt (src target)
+□ Run: cmake -GNinja .. && ninja
+□ Verify: Zero compilation errors and warnings
+□ Verify: robot_car.uf2 builds successfully
+□ Check binary size (should be <120 KB total)
+
+PHASE 6: DOCUMENTATION
+□ Create BUDDY5_IMPLEMENTATION.md with:
+   - Hardware wiring diagram (text description)
+   - Distance calculation formula derivation
+   - Echo pulse timing explanation
+   - Timing budget analysis
+   - Integration with Buddy 4 collision handling
+□ Create TESTING_CHECKLIST.md with:
+   - Simulation test procedures (if using ROBOT_SIMULATION flag)
+   - Hardware test procedures (physical obstacle testing)
+   - Distance accuracy verification
+   - Timing verification
+□ Create ALIGNMENT_REVIEW.md with:
+   - Requirements traceability matrix (FR12, FR13, NFR8, NFR9)
+   - Implementation verification checklist
+
+PHASE 7: GIT COMMIT & PUSH
+□ Stage all files: git add src/buddy5_ultrasonic/* include/interfaces/buddy5_ultrasonic.h include/config.h include/common_types.h src/main.c
+□ Commit with detailed message including:
+   - Requirements reference (FR12, FR13, NFR8, NFR9)
+   - Implementation summary
+   - Testing status
+   - GitHub co-author trailer
+□ Push to origin/main
+□ Verify on GitHub: https://github.com/LordPercivalXII/INF2004_Project
+
+================================================================================
+
+REFERENCE IMPLEMENTATION PATTERNS (FROM BUDDY 4)
+================================================================================
+
+Follow these patterns from Buddy 4 (IMU subsystem) for consistency:
+
+HEADER FILE PATTERN (include/interfaces/buddy5_ultrasonic.h):
+━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+#ifndef BUDDY5_ULTRASONIC_H
+#define BUDDY5_ULTRASONIC_H
+
+#include "FreeRTOS.h"
+
+/* Public task creation function */
+void Buddy5Ultrasonic_CreateTask(void);
+
+#endif
+
+SOURCE FILE STRUCTURE (src/buddy5_ultrasonic/buddy5_ultrasonic.c):
+━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+1. Includes
+   #include "pico/stdlib.h"
+   #include "hardware/gpio.h"     // GPIO operations
+   #include "hardware/timer.h"    // microsecond timing
+   #include "FreeRTOS.h"
+   #include "task.h"
+   #include "config.h"            // ULTRASONIC_* constants
+   #include "common_types.h"      // SystemEvent, ObstacleEvent
+   #include "interfaces/buddy5_ultrasonic.h"
+
+2. Constants & Macros
+   #define ROBOT_SIMULATION 0     // Set to 1 for simulation mode
+
+3. Static Helper Functions
+   static bool ultrasonic_gpio_init(void);
+   static void ultrasonic_trig_pulse(void);
+   static float ultrasonic_measure_distance_cm(void);
+   static uint32_t measure_echo_pulse_us(void);
+
+4. Main Task Function
+   static void ultrasonic_task(void *argument);
+   - Initialize hardware
+   - Loop with vTaskDelayUntil (100ms period)
+   - Measure distance
+   - Post ObstacleEvent
+   - Handle timeouts/failures
+
+5. Public Task Creation
+   void Buddy5Ultrasonic_CreateTask(void);
+   - xTaskCreate(ultrasonic_task, "UltrasonicMonitor", ...)
+
+SIMULATION MODE:
+━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+If building with ROBOT_SIMULATION enabled:
+- Return simulated distance values (e.g., 15cm, then 50cm, then 25cm)
+- Use sample counter to simulate different scenarios
+- Allow testing without physical hardware
+- See Buddy 4 imu_read() for simulation pattern
+
+================================================================================
+
+REQUIREMENTS TRACEABILITY
+================================================================================
+
+FR12: Obstacle Detection
+  ├─ Measurement: Implement ultrasonic_measure_distance_cm()
+  ├─ Threshold: Compare against ULTRASONIC_THRESHOLD_CM (30cm)
+  ├─ Detection: Set ObstacleEvent.detected = (distance < threshold)
+  ├─ Signal: Post SYSTEM_EVENT_OBSTACLE to event queue
+  └─ Latency: Must occur within single 100ms cycle (≤100ms, FR satisfied)
+
+FR13: Obstacle Distance Measurement
+  ├─ Range: 2cm to 400cm (HC-SR04 spec)
+  ├─ Accuracy: ±2cm (sensor specification)
+  ├─ Measurement: Calculate distance from echo pulse width
+  ├─ Formula: distance = (echo_time_us * 343 m/s) / 20000
+  ├─ Output: ObstacleEvent.center_distance_cm
+  └─ Telemetry: Logged for post-race analysis
+
+NFR8: Scan Rate
+  ├─ Period: 100ms (10Hz)
+  ├─ Implementation: vTaskDelayUntil with pdMS_TO_TICKS(100)
+  ├─ Accuracy: ±1ms (FreeRTOS tick resolution)
+  └─ Consistency: Same rate across all test runs
+
+NFR9: Obstacle Halt Latency
+  ├─ Measurement Point: From distance crossing threshold to halt command
+  ├─ Target: ≤100ms
+  ├─ Components:
+  │  ├─ Sensor measurement: ~10ms
+  │  ├─ Event queue post: <1ms
+  │  └─ Vehicle Controller wake: ≤50ms (typical task response)
+  ├─ Coordination: With Buddy 4 (both should trigger halt)
+  └─ Priority: TBD (verify with Buddy 1/Controller)
+
+================================================================================
+
+INTEGRATION CHECKLIST
+================================================================================
+
+EVENT QUEUE INTEGRATION
+□ ObstacleEvent properly populated with all fields
+□ SYSTEM_EVENT_OBSTACLE correctly set
+□ Posted every 100ms via Robot_PostEvent(&event)
+□ Timestamp accurate (Robot_Millis())
+□ Event queue sized appropriately (typically 32-64 items)
+
+VEHICLE CONTROLLER COORDINATION (Buddy 1)
+□ Review how Vehicle Controller handles SYSTEM_EVENT_OBSTACLE
+□ Verify obstacle halt takes priority (or coordinate priorities with Buddy 4)
+□ Test that receiving "detected=true" triggers motor halt
+□ Ensure relay of distance data for telemetry
+
+BUDDY 4 COORDINATION (Darren's IMU Subsystem)
+□ Both Buddy 4 (shock detection) and Buddy 5 (obstacle detection) trigger halt
+□ Define priority if both occur simultaneously (shock vs obstacle collision)
+□ Share telemetry for post-race analysis
+□ Consider: Should motor halt be atomic (one subsystem decides)?
+
+OTHER BUDDIES
+□ Buddy 2 (Line Follower): May need to know about obstacles for path planning
+□ Buddy 3 (Power Management): Monitor for halt state drain
+□ Verify no GPIO conflicts (TRIG=GP3, ECHO=GP7)
+
+================================================================================
+
+TESTING STRATEGY
+================================================================================
+
+SIMULATION TESTS (No Hardware Required)
+1. Code compiles without errors/warnings
+2. Binary builds successfully (robot_car.uf2)
+3. Simulated distance values trigger detection threshold correctly
+4. Event posting working via event queue
+5. Task runs at exact 10Hz (verify timing in simulation)
+
+HARDWARE TESTS (Physical Robot Testing)
+1. GPIO pins TRIG and ECHO properly connected
+2. Measure known distance (e.g., 10cm) and verify accuracy (±2cm)
+3. Obstacle detection threshold works (detect at 30cm, clear at 50cm)
+4. Scan rate is 10Hz (verify 100ms periodicity)
+5. Motor halts when obstacle detected (integration with Buddy 1)
+6. Telemetry logs distance values correctly
+7. Performance under motion (no noise artifacts)
+
+EDGE CASES TO TEST
+□ Obstacle too close (<2cm) - timeout handling
+□ Obstacle too far (>400cm) - no echo received
+□ Stationary obstacle
+□ Moving obstacle (approaching/receding)
+□ Multiple obstacles (only nearest measured)
+□ Noisy surfaces (reflective vs absorptive)
+
+================================================================================
+
+BUILD & DEPLOYMENT INSTRUCTIONS
+================================================================================
+
+BUILDING
+━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+
+1. Set FreeRTOS path (Windows):
+   set FREERTOS_KERNEL_PATH=C:\Users\[username]\FreeRTOS-Kernel
+
+2. Configure CMake:
+   cd build
+   cmake -GNinja ..
+
+3. Build with Ninja:
+   ninja
+
+4. Output: build/robot_car.uf2 (ready to flash)
+
+FLASHING TO PICO W
+━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+
+1. Hold BOOTSEL button on Pico W
+2. Plug into PC via USB
+3. Release BOOTSEL (Pico appears as USB storage device)
+4. Drag robot_car.uf2 to the mounted drive
+5. Pico will reboot and run firmware
+6. Check serial output for task creation messages
+
+TROUBLESHOOTING
+□ If build fails: Verify FREERTOS_KERNEL_PATH set correctly
+□ If GPIO conflicts: Check pin assignments (GP3, GP7)
+□ If timeout during measurement: Adjust ULTRASONIC_PULSE_TIMEOUT_US
+□ If distance readings wrong: Verify speed of sound calculation (343 m/s)
+
+================================================================================
+
+DELIVERABLES CHECKLIST
+================================================================================
+
+CODE DELIVERABLES
+□ src/buddy5_ultrasonic/buddy5_ultrasonic.c (~200-300 lines estimated)
+□ include/interfaces/buddy5_ultrasonic.h (~20 lines)
+□ Modified include/config.h (add 6-8 constants)
+□ Modified include/common_types.h (verify ObstacleEvent - may be unchanged)
+□ Modified src/main.c or src/robot.c (add task creation call)
+
+BUILD DELIVERABLES
+□ build/robot_car.uf2 (100-110 KB, zero errors/warnings)
+
+DOCUMENTATION DELIVERABLES
+□ BUDDY5_IMPLEMENTATION.md (~2-3 pages, technical reference)
+□ TESTING_CHECKLIST.md (~2-3 pages, procedures and test cases)
+□ ALIGNMENT_REVIEW.md (~1-2 pages, requirements matrix)
+
+GIT DELIVERABLES
+□ All source files committed with detailed message
+□ All documentation committed
+□ Pushed to https://github.com/LordPercivalXII/INF2004_Project
+□ Commits visible on main branch
+
+QUALITY METRICS
+□ Zero compilation errors
+□ Zero compiler warnings
+□ All requirements traced and verified
+□ Professional documentation
+□ Clean integration with codebase
+□ Performance within spec (NFR8, NFR9)
+
+================================================================================
+
+TIMELINE ESTIMATE
+================================================================================
+
+Task                        Effort      Status
+━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+Setup & File Creation       15 min      (headers, config, cmake)
+GPIO & Hardware Init        30 min      (pulse gen, echo measure)
+Distance Algorithm          30 min      (formula, validation)
+FreeRTOS Task               30 min      (periodic loop, queue posting)
+Build & Verification        15 min      (compilation, binary check)
+Documentation              60 min      (implementation, testing, alignment)
+Testing & Troubleshooting   45 min      (sim tests, edge cases)
+Git Commit & Push           10 min      (commit message, push)
+━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+TOTAL ESTIMATE             235 min      (~4 hours)
+
+================================================================================
+
+SUCCESS CRITERIA
+================================================================================
+
+Your implementation is successful when:
+
+✅ Code Criteria
+   • Compiles with zero errors and zero warnings
+   • Binary robot_car.uf2 successfully builds (should be ~100-110 KB)
+   • All code follows existing codebase patterns (see Buddy 4)
+
+✅ Functional Criteria
+   • Measures distance from HC-SR04 sensor
+   • Accuracy within ±2cm of known distances
+   • Detects obstacle when distance < 30cm threshold
+   • Clears obstacle when distance > 30cm
+   • Runs at exactly 10Hz (100ms period)
+
+✅ Integration Criteria
+   • Posts ObstacleEvent to event queue every 100ms
+   • Vehicle Controller receives and processes events
+   • Motor halts when obstacle detected (or indicates halt request)
+   • No GPIO conflicts or interference with other buddies
+
+✅ Non-Functional Criteria
+   • Shock-to-halt latency ≤100ms (NFR9)
+   • Scan rate exactly 10Hz ±1ms (NFR8)
+   • No memory leaks or buffer overflows
+   • CPU time per cycle <50% of 100ms
+
+✅ Documentation Criteria
+   • Technical implementation documented
+   • Testing procedures clearly outlined
+   • Requirements fully traced
+   • Professional writing quality
+   • Ready for assessment submission
+
+✅ Deployment Criteria
+   • All changes committed to Git
+   • Commits have detailed, professional messages
+   • Pushed to main branch on GitHub
+   • Visible on https://github.com/LordPercivalXII/INF2004_Project
+   • Ready for grading
+
+================================================================================
+
+CONTACT & QUESTIONS
+================================================================================
+
+If stuck or unclear:
+1. Review Buddy 4 implementation (src/buddy4_imu/buddy4_imu.c) for patterns
+2. Check RP2040 datasheet for GPIO/timer details
+3. Verify HC-SR04 timing specifications
+4. Test in simulation mode first (ROBOT_SIMULATION=1)
+5. Ask clarifying questions about requirements
+
+GPIO Reference:
+   GP3 = TRIG (digital output)
+   GP7 = ECHO (digital input)
+
+Speed of Sound:
+   343 m/s at 20°C (standard reference)
+   One-way distance = (echo_time_µs × 343) / 2,000,000
+   Distance (cm) = (echo_time_µs × 343) / 20,000
+
+================================================================================
+
+START HERE: CREATE THE FILES
+================================================================================
+
+1. Create include/interfaces/buddy5_ultrasonic.h
+2. Create src/buddy5_ultrasonic/buddy5_ultrasonic.c
+3. Update include/config.h with ULTRASONIC_* constants
+4. Add Buddy5Ultrasonic_CreateTask() to src/main.c
+5. Build and verify: cmake -GNinja .. && ninja
+6. Implement the ultrasonic_task() with distance measurement logic
+7. Post ObstacleEvent every 100ms
+8. Document, test, commit, push
+
+You've got this! Good luck! 💪
+
+================================================================================
