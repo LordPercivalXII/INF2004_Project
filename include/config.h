@@ -41,10 +41,11 @@
 #define IMU_I2C_ADDRESS              0x68U
 #define IMU_SAMPLE_RATE_HZ           100U
 #define IMU_GRAVITY_M_S2             9.80665f
-#define IMU_ACCEL_COUNTS_PER_G       16384.0f
-#define IMU_GYRO_COUNTS_PER_DPS      131.0f
-#define IMU_SHOCK_THRESHOLD_G        2.2f
-#define IMU_HUMP_THRESHOLD_G         0.25f
+#define IMU_ACCEL_COUNTS_PER_G       8192.0f      /* ±4g full-scale range (AFS_SEL=1) */
+#define IMU_GYRO_COUNTS_PER_DPS      65.5f        /* ±1000 DPS full-scale range (FS_SEL=1) */
+#define IMU_SHOCK_THRESHOLD_G        3.0f         /* FR10: Detect shocks ±3g */
+#define IMU_HUMP_THRESHOLD_G         0.25f        /* FR11: Threshold for bump detection */
+#define IMU_FILTER_WINDOW_SIZE       5U           /* 5-tap moving average filter */
 
 #define MOTOR_ENCODER_TICKS_PER_REV  360.0f
 #define MOTOR_WHEEL_DIAMETER_M       0.065f

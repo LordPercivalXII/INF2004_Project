@@ -2,18 +2,276 @@
 
 Modular RP2040 application using the Raspberry Pi Pico SDK and FreeRTOS. The Vehicle Controller is the sole owner of mission state; subsystems exchange copied messages through FreeRTOS queues and the system event group.
 
-## Build
-
-Install the Raspberry Pi Pico SDK, an ARM GCC toolchain, CMake, Ninja or Make, and an official FreeRTOS-Kernel checkout. In PowerShell, set the SDK and kernel paths before configuring:
+## 🚀 Quick Build (Windows)
 
 ```powershell
-$env:PICO_SDK_PATH = "C:\path\to\pico-sdk"
-$env:FREERTOS_KERNEL_PATH = "C:\path\to\FreeRTOS-Kernel"
+# 1. Run setup script (installs dependencies & compiles)
+.\setup_windows.ps1
+
+# 2. Flash to Pico
+.\flash_pico.ps1
+```
+
+---
+
+## 📋 Windows Setup & Build
+
+### What You Need to Install
+
+1. **CMake** (≥3.13)
+   - Download: https://cmake.org/download/
+   - ✅ Check "Add CMake to system PATH" during installation
+
+2. **Ninja Build System**
+   - Download: https://github.com/ninja-build/ninja/releases
+   - Extract to: `C:\tools\ninja\`
+   - Add `C:\tools\ninja\` to system PATH (Environment Variables)
+
+3. **ARM GCC Toolchain** (Choose one method)
+   
+   **Option A - Easiest (via winget):**
+   ```powershell
+   winget install GNU.Arm.EmbeddedToolchain.GCC
+   ```
+   
+   **Option B - Manual Download:**
+   - Download: https://developer.arm.com/downloads/-/arm-gnu-toolchain-downloads
+   - Choose: `arm-gnu-toolchain-*-mingw-w64-i686-arm-none-eabi.exe`
+   - ✅ Check "Add path to environment variable" during installation
+   
+   **Option C - Alternative (SourceForge):**
+   - https://sourceforge.net/projects/mingw-arm-gnu-toolchain/
+
+4. **Raspberry Pi Pico SDK**
+   ```powershell
+   cd C:\pico
+   git clone https://github.com/raspberrypi/pico-sdk.git
+   cd pico-sdk
+   git submodule update --init
+   ```
+
+5. **FreeRTOS-Kernel**
+   ```powershell
+   cd C:\pico
+   git clone https://github.com/FreeRTOS/FreeRTOS-Kernel.git
+   ```
+
+### Configure Paths
+
+Edit `setup_windows.ps1` (lines 8-9):
+```powershell
+$PICO_SDK_PATH = "C:\pico\pico-sdk"
+$FREERTOS_KERNEL_PATH = "C:\pico\FreeRTOS-Kernel"
+```
+
+Edit `build_commands.bat` (lines 6-7):
+```batch
+set PICO_SDK_PATH=C:\pico\pico-sdk
+set FREERTOS_KERNEL_PATH=C:\pico\FreeRTOS-Kernel
+```
+
+### Build Commands
+
+**Using PowerShell (Recommended):**
+```powershell
+# Build everything
+.\setup_windows.ps1
+
+# Flash to Pico
+.\flash_pico.ps1
+```
+
+**Using Batch Commands:**
+```batch
+# Build
+build_commands.bat build
+
+# Flash
+build_commands.bat flash
+
+# Other options
+build_commands.bat help               # Show all commands
+build_commands.bat clean              # Remove build directory
+build_commands.bat rebuild            # Clean + build
+build_commands.bat configure-hw       # Setup for real hardware
+build_commands.bat wifi-test          # Build WiFi test only
+build_commands.bat mqtt-test          # Build MQTT test only
+```
+
+### Manual CMake (if scripts don't work)
+
+```powershell
+# Set environment variables
+$env:PICO_SDK_PATH = "C:\pico\pico-sdk"
+$env:FREERTOS_KERNEL_PATH = "C:\pico\FreeRTOS-Kernel"
+
+# Configure
+cmake -S . -B build -G Ninja -DROBOT_SIMULATION=ON
+
+# Build
+cmake --build build
+```
+
+### Flash to Pico
+
+**Automatic (Recommended):**
+```powershell
+.\flash_pico.ps1
+```
+
+**Manual:**
+1. Hold **BOOTSEL** button on Pico
+2. Plug USB into computer
+3. Release BOOTSEL
+4. Pico appears as removable drive "RPI-RP2"
+5. Copy `build/robot_car.uf2` to the drive
+6. Pico auto-resets and firmware runs ✅
+
+---
+
+## 🍎 macOS Setup & Build
+
+### What You Need to Install
+
+```bash
+# Using Homebrew
+brew install cmake ninja gcc git
+
+# Or download directly:
+# CMake: https://cmake.org/download/
+# ARM Toolchain: https://developer.arm.com/tools-and-software/open-source-software/gnu-toolchain/gnu-rm/downloads
+```
+
+### Download SDK & Kernel
+
+```bash
+mkdir -p ~/pico
+cd ~/pico
+
+# Pico SDK
+git clone https://github.com/raspberrypi/pico-sdk.git
+cd pico-sdk
+git submodule update --init
+
+# FreeRTOS-Kernel
+cd ~/pico
+git clone https://github.com/FreeRTOS/FreeRTOS-Kernel.git
+```
+
+### Build
+
+```bash
+cd ~/path/to/INF2004_Project
+
+export PICO_SDK_PATH="$HOME/pico/pico-sdk"
+export FREERTOS_KERNEL_PATH="$HOME/pico/FreeRTOS-Kernel"
+
+# Configure
+cmake -S . -B build -G Ninja -DROBOT_SIMULATION=ON
+
+# Build
+cmake --build build
+```
+
+### Flash to Pico
+
+```bash
+# 1. Put Pico in BOOTSEL mode (hold BOOTSEL + plug USB)
+# 2. Pico appears as mounted drive
+# 3. Copy firmware:
+cp build/robot_car.uf2 /Volumes/RPI-RP2/
+```
+
+---
+
+## 🐧 Linux Setup & Build
+
+### What You Need to Install
+
+**Ubuntu/Debian:**
+```bash
+sudo apt-get install cmake ninja-build build-essential git
+
+# ARM Toolchain
+sudo apt-get install gcc-arm-none-eabi binutils-arm-none-eabi
+```
+
+**Fedora:**
+```bash
+sudo dnf install cmake ninja-build gcc git arm-none-eabi-toolchain
+```
+
+### Download SDK & Kernel
+
+```bash
+mkdir -p ~/pico
+cd ~/pico
+
+git clone https://github.com/raspberrypi/pico-sdk.git
+cd pico-sdk
+git submodule update --init
+
+cd ~/pico
+git clone https://github.com/FreeRTOS/FreeRTOS-Kernel.git
+```
+
+### Build
+
+```bash
+cd ~/path/to/INF2004_Project
+
+export PICO_SDK_PATH="$HOME/pico/pico-sdk"
+export FREERTOS_KERNEL_PATH="$HOME/pico/FreeRTOS-Kernel"
+
 cmake -S . -B build -G Ninja -DROBOT_SIMULATION=ON
 cmake --build build
 ```
 
-Set `ROBOT_SIMULATION=OFF` for sensor and actuator I/O. The default is simulation so task timing, queue traffic, and controller behavior can be exercised without energizing motors. Flash `build/robot_car.uf2` to the Pico. Telemetry is emitted as JSON lines over USB CDC.
+### Flash to Pico
+
+```bash
+# 1. Put Pico in BOOTSEL mode
+# 2. Mount appears, typically at /media/[username]/RPI-RP2
+# 3. Copy firmware:
+cp build/robot_car.uf2 /media/[username]/RPI-RP2/
+```
+
+---
+
+## Build Modes
+
+**Simulation Mode** (default, `ROBOT_SIMULATION=ON`):
+- No hardware needed
+- Safe for testing algorithms
+- Motors won't spin
+- Deterministic timing
+
+**Hardware Mode** (`ROBOT_SIMULATION=OFF`):
+- Real sensors and motors active
+- ⚠️ **Keep wheels elevated during testing!**
+- ⚠️ **Verify GPIO map in `include/config.h` before building!**
+
+---
+
+## Build Outputs
+
+- `build/robot_car.uf2` - Main firmware (flash this to Pico)
+- `build/robot_car.hex` - Hex format
+- `build/robot_car.elf` - Debug symbols
+- `build/wifi_smoke_test.uf2` - WiFi test
+- `build/mqtt_smoke_test.uf2` - MQTT test
+
+---
+
+## Telemetry
+
+Connect serial monitor (115200 baud) to see JSON telemetry:
+```json
+{"type":"telemetry","speed":0.5,"heading":180.0}
+{"type":"status","mode":"active","battery":4.2}
+```
+
+---
 
 ## Module boundaries
 
