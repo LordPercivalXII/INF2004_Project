@@ -60,6 +60,15 @@ typedef struct {
     float distance_m;
 } MotionEvent;
 
+typedef enum {
+    MOTION_STATIONARY = 0,      /* |a_total| < 0.5g and |gz| < 10 DPS */
+    MOTION_ACCELERATING = 1,    /* |a_total| > 1.5g and consistent direction */
+    MOTION_TURNING = 2,         /* |gz| > 20 DPS (high yaw rate) */
+    MOTION_CLIMBING = 3,        /* az > 1.3g for sustained duration */
+    MOTION_DESCENDING = 4,      /* az < 0.7g for sustained duration */
+    MOTION_IMPACT = 5           /* |a_total| > 3.0g (sudden shock) */
+} MotionClassification;
+
 typedef struct {
     float acceleration_x_g;
     float acceleration_y_g;
@@ -68,6 +77,9 @@ typedef struct {
     float estimated_hump_height_m;
     bool shock_detected;
     bool sensor_valid;
+    MotionClassification motion_state;  /* Current motion classification */
+    float tilt_roll_deg;                /* Roll angle in degrees */
+    float tilt_pitch_deg;               /* Pitch angle in degrees */
 } ImuEvent;
 
 typedef struct {

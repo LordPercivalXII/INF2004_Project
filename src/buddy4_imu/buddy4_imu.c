@@ -7,6 +7,10 @@
 #include "common_types.h"
 #include "interfaces/buddy4_imu.h"
 
+#ifndef M_PI
+#define M_PI 3.14159265358979323846f
+#endif
+
 /* MPU6050 Register Definitions */
 #define MPU6050_REG_PWR_MGMT_1       0x6BU     /* Power management */
 #define MPU6050_REG_ACCEL_CONFIG     0x1CU     /* Accelerometer configuration */
@@ -117,6 +121,56 @@ static bool imu_read(ImuRaw *raw, uint32_t sample)
 #endif
 }
 
+/* Classify motion state from acceleration and gyro data */
+static MotionClassification classify_motion(float ax_g, float ay_g, float az_g, float gz_dps)
+{
+    float total_accel = sqrtf(ax_g * ax_g + ay_g * ay_g + az_g * az_g);
+    float abs_gz = fabsf(gz_dps);
+
+    /* Priority order: Impact > Turning > Climbing/Descending > Accelerating > Stationary */
+    
+    /* MOTION_IMPACT: Sudden shock detection (|a_total| > 3.0g) */
+    if (total_accel > 3.0f) {
+        return MOTION_IMPACT;
+    }
+    
+    /* MOTION_TURNING: High yaw rate indicates turning (|gz| > 20 DPS) */
+    if (abs_gz > 20.0f) {
+        return MOTION_TURNING;
+    }
+    
+    /* MOTION_CLIMBING: Strong upward acceleration (az > 1.3g) */
+    if (az_g > 1.3f) {
+        return MOTION_CLIMBING;
+    }
+    
+    /* MOTION_DESCENDING: Reduced vertical acceleration (az < 0.7g) indicates downward slope */
+    if (az_g < 0.7f) {
+        return MOTION_DESCENDING;
+    }
+    
+    /* MOTION_ACCELERATING: Significant horizontal acceleration (|a_total| > 1.5g) */
+    if (total_accel > 1.5f) {
+        return MOTION_ACCELERATING;
+    }
+    
+    /* MOTION_STATIONARY: Default when none of above conditions met */
+    return MOTION_STATIONARY;
+}
+
+/* Calculate tilt angles from acceleration vector (assumes acceleration ≈ gravity at rest) */
+static void calculate_tilt_angles(float ax_g, float ay_g, float az_g, 
+                                  float *roll_deg, float *pitch_deg)
+{
+    /* Roll = atan2(ay, az) */
+    float roll_rad = atan2f(ay_g, az_g);
+    *roll_deg = roll_rad * 180.0f / M_PI;
+    
+    /* Pitch = atan2(-ax, sqrt(ay² + az²)) */
+    float pitch_rad = atan2f(-ax_g, sqrtf(ay_g * ay_g + az_g * az_g));
+    *pitch_deg = pitch_rad * 180.0f / M_PI;
+}
+
 static void imu_task(void *argument)
 {
     (void)argument;
@@ -184,6 +238,16 @@ static void imu_task(void *argument)
         event.data.imu.estimated_hump_height_m = estimated_height;
         event.data.imu.shock_detected = valid && (total_accel_g > IMU_SHOCK_THRESHOLD_G);
         event.data.imu.sensor_valid = valid;
+        
+        /* Classify motion state from sensor data */
+        event.data.imu.motion_state = classify_motion(ax_g, ay_g, az_g, 
+                                                       event.data.imu.turn_rate_dps);
+        
+        /* Calculate tilt angles from acceleration vector */
+        calculate_tilt_angles(ax_g, ay_g, az_g, 
+                            &event.data.imu.tilt_roll_deg, 
+                            &event.data.imu.tilt_pitch_deg);
+        
         (void)Robot_PostEvent(&event);
         
         /* NFR7: Sample at 10 ms intervals (100 Hz) */
