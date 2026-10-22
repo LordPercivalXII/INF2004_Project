@@ -95,6 +95,7 @@ static uint16_t barcode_to_command(const char *text)
 {
     if (text[0] == BARCODE_LEFT_CHAR) return (uint16_t)BARCODE_CMD_LEFT;
     if (text[0] == BARCODE_RIGHT_CHAR) return (uint16_t)BARCODE_CMD_RIGHT;
+    if (text[0] == BARCODE_UTURN_CHAR) return (uint16_t)BARCODE_CMD_UTURN;
     return (uint16_t)BARCODE_CMD_NONE;
 }
 

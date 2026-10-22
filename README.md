@@ -285,6 +285,8 @@ Connect serial monitor (115200 baud) to see JSON telemetry:
 
 Subsystem messages are copied into `g_system_event_queue`; commands and telemetry use dedicated queues. Queue sends from periodic sensor paths are non-blocking. A full event queue drops that sample rather than stalling a time-sensitive task.
 
+Buddy 2 samples encoder A-channel rising edges every 20 ms, estimates signed wheel speed and center distance, and regulates each wheel independently. A 500 ms no-tick timeout on a commanded-moving wheel triggers a fault stop. `MOTION_TURN` commands execute encoder-odometry point turns; barcode payloads `L`, `R`, and `U` request left 90°, right 90°, and 180° turns at a junction. Measure and update `MOTOR_TRACK_WIDTH_M` and `MOTOR_ENCODER_TICKS_PER_REV` for the assembled robot before relying on turn accuracy. The PID gains and turn speeds are initial tuning values, not calibrated values.
+
 ## Integration assumptions to verify
 
 The default GPIO map in `include/config.h` is a proposed map, not a verified Robo Pico pinout. Check it against the carrier schematic and the actual motor driver, encoder, sensor, and servo modules before building with `ROBOT_SIMULATION=OFF`. Level-shift the ultrasonic module's echo output to 3.3 V, use a suitable separate motor/servo supply, and connect grounds as required by the selected drivers. Keep the wheels raised for initial motor tests and use a physical power cut-off. The IMU driver assumes an MPU-6050-compatible device at I2C address `0x68`, accelerometer range ±2 g, and gyroscope range ±250 degrees/s. The barcode decoder currently assumes an 8-bit pulse-width frame with a long start gap; replace that framing with the track's published barcode format before navigation tests.

@@ -1,4 +1,5 @@
 #include <math.h>
+#include <stdio.h>
 #include "FreeRTOS.h"
 #include "task.h"
 #include "queue.h"
@@ -25,7 +26,28 @@ static void set_motion(float left, float right)
 
 static void stop_motion(void)
 {
-    MotionCommand command = { .type = MOTION_STOP, .left_speed = 0.0f, .right_speed = 0.0f };
+    MotionCommand command = {
+        .type = MOTION_STOP, .left_speed = 0.0f, .right_speed = 0.0f,
+        .turn_angle_deg = 0.0f, .turn_id = 0U
+    };
+    (void)Buddy2Motion_SendCommand(&command);
+}
+
+static bool turn_motion(float angle_deg, uint32_t turn_id)
+{
+    MotionCommand command = {
+        .type = MOTION_TURN, .left_speed = 0.0f, .right_speed = 0.0f,
+        .turn_angle_deg = angle_deg, .turn_id = turn_id
+    };
+    return Buddy2Motion_SendCommand(&command);
+}
+
+static void brake_motion(void)
+{
+    MotionCommand command = {
+        .type = MOTION_BRAKE, .left_speed = 0.0f, .right_speed = 0.0f,
+        .turn_angle_deg = 0.0f, .turn_id = 0U
+    };
     (void)Buddy2Motion_SendCommand(&command);
 }
 
@@ -41,6 +63,10 @@ static void controller_task(void *argument)
     uint32_t barcode = 0U;
     uint32_t fault_code = 0U;
     bool imu_healthy = false;
+    bool turn_in_progress = false;
+    uint16_t pending_turn = BARCODE_CMD_NONE;
+    uint32_t next_turn_id = 0U;
+    uint32_t active_turn_id = 0U;
     AvoidancePhase avoidance_phase = AVOIDANCE_NONE;
     int8_t avoidance_direction = 1;
     TickType_t avoidance_deadline = 0U;
@@ -65,6 +91,9 @@ static void controller_task(void *argument)
                 break;
             case CONTROL_STOP:
                 state = MISSION_IDLE;
+                turn_in_progress = false;
+                active_turn_id = 0U;
+                pending_turn = BARCODE_CMD_NONE;
                 xEventGroupClearBits(g_system_event_group, SYSTEM_BIT_MISSION_RUN);
                 stop_motion();
                 break;
@@ -91,14 +120,35 @@ static void controller_task(void *argument)
                 current_line_error = event.data.line.line_error;
                 if (event.data.line.barcode_valid) {
                     barcode = event.data.line.barcode;
-                    /* Waypoint codes 1 and 2 request left/right; other codes continue straight. */
-                    if (state == MISSION_FOLLOWING && barcode == 1U) {
-                        set_motion(base_speed * 0.55f, base_speed);
-                    } else if (state == MISSION_FOLLOWING && barcode == 2U) {
-                        set_motion(base_speed, base_speed * 0.55f);
+                    pending_turn = state == MISSION_FOLLOWING &&
+                                   barcode <= (uint16_t)BARCODE_CMD_UTURN ?
+                                   (uint16_t)barcode : (uint16_t)BARCODE_CMD_NONE;
+                }
+                if (state == MISSION_FOLLOWING && event.data.line.junction &&
+                    !turn_in_progress && pending_turn != (uint16_t)BARCODE_CMD_NONE) {
+                    float angle_deg = 0.0f;
+                    if (pending_turn == (uint16_t)BARCODE_CMD_LEFT) angle_deg = 90.0f;
+                    else if (pending_turn == (uint16_t)BARCODE_CMD_RIGHT) angle_deg = -90.0f;
+                    else if (pending_turn == (uint16_t)BARCODE_CMD_UTURN) angle_deg = 180.0f;
+
+                    ++next_turn_id;
+                    if (next_turn_id == 0U) ++next_turn_id;
+                    if (turn_motion(angle_deg, next_turn_id)) {
+                        active_turn_id = next_turn_id;
+                        turn_in_progress = true;
+                        pending_turn = (uint16_t)BARCODE_CMD_NONE;
+                    } else {
+                        printf("Controller: motion turn command was not accepted\n");
+                        fault_code = 6U;
+                        state = MISSION_FAULT;
+                        active_turn_id = 0U;
+                        pending_turn = (uint16_t)BARCODE_CMD_NONE;
+                        xEventGroupSetBits(g_system_event_group, SYSTEM_BIT_FAULT);
+                        xEventGroupClearBits(g_system_event_group, SYSTEM_BIT_MISSION_RUN);
+                        brake_motion();
                     }
                 }
-                if (state == MISSION_FOLLOWING) {
+                if (state == MISSION_FOLLOWING && !turn_in_progress) {
                     const float correction = fminf(0.25f, fmaxf(-0.25f, current_line_error * 0.18f));
                     set_motion(base_speed + correction, base_speed - correction);
                 } else if (state == MISSION_AVOIDING && avoidance_phase == AVOIDANCE_REACQUIRE &&
@@ -110,21 +160,34 @@ static void controller_task(void *argument)
                 break;
             case SYSTEM_EVENT_MOTION:
                 distance_m = event.data.motion.distance_m;
+                if (turn_in_progress && event.data.motion.turn_complete &&
+                    event.data.motion.turn_id == active_turn_id) {
+                    turn_in_progress = false;
+                    active_turn_id = 0U;
+                }
                 break;
             case SYSTEM_EVENT_IMU:
                 if (event.data.imu.sensor_valid) {
                     imu_healthy = true;
                     hump_m = event.data.imu.estimated_hump_height_m;
                     if (event.data.imu.shock_detected) {
-                        base_speed = fminf(base_speed, ROBOT_BASE_SPEED * 0.7f);
+                        fault_code = 5U;
+                        state = MISSION_FAULT;
+                        turn_in_progress = false;
+                        pending_turn = (uint16_t)BARCODE_CMD_NONE;
+                        xEventGroupSetBits(g_system_event_group, SYSTEM_BIT_FAULT);
+                        xEventGroupClearBits(g_system_event_group, SYSTEM_BIT_MISSION_RUN);
+                        brake_motion();
                     }
                 } else {
                     imu_healthy = false;
                     fault_code = 2U;
                     state = MISSION_FAULT;
+                    turn_in_progress = false;
+                    pending_turn = (uint16_t)BARCODE_CMD_NONE;
                     xEventGroupSetBits(g_system_event_group, SYSTEM_BIT_FAULT);
                     xEventGroupClearBits(g_system_event_group, SYSTEM_BIT_MISSION_RUN);
-                    stop_motion();
+                    brake_motion();
                 }
                 break;
             case SYSTEM_EVENT_OBSTACLE:
@@ -134,11 +197,15 @@ static void controller_task(void *argument)
                     if (event.data.obstacle.bypass_direction == 0) {
                         fault_code = 4U;
                         state = MISSION_FAULT;
+                        turn_in_progress = false;
+                        pending_turn = (uint16_t)BARCODE_CMD_NONE;
                         xEventGroupSetBits(g_system_event_group, SYSTEM_BIT_FAULT);
                         xEventGroupClearBits(g_system_event_group, SYSTEM_BIT_MISSION_RUN);
-                        stop_motion();
+                        brake_motion();
                     } else {
                         state = MISSION_AVOIDING;
+                        turn_in_progress = false;
+                        pending_turn = (uint16_t)BARCODE_CMD_NONE;
                         avoidance_phase = AVOIDANCE_TURN_OUT;
                         avoidance_direction = event.data.obstacle.bypass_direction < 0 ? -1 : 1;
                         avoidance_deadline = xTaskGetTickCount() + pdMS_TO_TICKS(350U);
@@ -154,9 +221,11 @@ static void controller_task(void *argument)
             case SYSTEM_EVENT_FAULT:
                 fault_code = 1U;
                 state = MISSION_FAULT;
+                turn_in_progress = false;
+                pending_turn = (uint16_t)BARCODE_CMD_NONE;
                 xEventGroupSetBits(g_system_event_group, SYSTEM_BIT_FAULT);
                 xEventGroupClearBits(g_system_event_group, SYSTEM_BIT_MISSION_RUN);
-                stop_motion();
+                brake_motion();
                 break;
             default:
                 break;
@@ -185,11 +254,12 @@ static void controller_task(void *argument)
             case AVOIDANCE_REACQUIRE:
                 fault_code = 3U;
                 state = MISSION_FAULT;
+                turn_in_progress = false;
                 avoidance_phase = AVOIDANCE_NONE;
                 xEventGroupSetBits(g_system_event_group, SYSTEM_BIT_FAULT);
                 xEventGroupClearBits(g_system_event_group, SYSTEM_BIT_OBSTACLE);
                 xEventGroupClearBits(g_system_event_group, SYSTEM_BIT_MISSION_RUN);
-                stop_motion();
+                brake_motion();
                 break;
             default:
                 break;
