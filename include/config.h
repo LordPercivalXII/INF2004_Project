@@ -62,9 +62,14 @@
 
 #define MOTOR_ENCODER_TICKS_PER_REV  360.0f
 #define MOTOR_WHEEL_DIAMETER_M       0.065f
+#define MOTOR_TRACK_WIDTH_M          0.150f /* Provisional; measure wheel-center spacing before use. */
+#define MOTOR_ENCODER_TIMEOUT_MS     500U
 #define MOTOR_PID_KP                 0.55f
 #define MOTOR_PID_KI                 0.08f
 #define MOTOR_PID_KD                 0.00f
+#define MOTOR_TURN_SPEED_M_S         0.18f
+#define MOTOR_TURN_MIN_SPEED_M_S     0.07f
+#define MOTOR_TURN_SLOWDOWN_DEG      25.0f
 
 /* ---- Buddy 3: line tracking (FR7, NFR6) ---- */
 #define IR_RING_SIZE                64U   /* power-of-two ISR-to-task sample buffer */
@@ -87,6 +92,7 @@
 #define BARCODE_EDGE_QUEUE_LENGTH    128U
 #define BARCODE_LEFT_CHAR            'L'   /* set these to the track's barcode convention */
 #define BARCODE_RIGHT_CHAR           'R'
+#define BARCODE_UTURN_CHAR           'U'
 
 #define OBSTACLE_TRIGGER_CM          35.0f
 #define ULTRASONIC_MAX_CM            250.0f

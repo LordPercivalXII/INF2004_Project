@@ -52,7 +52,7 @@ int main(void)
 
     g_system_event_queue = xQueueCreate(ROBOT_EVENT_QUEUE_LENGTH, sizeof(SystemEvent));
     g_control_command_queue = xQueueCreate(ROBOT_QUEUE_LENGTH, sizeof(ControlCommand));
-    g_motion_command_queue = xQueueCreate(ROBOT_QUEUE_LENGTH, sizeof(MotionCommand));
+    g_motion_command_queue = xQueueCreate(1U, sizeof(MotionCommand));
     g_telemetry_queue = xQueueCreate(ROBOT_QUEUE_LENGTH, sizeof(TelemetryMessage));
     g_system_event_group = xEventGroupCreate();
 
