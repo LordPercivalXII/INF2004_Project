@@ -44,6 +44,7 @@ typedef enum
 {
     MOTION_STOP = 0,
     MOTION_DRIVE,
+    MOTION_TURN,
     MOTION_BRAKE
 } motion_command_type_t;
 
@@ -53,7 +54,8 @@ typedef enum
 {
     BARCODE_CMD_NONE  = 0,      /* Decoded, no turn: continue straight. */
     BARCODE_CMD_LEFT  = 1,
-    BARCODE_CMD_RIGHT = 2
+    BARCODE_CMD_RIGHT = 2,
+    BARCODE_CMD_UTURN = 3
 } barcode_command_t;
 
 typedef struct
@@ -73,6 +75,8 @@ typedef struct
     float       left_speed_m_s;
     float       right_speed_m_s;
     float       distance_m;
+    bool        turn_complete;
+    uint32_t    turn_id;
 } motion_event_t;
 
 typedef enum
@@ -134,6 +138,8 @@ typedef struct
     motion_command_type_t   type;
     float                   left_speed;
     float                   right_speed;
+    float                   turn_angle_deg;
+    uint32_t                turn_id;
 } motion_command_t;
 
 typedef struct

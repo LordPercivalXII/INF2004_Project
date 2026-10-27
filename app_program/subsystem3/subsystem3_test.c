@@ -50,8 +50,9 @@ subsystem3_test (void)
     TEST_CHECK("S3-U04",
                (((uint16_t) BARCODE_CMD_LEFT == barcode_to_command("L")) &&
                 ((uint16_t) BARCODE_CMD_RIGHT == barcode_to_command("R")) &&
+                ((uint16_t) BARCODE_CMD_UTURN == barcode_to_command("U")) &&
                 ((uint16_t) BARCODE_CMD_NONE == barcode_to_command("7"))),
-               "payload maps to turn command");
+               "payload maps to turn command including U-turn");
 
     TEST_CHECK("S3-U05",
                ((line_compute_error(1.0f, 0.0f, true, 0.0f) < -0.99f) &&

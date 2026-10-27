@@ -1,7 +1,8 @@
 /** @file subsystem2.h
  *
  * @brief Subsystem 2 -- Buddy 2: motion (motors, wheel encoders, speed
- *        PID).  Student ID: <student ID>.  Port of src/buddy2_motion/.
+ *        PID, encoder odometry and closed-loop turns.  Student ID:
+ *        <student ID>.  Port of src/buddy2_motion/.
  *
  * Public interface (TEAM.md section 5):
  *   IF-03  controller -> S2: motion commands, message buffer
@@ -23,6 +24,8 @@
 extern ID gh_motion_cmd_mbf;
 
 bool motion_send_command(motion_command_t const * p_command);
+/* MOTION_TURN commands require a nonzero turn_id; completion is reported in
+ * the matching SYSTEM_EVENT_MOTION event. */
 
 /* Private to subsystem 2. */
 typedef struct

@@ -90,6 +90,10 @@ barcode_to_command (char const * p_text)
     {
         command = (uint16_t) BARCODE_CMD_RIGHT;
     }
+    else if (BARCODE_UTURN_CHAR == p_text[0])
+    {
+        command = (uint16_t) BARCODE_CMD_UTURN;
+    }
     else
     {
         /* Any other payload: continue straight. */

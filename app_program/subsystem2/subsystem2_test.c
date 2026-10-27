@@ -31,11 +31,16 @@ subsystem2_test (void)
     TEST_CHECK("S2-U02", (output > 0.3f),
                "PID pushes harder when the wheel is too slow");
 
+    motion_pid_reset(&pid);
+    output = motion_pid_step(&pid, 2.0f, 0.0f, 0.02f);
+    TEST_CHECK("S2-U03", ((output == 1.0f) && (pid.integral == 0.0f)),
+               "PID clamps output and prevents integral windup");
+
     /* The controller drives in simulation, so the encoders must move. */
     encoder_read(&left_before, &right_before);
     (void) tk_dly_tsk(200);
     encoder_read(&left_after, &right_after);
-    TEST_CHECK("S2-U03", ((left_after != left_before) ||
+    TEST_CHECK("S2-U04", ((left_after != left_before) ||
                           (right_after != right_before) ||
                           (0 == ROBOT_SIMULATION)),
                "encoder counts advance while driving (simulation)");

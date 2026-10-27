@@ -35,6 +35,7 @@
 #define FAULT_IMU               (2U)
 #define FAULT_REACQUIRE         (3U)
 #define FAULT_BOXED_IN          (4U)
+#define FAULT_MOTION_COMMAND    (6U)
 
 ID gh_event_mbf   = E_ID;
 ID gh_control_mbf = E_ID;
@@ -60,6 +61,10 @@ typedef struct
     uint32_t            barcode;
     uint32_t            fault_code;
     bool                b_imu_healthy;
+    bool                b_turn_in_progress;
+    uint16_t            pending_turn;
+    uint32_t            next_turn_id;
+    uint32_t            active_turn_id;
     avoidance_phase_t   phase;
     int8_t              direction;
     uint32_t            deadline_ms;
@@ -166,7 +171,7 @@ ctrl_clear_bits (uint32_t bits)
 static void
 ctrl_set_motion (float left_speed, float right_speed)
 {
-    motion_command_t command;
+    motion_command_t command = {0};
 
     command.type        = MOTION_DRIVE;
     command.left_speed  = left_speed;
@@ -174,10 +179,24 @@ ctrl_set_motion (float left_speed, float right_speed)
     (void) motion_send_command(&command);
 }
 
+static bool
+ctrl_turn_motion (float angle_deg, uint32_t turn_id)
+{
+    motion_command_t command = {0};
+
+    command.type           = MOTION_TURN;
+    command.left_speed     = 0.0f;
+    command.right_speed    = 0.0f;
+    command.turn_angle_deg = angle_deg;
+    command.turn_id        = turn_id;
+
+    return (motion_send_command(&command));
+}
+
 static void
 ctrl_stop_motion (void)
 {
-    motion_command_t command;
+    motion_command_t command = {0};
 
     command.type        = MOTION_STOP;
     command.left_speed  = 0.0f;
@@ -198,6 +217,9 @@ ctrl_enter_fault (ctrl_state_t * p_ctrl, uint32_t code)
 {
     p_ctrl->fault_code = code;
     p_ctrl->state      = MISSION_FAULT;
+    p_ctrl->b_turn_in_progress = false;
+    p_ctrl->active_turn_id = 0U;
+    p_ctrl->pending_turn = (uint16_t) BARCODE_CMD_NONE;
     ctrl_set_bits(SYSTEM_BIT_FAULT);
     ctrl_clear_bits(SYSTEM_BIT_MISSION_RUN);
     ctrl_stop_motion();
@@ -223,6 +245,9 @@ ctrl_handle_command (ctrl_state_t * p_ctrl,
 
         case CONTROL_STOP:
             p_ctrl->state = MISSION_IDLE;
+            p_ctrl->b_turn_in_progress = false;
+            p_ctrl->active_turn_id = 0U;
+            p_ctrl->pending_turn = (uint16_t) BARCODE_CMD_NONE;
             ctrl_clear_bits(SYSTEM_BIT_MISSION_RUN);
             ctrl_stop_motion();
             break;
@@ -260,27 +285,58 @@ ctrl_handle_line (ctrl_state_t * p_ctrl, line_event_t const * p_line)
     if (p_line->b_barcode_valid)
     {
         p_ctrl->barcode = p_line->barcode;
+        p_ctrl->pending_turn =
+            ((MISSION_FOLLOWING == p_ctrl->state) &&
+             (p_ctrl->barcode <= (uint32_t) BARCODE_CMD_UTURN))
+            ? (uint16_t) p_ctrl->barcode
+            : (uint16_t) BARCODE_CMD_NONE;
+    }
 
-        /* Waypoint codes 1 and 2 request left/right. */
-        if ((MISSION_FOLLOWING == p_ctrl->state) &&
-            ((uint32_t) BARCODE_CMD_LEFT == p_ctrl->barcode))
+    if ((MISSION_FOLLOWING == p_ctrl->state) && p_line->b_junction &&
+        (!p_ctrl->b_turn_in_progress) &&
+        ((uint16_t) BARCODE_CMD_NONE != p_ctrl->pending_turn))
+    {
+        float angle_deg = 0.0f;
+
+        if ((uint16_t) BARCODE_CMD_LEFT == p_ctrl->pending_turn)
         {
-            ctrl_set_motion(p_ctrl->base_speed * CTRL_BARCODE_SLOW_SIDE,
-                            p_ctrl->base_speed);
+            angle_deg = 90.0f;
         }
-        else if ((MISSION_FOLLOWING == p_ctrl->state) &&
-                 ((uint32_t) BARCODE_CMD_RIGHT == p_ctrl->barcode))
+        else if ((uint16_t) BARCODE_CMD_RIGHT == p_ctrl->pending_turn)
         {
-            ctrl_set_motion(p_ctrl->base_speed,
-                            p_ctrl->base_speed * CTRL_BARCODE_SLOW_SIDE);
+            angle_deg = -90.0f;
+        }
+        else if ((uint16_t) BARCODE_CMD_UTURN == p_ctrl->pending_turn)
+        {
+            angle_deg = 180.0f;
         }
         else
         {
-            /* Other codes: continue straight. */
+            /* Unknown commands are discarded below. */
+        }
+
+        p_ctrl->next_turn_id++;
+        if (0U == p_ctrl->next_turn_id)
+        {
+            p_ctrl->next_turn_id++;
+        }
+
+        if ((0.0f != angle_deg) &&
+            ctrl_turn_motion(angle_deg, p_ctrl->next_turn_id))
+        {
+            p_ctrl->active_turn_id = p_ctrl->next_turn_id;
+            p_ctrl->b_turn_in_progress = true;
+            p_ctrl->pending_turn = (uint16_t) BARCODE_CMD_NONE;
+        }
+        else
+        {
+            p_ctrl->pending_turn = (uint16_t) BARCODE_CMD_NONE;
+            ctrl_enter_fault(p_ctrl, FAULT_MOTION_COMMAND);
         }
     }
 
-    if (MISSION_FOLLOWING == p_ctrl->state)
+    if ((MISSION_FOLLOWING == p_ctrl->state) &&
+        (!p_ctrl->b_turn_in_progress))
     {
         float const correction =
             rmath_clampf(p_ctrl->line_error * CTRL_STEER_GAIN,
@@ -344,6 +400,9 @@ ctrl_handle_obstacle (ctrl_state_t * p_ctrl,
         else
         {
             p_ctrl->state       = MISSION_AVOIDING;
+            p_ctrl->b_turn_in_progress = false;
+            p_ctrl->active_turn_id = 0U;
+            p_ctrl->pending_turn = (uint16_t) BARCODE_CMD_NONE;
             p_ctrl->phase       = AVOIDANCE_TURN_OUT;
             p_ctrl->direction   = (p_obs->bypass_direction < 0) ? -1 : 1;
             p_ctrl->deadline_ms = board_millis() + CTRL_TURN_OUT_MS;
@@ -373,6 +432,13 @@ ctrl_handle_event (ctrl_state_t * p_ctrl, system_event_t const * p_event)
 
         case SYSTEM_EVENT_MOTION:
             p_ctrl->distance_m = p_event->data.motion.distance_m;
+            if (p_ctrl->b_turn_in_progress &&
+                p_event->data.motion.turn_complete &&
+                (p_event->data.motion.turn_id == p_ctrl->active_turn_id))
+            {
+                p_ctrl->b_turn_in_progress = false;
+                p_ctrl->active_turn_id = 0U;
+            }
             break;
 
         case SYSTEM_EVENT_IMU:
@@ -480,6 +546,10 @@ controller_task (INT stacd, void * p_exinf)
 
     ctrl.state             = MISSION_IDLE;
     ctrl.base_speed        = ROBOT_BASE_SPEED;
+    ctrl.b_turn_in_progress = false;
+    ctrl.pending_turn       = (uint16_t) BARCODE_CMD_NONE;
+    ctrl.next_turn_id       = 0U;
+    ctrl.active_turn_id     = 0U;
     ctrl.phase             = AVOIDANCE_NONE;
     ctrl.direction         = 1;
     ctrl.last_telemetry_ms = board_millis();
