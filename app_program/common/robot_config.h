@@ -34,11 +34,13 @@
 #define ROBOT_MAX_SPEED                 (0.70f)
 #define ROBOT_MIN_SPEED                 (0.10f)
 
-/* ---- Cytron Robo Pico pin map (Group 19 Design Review) ---- */
-#define PIN_MOTOR_LEFT_PWM              (8U)
-#define PIN_MOTOR_LEFT_DIR              (9U)
-#define PIN_MOTOR_RIGHT_PWM             (10U)
-#define PIN_MOTOR_RIGHT_DIR             (11U)
+/* ---- Cytron Robo Pico pin map (Group 19 Design Review) ----
+ * Measured on the car: motor channel GP10/GP11 drives the physical left
+ * wheel and GP8/GP9 the physical right wheel, so they are swapped here. */
+#define PIN_MOTOR_LEFT_PWM              (10U)
+#define PIN_MOTOR_LEFT_DIR              (11U)
+#define PIN_MOTOR_RIGHT_PWM             (8U)
+#define PIN_MOTOR_RIGHT_DIR             (9U)
 #define PIN_ENCODER_LEFT_A              (12U)
 #define PIN_ENCODER_LEFT_B              (13U)
 #define PIN_ENCODER_RIGHT_A             (14U)
@@ -80,9 +82,28 @@
 #define IMU_FILTER_WINDOW_SIZE          (5U)        /* moving average taps  */
 
 /* ---- Buddy 2: motors and encoders ---- */
-#define MOTOR_ENCODER_TICKS_PER_REV     (360.0f)
-#define MOTOR_WHEEL_DIAMETER_M          (0.065f)
-#define MOTOR_TRACK_WIDTH_M             (0.150f)  /* Provisional; measure wheel-center spacing. */
+#define MOTOR_ENCODER_TICKS_PER_REV     (630.0f)
+#define MOTOR_WHEEL_DIAMETER_M          (0.066f)
+#define MOTOR_TRACK_WIDTH_M             (0.110f)  /* Measured wheel-center spacing, approx. */
+/* 1 = motors off and raw encoder ticks printed (build TEST=1 SIM=0). */
+#ifndef S2_ENCODER_CALIBRATION
+#define S2_ENCODER_CALIBRATION          (0)
+#endif
+/* With calibration on: 1 = also spin each wheel alone to check direction. */
+#ifndef S2_MOTOR_DIR_TEST
+#define S2_MOTOR_DIR_TEST               (0)
+#endif
+/* Motor direction: 1.0 = normal, -1.0 = wired/mounted the other way round. */
+#define MOTOR_LEFT_DIR_SIGN             (1.0f)
+#define MOTOR_RIGHT_DIR_SIGN            (-1.0f)
+/* Cap on motor PWM duty (0..1); lower = slower wheels. */
+#define MOTOR_MAX_DUTY                  (0.70f)
+/* Smallest duty that still overcomes motor friction (0 = disabled). */
+#define MOTOR_MIN_DUTY                  (0.0f)
+/* 1 = after boot, run straight/turn bench drive and print results. */
+#ifndef S2_BENCH_DRIVE
+#define S2_BENCH_DRIVE                  (0)
+#endif
 #define MOTOR_ENCODER_TIMEOUT_MS        (500U)
 #define MOTOR_PID_KP                    (0.55f)
 #define MOTOR_PID_KI                    (0.08f)

@@ -15,32 +15,41 @@
 #define MOTOR_PWM_FULL      (65535.0f)
 
 /*!
- * @brief Configure both PWM outputs and direction pins; motors stopped.
+ * @brief Configure both H-bridge inputs of both motors; motors stopped.
+ *
+ * Driver truth table: A high/B low = forward, A low/B high = backward,
+ * both low = brake.  Both inputs are PWM-capable (GP8/GP9, GP10/GP11).
  */
 void
 motor_init (void)
 {
     board_pwm_init(PIN_MOTOR_LEFT_PWM, MOTOR_PWM_CLKDIV, MOTOR_PWM_WRAP);
+    board_pwm_init(PIN_MOTOR_LEFT_DIR, MOTOR_PWM_CLKDIV, MOTOR_PWM_WRAP);
     board_pwm_init(PIN_MOTOR_RIGHT_PWM, MOTOR_PWM_CLKDIV, MOTOR_PWM_WRAP);
-    board_gpio_output(PIN_MOTOR_LEFT_DIR, false);
-    board_gpio_output(PIN_MOTOR_RIGHT_DIR, false);
+    board_pwm_init(PIN_MOTOR_RIGHT_DIR, MOTOR_PWM_CLKDIV, MOTOR_PWM_WRAP);
 }
 
 /*!
  * @brief Drive one motor.
  *
- * @param[in] pwm_pin  PWM pin of the motor.
- * @param[in] dir_pin  Direction pin of the motor.
- * @param[in] duty     -1.0 (full reverse) .. +1.0 (full forward).
+ * @param[in] pin_a  Input A of the motor (forward PWM).
+ * @param[in] pin_b  Input B of the motor (reverse PWM).
+ * @param[in] duty   -1.0 (full reverse) .. +1.0 (full forward).
  */
 void
-motor_set (uint32_t pwm_pin, uint32_t dir_pin, float duty)
+motor_set (uint32_t pin_a, uint32_t pin_b, float duty)
 {
-    float const bounded = rmath_clampf(duty, -1.0f, 1.0f);
+    float const sign = (PIN_MOTOR_RIGHT_DIR == pin_b) ?
+                       MOTOR_RIGHT_DIR_SIGN : MOTOR_LEFT_DIR_SIGN;
+    float const scaled = duty * sign;
+    float const lifted = (rmath_absf(scaled) < 0.01f) ? 0.0f :
+        ((scaled > 0.0f) ? (MOTOR_MIN_DUTY + (scaled * (1.0f - MOTOR_MIN_DUTY)))
+                         : (-MOTOR_MIN_DUTY + (scaled * (1.0f - MOTOR_MIN_DUTY))));
+    float const bounded = rmath_clampf(lifted, -MOTOR_MAX_DUTY, MOTOR_MAX_DUTY);
+    uint32_t const level = (uint32_t) (rmath_absf(bounded) * MOTOR_PWM_FULL);
 
-    board_gpio_write(dir_pin, (bounded >= 0.0f));
-    board_pwm_set_level(pwm_pin,
-                        (uint32_t) (rmath_absf(bounded) * MOTOR_PWM_FULL));
+    board_pwm_set_level(pin_a, (bounded >= 0.0f) ? level : 0U);
+    board_pwm_set_level(pin_b, (bounded >= 0.0f) ? 0U : level);
 }
 
 /*** end of file ***/

@@ -67,10 +67,21 @@ motion_command_is_valid (motion_command_t const * p_command)
  *
  * @return true if queued.
  */
+#if S2_BENCH_DRIVE
+volatile bool g_motion_bench_owner = false;   /* bench test owns the motors */
+#endif
+
 bool
 motion_send_command (motion_command_t const * p_command)
 {
     bool b_ok = false;
+
+#if S2_BENCH_DRIVE
+    if (g_motion_bench_owner)
+    {
+        return (false);     /* controller commands are ignored on the bench */
+    }
+#endif
 
     if (motion_command_is_valid(p_command) && (gh_motion_cmd_mbf > 0))
     {
@@ -424,7 +435,7 @@ motion_task (INT stacd, void * p_exinf)
                                         interval_s);
         }
 
-#if !ROBOT_SIMULATION
+#if (!ROBOT_SIMULATION) && (!S2_ENCODER_CALIBRATION)
         motor_set(PIN_MOTOR_LEFT_PWM, PIN_MOTOR_LEFT_DIR, left_out);
         motor_set(PIN_MOTOR_RIGHT_PWM, PIN_MOTOR_RIGHT_DIR, right_out);
 #else
