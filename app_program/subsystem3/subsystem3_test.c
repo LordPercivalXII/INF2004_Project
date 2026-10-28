@@ -142,6 +142,30 @@ subsystem3_test (void)
                           s3_round_trip("%", false)),
                "punctuation characters decode both ways");
 
+    /* Real sensor: bars ~40% of a narrow element too short, spaces too
+       long (threshold off mid-grey), plus a stray edge pair at the end
+       of the swipe.  Must still decode, never as a wrong character. */
+    count = code39_encode_widths("A", S3_TEST_NARROW * 3U, S3_TEST_WIDE * 3U,
+                                 widths, CODE39_MAX_ELEMENTS);
+    {
+        uint32_t idx;
+        bool     b_rev = true;
+
+        for (idx = 0U; idx < count; idx++)
+        {
+            widths[idx] = (0U == (idx % 2U)) ? (widths[idx] - 1200U)
+                                             : (widths[idx] + 1200U);
+        }
+
+        widths[count]      = 5000U;     /* stray space + bar */
+        widths[count + 1U] = 2000U;
+        TEST_CHECK("S3-U14",
+                   (code39_decode_dir(widths, count + 2U, text,
+                                      sizeof(text), &b_rev) &&
+                    ('A' == text[0]) && ('\0' == text[1]) && !b_rev),
+                   "edge-biased scan with stray edges decodes \"A\"");
+    }
+
     TEST_CHECK("S3-U05",
                ((line_compute_error(1.0f, 0.0f, true, 0.0f) < -0.99f) &&
                 (line_compute_error(0.0f, 1.0f, true, 0.0f) > 0.99f) &&

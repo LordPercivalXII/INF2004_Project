@@ -131,7 +131,8 @@
 #define BARCODE_GLITCH_US               (500U)
 #define BARCODE_END_GAP_MIN_MS          (150U)
 #define BARCODE_END_GAP_FACTOR          (4U)
-#define BARCODE_EDGE_QUEUE_LENGTH       (128U)
+#define BARCODE_END_GAP_MAX_MS          (1000U)  /* cap: slow scans end */
+#define BARCODE_EDGE_QUEUE_LENGTH       (512U)   /* absorbs comparator chatter */
 
 /* ---- Buddy 3: junction routing from MQTT (subsystem3/route.c) ----
  * Which character means left/right/straight/U-turn is NOT set here: it

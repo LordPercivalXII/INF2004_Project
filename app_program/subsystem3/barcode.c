@@ -201,9 +201,21 @@ barcode_session_wait (barcode_session_t const * p_session)
         end_gap_ms = (p_session->widest_us * BARCODE_END_GAP_FACTOR) /
                      1000U;
 
+        /* Quiet time that ends a scan: 4x the widest element, but at
+           least 150 ms and at most 1 s.  Without the cap, slow or
+           stop-and-go scans grow the gap without limit (a 3 s element
+           -> 12 s) and the scan never ends. */
         if (end_gap_ms < BARCODE_END_GAP_MIN_MS)
         {
             end_gap_ms = BARCODE_END_GAP_MIN_MS;
+        }
+        else if (end_gap_ms > BARCODE_END_GAP_MAX_MS)
+        {
+            end_gap_ms = BARCODE_END_GAP_MAX_MS;
+        }
+        else
+        {
+            /* In range. */
         }
 
         elapsed_ms = (board_micros() - p_session->last_edge_us) / 1000U;
@@ -264,6 +276,9 @@ barcode_task (INT stacd, void * p_exinf)
     static barcode_session_t session;   /* keeps 400 B off the stack */
     barcode_element_t        element;
     INT                      result;
+#if S3_BARCODE_DEBUG
+    uint32_t                 glitches = 0U;
+#endif
 
     (void) stacd;
     (void) p_exinf;
@@ -290,10 +305,21 @@ barcode_task (INT stacd, void * p_exinf)
         if (result > 0)
         {
 #if S3_BARCODE_DEBUG
-            /* Live view: one line per level change on GP28. */
-            tm_printf((UB *) "S3 dbg: edge, %s lasted %u us\n",
-                      (0U != element.is_black) ? "BLACK" : "white",
-                      (unsigned int) element.width_us);
+            /* Live view: one line per real bar or space.  Comparator
+               chatter (< BARCODE_GLITCH_US) is counted, not printed, so
+               it cannot flood the console. */
+            if (element.width_us >= BARCODE_GLITCH_US)
+            {
+                tm_printf((UB *) "S3 dbg: %s %u us  (+%u glitch edges)\n",
+                          (0U != element.is_black) ? "BLACK" : "white",
+                          (unsigned int) element.width_us,
+                          (unsigned int) glitches);
+                glitches = 0U;
+            }
+            else
+            {
+                glitches++;
+            }
 #endif
             barcode_session_add(&session, &element);
         }

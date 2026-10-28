@@ -81,25 +81,73 @@ code39_lookup_pattern (uint16_t pattern, char * p_symbol)
 }
 
 /*!
- * @brief Classify one character's 9 elements: the 3 widest are wide.
+ * @brief Estimate the edge bias d of one character.
+ *
+ * An IR sensor whose threshold is not exactly at mid-grey switches late
+ * on one colour and early on the other, so every bar comes out shorter
+ * by some time d and every space longer by d (or the reverse).  Narrow
+ * bars and narrow spaces must be equal in Code 39, and every character
+ * has at least 3 narrow bars and 1 narrow space, so
+ * d = (narrowest space - narrowest bar) / 2.
+ */
+static int32_t
+code39_estimate_bias (uint32_t const * p_elements)
+{
+    uint32_t min_bar   = UINT32_MAX;
+    uint32_t min_space = UINT32_MAX;
+    uint32_t idx;
+
+    for (idx = 0U; idx < CODE39_CHAR_ELEMENTS; idx++)
+    {
+        if (0U == (idx % 2U))
+        {
+            min_bar = (p_elements[idx] < min_bar) ? p_elements[idx] : min_bar;
+        }
+        else
+        {
+            min_space = (p_elements[idx] < min_space) ? p_elements[idx]
+                                                      : min_space;
+        }
+    }
+
+    return (((int32_t) min_space - (int32_t) min_bar) / 2);
+}
+
+/*!
+ * @brief Classify one character's 9 elements after adding bias to bars
+ *        and subtracting it from spaces: the 3 widest are wide.
  *        Rejected if wide and narrow are not clearly separated.
+ *
+ * @param[in]  p_elements  9 widths, starting with a bar.
+ * @param[in]  bias        Edge bias d (0 = take widths as measured).
+ * @param[out] p_pattern   9-bit wide/narrow pattern (MSB first).
+ * @param[out] p_split     Wide/narrow threshold (corrected units).
  */
 static bool
-code39_classify (uint32_t const * p_elements, uint16_t * p_pattern,
-                 uint32_t * p_split)
+code39_classify (uint32_t const * p_elements, int32_t bias,
+                 uint16_t * p_pattern, uint32_t * p_split)
 {
+    uint32_t corrected[CODE39_CHAR_ELEMENTS];
     uint32_t sorted[CODE39_CHAR_ELEMENTS];
+    int32_t  value;
     uint32_t narrow_max;
     uint32_t wide_min;
     uint32_t split;
     uint16_t bits = 0U;
     bool     b_ok = false;
-    uint32_t   idx;
-    uint32_t   pos;
+    uint32_t idx;
+    uint32_t pos;
 
     for (idx = 0U; idx < CODE39_CHAR_ELEMENTS; idx++)
     {
-        uint32_t const key = p_elements[idx];
+        value = (int32_t) p_elements[idx] +
+                ((0U == (idx % 2U)) ? bias : -bias);
+        corrected[idx] = (value > 0) ? (uint32_t) value : 1U;
+    }
+
+    for (idx = 0U; idx < CODE39_CHAR_ELEMENTS; idx++)
+    {
+        uint32_t const key = corrected[idx];
 
         pos = idx;
 
@@ -124,12 +172,37 @@ code39_classify (uint32_t const * p_elements, uint16_t * p_pattern,
         for (idx = 0U; idx < CODE39_CHAR_ELEMENTS; idx++)
         {
             bits = (uint16_t) ((uint32_t) (bits << 1U) |
-                               ((p_elements[idx] > split) ? 1U : 0U));
+                               ((corrected[idx] > split) ? 1U : 0U));
         }
 
         *p_pattern = bits;
         *p_split   = split;
         b_ok       = true;
+    }
+
+    return (b_ok);
+}
+
+/*!
+ * @brief Decode one character: as measured first, and only if that does
+ *        not give a valid character, again with edge-bias correction.
+ */
+static bool
+code39_decode_char (uint32_t const * p_elements, char * p_symbol,
+                    uint32_t * p_split, int32_t * p_bias)
+{
+    uint16_t pattern = 0U;
+    bool     b_ok;
+
+    *p_bias = 0;
+    b_ok = code39_classify(p_elements, 0, &pattern, p_split) &&
+           code39_lookup_pattern(pattern, p_symbol);
+
+    if (!b_ok)
+    {
+        *p_bias = code39_estimate_bias(p_elements);
+        b_ok = code39_classify(p_elements, *p_bias, &pattern, p_split) &&
+               code39_lookup_pattern(pattern, p_symbol);
     }
 
     return (b_ok);
@@ -154,16 +227,17 @@ code39_decode_forward (uint32_t const * p_widths, uint32_t count,
             uint32_t const * p_elem  = &p_widths[chr * CODE39_CHAR_STRIDE];
             bool const       b_edge  = (0U == chr) ||
                                        ((characters - 1U) == chr);
-            uint16_t         pattern = 0U;
             uint32_t         split   = 0U;
+            int32_t          bias    = 0;
             char             symbol  = '\0';
 
-            b_ok = code39_classify(p_elem, &pattern, &split) &&
-                   code39_lookup_pattern(pattern, &symbol);
+            b_ok = code39_decode_char(p_elem, &symbol, &split, &bias);
 
-            /* Inter-character gap must be narrow-ish, not quiet zone. */
+            /* Inter-character gap (a space, so minus the bias) must be
+               narrow-ish, not a quiet zone. */
             if (b_ok && ((chr + 1U) < characters) &&
-                (p_elem[CODE39_CHAR_ELEMENTS] > (CODE39_GAP_LIMIT * split)))
+                (((int32_t) p_elem[CODE39_CHAR_ELEMENTS] - bias) >
+                 (int32_t) (CODE39_GAP_LIMIT * split)))
             {
                 b_ok = false;
             }
@@ -212,23 +286,42 @@ code39_decode_dir (uint32_t const * p_widths, uint32_t count, char * p_out,
     uint32_t reversed[CODE39_MAX_ELEMENTS];
     bool     b_ok       = false;
     bool     b_backward = false;
+    uint32_t trim;
+    uint32_t lead;
+    uint32_t length;
     uint32_t idx;
 
     if ((NULL != p_widths) && (NULL != p_out) && (0U != out_size) &&
         (count <= CODE39_MAX_ELEMENTS))
     {
-        b_ok = code39_decode_forward(p_widths, count, p_out, out_size);
-
-        if (!b_ok)
+        for (idx = 0U; idx < count; idx++)
         {
-            for (idx = 0U; idx < count; idx++)
-            {
-                reversed[idx] = p_widths[count - 1U - idx];
-            }
+            reversed[idx] = p_widths[count - 1U - idx];
+        }
 
-            b_ok       = code39_decode_forward(reversed, count, p_out,
-                                               out_size);
-            b_backward = b_ok;
+        /* Try the whole scan first, then windows with an even number of
+           stray elements (an extra wobble when the swipe starts or stops)
+           removed from the ends, fewest removed first.  Windows keep a
+           bar at both ends; '*' start/stop and the gap checks reject
+           anything that is not a complete symbol. */
+        for (trim = 0U; ((trim + CODE39_MIN_ELEMENTS) <= count) && !b_ok;
+             trim += 2U)
+        {
+            length = count - trim;
+
+            for (lead = 0U; (lead <= trim) && !b_ok &&
+                 (0U == ((length + 1U) % CODE39_CHAR_STRIDE)); lead += 2U)
+            {
+                b_ok = code39_decode_forward(&p_widths[lead], length, p_out,
+                                             out_size);
+
+                if (!b_ok)
+                {
+                    b_ok = code39_decode_forward(&reversed[lead], length,
+                                                 p_out, out_size);
+                    b_backward = b_ok;
+                }
+            }
         }
     }
 
