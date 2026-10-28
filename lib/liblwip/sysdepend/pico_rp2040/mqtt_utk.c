@@ -22,6 +22,12 @@
 #include "mqtt_utk.h"
 #include <tm/tmonitor.h>
 
+/* Route table topic for subsystem 3; override in config/wifi_secrets.h. */
+#ifndef MQTT_ROUTE_TOPIC
+#define MQTT_ROUTE_TOPIC        "inf2004/car/route"
+#endif
+#define MQTT_ROUTE_QOS          1
+
 #define MQTT_UTK_HEARTBEAT_MS   5000
 #define MQTT_UTK_KEEPALIVE_S    60
 #define MQTT_UTK_RETRY_MS       3000
@@ -44,6 +50,24 @@ static u16_t		rx_len;
 static u8_t		rx_truncated;
 
 static void heartbeat_timeout(void *arg);
+
+/* Weak default so the library also links without subsystem 3. */
+__attribute__((weak)) void mqtt_utk_route_rx(const char *payload, uint32_t length)
+{
+	(void)payload;
+	(void)length;
+}
+
+/* No <string.h> here (see the header comment about size_t). */
+static u8_t topic_is(const char *topic, const char *wanted)
+{
+	u32_t	i = 0;
+
+	while(topic[i] != '\0' && topic[i] == wanted[i]) {
+		i++;
+	}
+	return (topic[i] == wanted[i])? 1: 0;
+}
 
 /* mqtt.c NUL-terminates the topic before handing it over, but it is only
  * valid for the duration of this call -- copy it out. */
@@ -74,7 +98,12 @@ static void incoming_data_cb(void *arg, const u8_t *data, u16_t len, u8_t flags)
 			/* The console is a terminal -- keep raw bytes from a
 			 * payload this demo did not publish from scrambling it. */
 			UB c = data[i];
-			rx_data[rx_len++] = (c >= 0x20 && c < 0x7f)? c: '.';
+			if(c == '\r' || c == '\n' || c == '\t') {
+				c = ' ';	/* multi-line JSON stays parseable */
+			} else if(c < 0x20 || c >= 0x7f) {
+				c = '?';	/* not '.', a valid Code 39 char */
+			}
+			rx_data[rx_len++] = c;
 		} else {
 			rx_truncated = 1;
 		}
@@ -84,14 +113,21 @@ static void incoming_data_cb(void *arg, const u8_t *data, u16_t len, u8_t flags)
 		rx_data[rx_len] = '\0';
 		tm_printf((UB*)"mqtt: RX [%s] \"%s\"%s\n", rx_topic, rx_data,
 			  rx_truncated? " (truncated)": "");
+
+		/* Route table for subsystem 3: hand over a copy, never wait.
+		 * A truncated table is dropped rather than half-applied. */
+		if(topic_is(rx_topic, MQTT_ROUTE_TOPIC) && !rx_truncated) {
+			mqtt_utk_route_rx((const char *)rx_data, (uint32_t)rx_len);
+		}
 	}
 }
 
 static void subscribe_done_cb(void *arg, err_t result)
 {
-	(void)arg;
+	const char *topic = (arg != NULL)? (const char *)arg: MQTT_TOPIC;
+
 	if(result == ERR_OK) {
-		tm_printf((UB*)"mqtt: subscribed to " MQTT_TOPIC "\n");
+		tm_printf((UB*)"mqtt: subscribed to %s\n", topic);
 	} else {
 		tm_printf((UB*)"mqtt: subscribe failed, err=%d\n", (int)result);
 	}
@@ -163,6 +199,16 @@ static void connection_cb(mqtt_client_t *c, void *arg, mqtt_connection_status_t 
 				     subscribe_done_cb, NULL);
 		if(err != ERR_OK) {
 			tm_printf((UB*)"mqtt: mqtt_subscribe() failed, err=%d\n",
+				  (int)err);
+		}
+
+		/* Junction route table (subsystem 3). Publish it with the
+		 * retain flag so the broker re-delivers it on every
+		 * (re)connect. QoS 1 so a table update is not silently lost. */
+		err = mqtt_subscribe(client, MQTT_ROUTE_TOPIC, MQTT_ROUTE_QOS,
+				     subscribe_done_cb, (void *)MQTT_ROUTE_TOPIC);
+		if(err != ERR_OK) {
+			tm_printf((UB*)"mqtt: route subscribe failed, err=%d\n",
 				  (int)err);
 		}
 

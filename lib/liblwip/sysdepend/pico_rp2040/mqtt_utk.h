@@ -15,4 +15,14 @@
  */
 void mqtt_utk_start(void);
 
+/*
+ * Junction route table for subsystem 3 (app_program/subsystem3/route.c).
+ * Every complete message received on MQTT_ROUTE_TOPIC is passed to this
+ * hook, from the WiFi service task.  The application's definition must
+ * only copy the payload and never block (tk_snd_mbf with TMO_POL).  A weak
+ * empty default in mqtt_utk.c is used if the application has none.
+ */
+#include <stdint.h>
+void mqtt_utk_route_rx(const char *payload, uint32_t length);
+
 #endif /* MQTT_UTK_H */

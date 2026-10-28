@@ -284,11 +284,18 @@ ctrl_handle_line (ctrl_state_t * p_ctrl, line_event_t const * p_line)
 
     if (p_line->b_barcode_valid)
     {
+        /* Decoded character (ASCII), for telemetry.  It is only an
+           instruction once S3 resolves it at the next junction. */
         p_ctrl->barcode = p_line->barcode;
+    }
+
+    if (p_line->b_junction)
+    {
+        /* S3 looked the stored character up in the MQTT route table;
+           BARCODE_CMD_NONE means carry straight on. */
         p_ctrl->pending_turn =
-            ((MISSION_FOLLOWING == p_ctrl->state) &&
-             (p_ctrl->barcode <= (uint32_t) BARCODE_CMD_UTURN))
-            ? (uint16_t) p_ctrl->barcode
+            (p_line->junction_action <= (uint16_t) BARCODE_CMD_UTURN)
+            ? p_line->junction_action
             : (uint16_t) BARCODE_CMD_NONE;
     }
 

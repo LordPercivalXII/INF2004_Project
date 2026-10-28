@@ -6,6 +6,7 @@
  *   -------------------------------------  ------------------------------
  *   s_edge_queue   (xQueueCreate, 128)     gh_barcode_edge_mbf (tk_cre_mbf)
  *   s_result_queue (length 1, overwrite)   result slot + gh_barcode_result_mtx
+ *   (new) MQTT route table                 gh_route_cfg_mbf + gh_route_mtx
  */
 
 #include "subsystem3.h"
@@ -29,6 +30,13 @@ subsystem3_init (void)
 
     cmtx.mtxatr = TA_INHERIT;
     gh_barcode_result_mtx = tk_cre_mtx(&cmtx);
+    gh_route_mtx          = tk_cre_mtx(&cmtx);
+
+    /* IF-06: route table text from the MQTT client (WiFi task). */
+    cmbf.maxmsz = (INT) ROUTE_CONFIG_MAX_LEN;
+    cmbf.bufsz  = (SZ) APP_MBF_BUFSZ(ROUTE_CONFIG_QUEUE_LENGTH,
+                                     ROUTE_CONFIG_MAX_LEN);
+    gh_route_cfg_mbf = tk_cre_mbf(&cmbf);
 
     if (gh_barcode_edge_mbf < E_OK)
     {
@@ -37,6 +45,14 @@ subsystem3_init (void)
     else if (gh_barcode_result_mtx < E_OK)
     {
         er = gh_barcode_result_mtx;
+    }
+    else if (gh_route_mtx < E_OK)
+    {
+        er = gh_route_mtx;
+    }
+    else if (gh_route_cfg_mbf < E_OK)
+    {
+        er = gh_route_cfg_mbf;
     }
     else
     {

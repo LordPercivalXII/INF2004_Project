@@ -1,7 +1,8 @@
 /** @file barcode.c
  *
- * @brief Barcode task (FR8, FR9): debounce edges, collect element widths,
- *        decode Code 39 and leave the result for line_task.
+ * @brief Barcode task (FR8): debounce edges, collect element widths,
+ *        decode Code 39 in either direction and leave the decoded text
+ *        for line_task, which stores it as the next waypoint.
  *
  *   FreeRTOS                              micro T-Kernel
  *   ------------------------------------  -------------------------------
@@ -25,6 +26,8 @@ typedef struct
     barcode_element_t pending;  /* held back so a glitch can merge in */
     uint32_t          widest_us;
     uint32_t          last_edge_us;
+    uint32_t          received;     /* elements received this scan   */
+    uint32_t          merged;       /* of those, merged as glitches  */
 } barcode_session_t;
 
 static barcode_result_t g_result;
@@ -74,34 +77,6 @@ barcode_result_take (barcode_result_t * p_result)
     return (b_taken);
 }
 
-/*!
- * @brief Map decoded text to a turn command.
- */
-uint16_t
-barcode_to_command (char const * p_text)
-{
-    uint16_t command = (uint16_t) BARCODE_CMD_NONE;
-
-    if (BARCODE_LEFT_CHAR == p_text[0])
-    {
-        command = (uint16_t) BARCODE_CMD_LEFT;
-    }
-    else if (BARCODE_RIGHT_CHAR == p_text[0])
-    {
-        command = (uint16_t) BARCODE_CMD_RIGHT;
-    }
-    else if (BARCODE_UTURN_CHAR == p_text[0])
-    {
-        command = (uint16_t) BARCODE_CMD_UTURN;
-    }
-    else
-    {
-        /* Any other payload: continue straight. */
-    }
-
-    return (command);
-}
-
 /* ------------------------------------------------------------------ */
 /* Session                                                             */
 /* ------------------------------------------------------------------ */
@@ -113,6 +88,8 @@ barcode_session_reset (barcode_session_t * p_session)
     p_session->b_active   = false;
     p_session->b_overflow = false;
     p_session->widest_us  = 0U;
+    p_session->received   = 0U;
+    p_session->merged     = 0U;
 }
 
 static void
@@ -134,22 +111,77 @@ barcode_session_push (barcode_session_t * p_session, uint32_t width_us)
     }
 }
 
+#if S3_BARCODE_DEBUG
+/*!
+ * @brief Print one scan: element widths (us), bars marked B, spaces s.
+ *        A clean Code 39 read shows two width groups ~2-3x apart, with
+ *        bars and spaces of the same kind about equally wide.
+ */
+static void
+barcode_debug_dump (barcode_session_t const * p_session, bool b_decoded,
+                    bool b_overflow, barcode_result_t const * p_result)
+{
+    uint32_t idx;
+    uint32_t irqs;
+    uint32_t changes;
+
+    barcode_sensor_take_counts(&irqs, &changes);
+    tm_printf((UB *) "S3 dbg: GP28 IRQs %u, level changes %u, received %u,"
+              " merged %u, now %s\n", (unsigned int) irqs,
+              (unsigned int) changes, (unsigned int) p_session->received,
+              (unsigned int) p_session->merged,
+              (0U != barcode_sensor_is_black()) ? "BLACK" : "WHITE");
+    tm_printf((UB *) "S3 dbg: %u elements, ", (unsigned int) p_session->count);
+
+    if (b_decoded)
+    {
+        tm_printf((UB *) "decoded \"%s\" (%s)\n", p_result->text,
+                  p_result->b_reversed ? "right-to-left" : "left-to-right");
+    }
+    else
+    {
+        tm_printf((UB *) "NOT decoded%s\n",
+                  b_overflow ? " (overflow)" : "");
+    }
+
+    for (idx = 0U; idx < p_session->count; idx++)
+    {
+        tm_printf((UB *) "%c%u%s", (0U == (idx % 2U)) ? 'B' : 's',
+                  (unsigned int) p_session->widths[idx],
+                  (9U == (idx % 10U)) ? "\n" : " ");
+    }
+
+    tm_printf((UB *) "\n");
+}
+#endif /* S3_BARCODE_DEBUG */
+
 static void
 barcode_session_finish (barcode_session_t * p_session)
 {
     barcode_result_t result = {0};
     bool const       b_isr_overflow = barcode_sensor_take_overflow();
+    bool             b_decoded      = false;
 
     /* Final bar: the trailing quiet zone has no closing edge. */
     barcode_session_push(p_session, p_session->pending.width_us);
 
     if ((!p_session->b_overflow) && (!b_isr_overflow) &&
-        code39_decode(p_session->widths, p_session->count, result.text,
-                      sizeof(result.text)))
+        code39_decode_dir(p_session->widths, p_session->count,
+                          result.text, sizeof(result.text),
+                          &result.b_reversed))
     {
-        result.command = barcode_to_command(result.text);
+        /* FR8: either crossing direction; mapping to an action happens
+           later, at the junction (route.c), not here. */
+        b_decoded = true;
         barcode_result_put(&result);
     }
+
+#if S3_BARCODE_DEBUG
+    barcode_debug_dump(p_session, b_decoded,
+                       (p_session->b_overflow || b_isr_overflow), &result);
+#else
+    (void) b_decoded;
+#endif
 
     barcode_session_reset(p_session);
 }
@@ -199,11 +231,13 @@ barcode_session_add (barcode_session_t * p_session,
             p_session->pending      = *p_element;
             p_session->last_edge_us = p_element->end_us;
             p_session->widest_us    = p_element->width_us;
+            p_session->received     = 1U;
         }
     }
     else
     {
         p_session->last_edge_us = p_element->end_us;
+        p_session->received++;
 
         if ((p_element->width_us < BARCODE_GLITCH_US) ||
             (p_element->is_black == p_session->pending.is_black))
@@ -211,6 +245,7 @@ barcode_session_add (barcode_session_t * p_session,
             /* Debounce: merge a short pulse (and the same-colour rest
                after it) into the element in progress. */
             p_session->pending.width_us += p_element->width_us;
+            p_session->merged++;
         }
         else
         {
@@ -235,11 +270,16 @@ barcode_task (INT stacd, void * p_exinf)
 
     barcode_session_reset(&session);
 
-#if !ROBOT_SIMULATION
+#if S3_BARCODE_HW
     if (!barcode_sensor_init())
     {
         tm_printf((UB *) "S3: barcode interrupt registration failed\n");
     }
+
+#if S3_BARCODE_DEBUG
+    tm_printf((UB *) "S3 dbg: barcode sensor GP28 reads %s at start\n",
+              (0U != barcode_sensor_is_black()) ? "BLACK" : "WHITE");
+#endif
 #endif
 
     for (;;)
@@ -249,6 +289,12 @@ barcode_task (INT stacd, void * p_exinf)
 
         if (result > 0)
         {
+#if S3_BARCODE_DEBUG
+            /* Live view: one line per level change on GP28. */
+            tm_printf((UB *) "S3 dbg: edge, %s lasted %u us\n",
+                      (0U != element.is_black) ? "BLACK" : "white",
+                      (unsigned int) element.width_us);
+#endif
             barcode_session_add(&session, &element);
         }
         else if (session.b_active)

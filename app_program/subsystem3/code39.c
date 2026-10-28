@@ -190,23 +190,29 @@ code39_decode_forward (uint32_t const * p_widths, uint32_t count,
 }
 
 /*!
- * @brief Decode element widths into the payload text ('*' removed).
- *        Tries forward, then reverse, so either crossing direction works.
+ * @brief Decode element widths into the payload text ('*' removed) and
+ *        report which way the symbol was crossed (FR8: both directions).
  *
- * @param[in]  p_widths  Element widths, starting with a bar.
- * @param[in]  count     Number of elements.
- * @param[out] p_out     Payload text, NUL-terminated.
- * @param[in]  out_size  Size of p_out (>= payload length + 1).
+ * Code 39 is not palindromic element-by-element, so a symbol read from
+ * right to left only decodes after its element list is reversed.  The
+ * forward order is tried first, then the reversed order.
+ *
+ * @param[in]  p_widths      Element widths, starting with a bar.
+ * @param[in]  count         Number of elements.
+ * @param[out] p_out         Payload text, NUL-terminated.
+ * @param[in]  out_size      Size of p_out (>= payload length + 1).
+ * @param[out] p_b_reversed  true if it decoded right-to-left; may be NULL.
  *
  * @return true on a valid symbol.
  */
 bool
-code39_decode (uint32_t const * p_widths, uint32_t count, char * p_out,
-               uint32_t out_size)
+code39_decode_dir (uint32_t const * p_widths, uint32_t count, char * p_out,
+                   uint32_t out_size, bool * p_b_reversed)
 {
     uint32_t reversed[CODE39_MAX_ELEMENTS];
-    bool     b_ok = false;
-    uint32_t   idx;
+    bool     b_ok       = false;
+    bool     b_backward = false;
+    uint32_t idx;
 
     if ((NULL != p_widths) && (NULL != p_out) && (0U != out_size) &&
         (count <= CODE39_MAX_ELEMENTS))
@@ -220,11 +226,30 @@ code39_decode (uint32_t const * p_widths, uint32_t count, char * p_out,
                 reversed[idx] = p_widths[count - 1U - idx];
             }
 
-            b_ok = code39_decode_forward(reversed, count, p_out, out_size);
+            b_ok       = code39_decode_forward(reversed, count, p_out,
+                                               out_size);
+            b_backward = b_ok;
         }
     }
 
+    if (NULL != p_b_reversed)
+    {
+        *p_b_reversed = b_backward;
+    }
+
     return (b_ok);
+}
+
+/*!
+ * @brief Decode in either direction, without reporting which.
+ *
+ * @return true on a valid symbol.
+ */
+bool
+code39_decode (uint32_t const * p_widths, uint32_t count, char * p_out,
+               uint32_t out_size)
+{
+    return (code39_decode_dir(p_widths, count, p_out, out_size, NULL));
 }
 
 /*!
