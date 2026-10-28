@@ -50,9 +50,14 @@ typedef enum
 
 #define BARCODE_TEXT_MAX    (8U)
 
+/*
+ * What to do at the next junction.  Chosen by subsystem 3 from the
+ * decoded barcode character through the route table received over MQTT
+ * (subsystem3/route.c); no character is hardcoded in the firmware.
+ */
 typedef enum
 {
-    BARCODE_CMD_NONE  = 0,      /* Decoded, no turn: continue straight. */
+    BARCODE_CMD_NONE  = 0,      /* Continue straight through.          */
     BARCODE_CMD_LEFT  = 1,
     BARCODE_CMD_RIGHT = 2,
     BARCODE_CMD_UTURN = 3
@@ -64,8 +69,12 @@ typedef struct
     bool        b_line_detected;
     bool        b_junction;
     bool        b_barcode_valid;
-    uint16_t    barcode;        /* barcode_command_t when b_barcode_valid */
+    bool        b_barcode_reversed; /* read right-to-left               */
+    uint16_t    barcode;            /* decoded character (ASCII) when
+                                       b_barcode_valid                   */
     char        barcode_text[BARCODE_TEXT_MAX + 1U];
+    uint16_t    junction_action;    /* barcode_command_t when b_junction */
+    char        junction_char;      /* character used, '\0' if none     */
 } line_event_t;
 
 typedef struct

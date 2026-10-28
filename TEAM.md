@@ -98,8 +98,11 @@ The receiver creates the kernel object and publishes its ID in its header.
 | IF-03 | controller → S2 | message buffer (owned by S2) | `gh_motion_cmd_mbf` via `motion_send_command()` | `motion_command_t`, 12 deep; S2 keeps the newest |
 | IF-04 | controller → S1 | message buffer (owned by S1) | `gh_telemetry_mbf` via `telemetry_publish()` | `telemetry_message_t`, 12 deep |
 | IF-05 | controller → any | event flag (owned by controller) | `gh_system_flg` | `SYSTEM_BIT_READY/MISSION_RUN/OBSTACLE/FAULT/WIFI_UP` |
+| IF-06 | MQTT (WiFi service task) → S3 | message buffer (owned by S3), `TMO_POL` | `gh_route_cfg_mbf` via `mqtt_utk_route_rx()` | route table text from `MQTT_ROUTE_TOPIC`, e.g. `A:L,B:R,C:S,D:U` (format in `subsystem3/route.c`) |
 
-Internal (inside one subsystem): S3 `gh_barcode_edge_mbf` (edge ISR → `barcode_task`, 128 deep),
+IF-01 line events carry `barcode` (decoded character, ASCII) once per read and, on a junction, `junction_action` (left/right/straight/U-turn) resolved by S3 from the stored character.
+
+Internal (inside one subsystem): S3 `gh_barcode_edge_mbf` (edge ISR → `barcode_task`, 128 deep), S3 `gh_route_mtx` (route table + waypoint memory),
 S3 `gh_barcode_result_mtx` + one-slot result (`barcode_task` → `line_task`),
 S5 `gh_echo_mbf` (echo ISR → `obstacle_task`, 4 deep).
 
@@ -109,9 +112,9 @@ S5 `gh_echo_mbf` (echo ISR → `obstacle_task`, 4 deep).
 |---|---|---|---|---|---|---|---|
 | Task | 32 | 1 | 1 | 1 | 2 | 1 | 1 |
 | Event flag | 16 | 1 | | | | | |
-| Mutex | 12 | | | | 1 | | |
-| Message buffer | 12 | 2 | 1 | 1 | 1 | | 1 |
+| Mutex | 12 | | | | 2 | | |
+| Message buffer | 12 | 2 | 1 | 1 | 2 | | 1 |
 | Cyclic handler | 12 | | | 1 | 1 | 1 | |
 
 The kernel's `iica` driver also creates one event flag. Total: 7 tasks,
-6 message buffers, 3 cyclic handlers — well inside `config/config.h`.
+7 message buffers, 3 cyclic handlers — well inside `config/config.h`.

@@ -132,9 +132,28 @@
 #define BARCODE_END_GAP_MIN_MS          (150U)
 #define BARCODE_END_GAP_FACTOR          (4U)
 #define BARCODE_EDGE_QUEUE_LENGTH       (128U)
-#define BARCODE_LEFT_CHAR               ('L')
-#define BARCODE_RIGHT_CHAR              ('R')
-#define BARCODE_UTURN_CHAR              ('U')
+
+/* ---- Buddy 3: junction routing from MQTT (subsystem3/route.c) ----
+ * Which character means left/right/straight/U-turn is NOT set here: it
+ * arrives at run time on MQTT_ROUTE_TOPIC (config/wifi_secrets.h). */
+#define ROUTE_CONFIG_MAX_LEN            (128U)  /* = mqtt_utk RX buffer  */
+#define ROUTE_CONFIG_QUEUE_LENGTH       (4U)
+#define ROUTE_HISTORY_LENGTH            (8U)    /* decoded chars kept    */
+
+/* 1 = read the REAL barcode sensor (GP28) and stop the scripted A..E
+ * barcodes, even in a SIM=1 build (motors, IMU, ultrasonic and the line
+ * stay simulated; a junction is simulated 3 s after each real read).
+ * Default: real sensor only in SIM=0 builds. */
+#ifndef S3_BARCODE_HW
+#define S3_BARCODE_HW                   (1)
+#endif
+/* 1 = print every scan's bar/space widths and the decode result. */
+#ifndef S3_BARCODE_DEBUG
+#define S3_BARCODE_DEBUG                (1)
+#endif
+#if (!ROBOT_SIMULATION) && (!S3_BARCODE_HW)
+#error "SIM=0 needs the real barcode sensor (S3_BARCODE_HW = 1)"
+#endif
 
 /* ---- Spare constants kept from the original configuration ---- */
 #define OBSTACLE_TRIGGER_CM             (35.0f)

@@ -28,6 +28,9 @@
 
 bool   code39_decode(uint32_t const * p_widths, uint32_t count,
                      char * p_out, uint32_t out_size);
+bool   code39_decode_dir(uint32_t const * p_widths, uint32_t count,
+                         char * p_out, uint32_t out_size,
+                         bool * p_b_reversed);
 bool   code39_pattern_for(char symbol, uint16_t * p_pattern);
 uint32_t code39_encode_widths(char const * p_payload, uint32_t narrow,
                             uint32_t wide, uint32_t * p_out,

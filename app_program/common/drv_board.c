@@ -36,10 +36,11 @@ board_init (void)
 {
     board_release_reset(RESETS_RESET_TIMER | RESETS_RESET_PWM);
 
-    if (0UL == (in_w(WATCHDOG_TICK) & WATCHDOG_TICK_ENABLE))
-    {
-        out_w(WATCHDOG_TICK, (CLK_REF_MHZ | WATCHDOG_TICK_ENABLE));
-    }
+    /* Always program the tick: it comes out of reset ENABLED with
+       CYCLES = 0, which divides clk_ref by 512 (23.4 kHz) and makes the
+       "microsecond" TIMER run 42.7x too slow.  12 cycles of the 12 MHz
+       clk_ref = exactly 1 MHz, as the Pico SDK sets it. */
+    out_w(WATCHDOG_TICK, (CLK_REF_MHZ | WATCHDOG_TICK_ENABLE));
 
     return (E_OK);
 }

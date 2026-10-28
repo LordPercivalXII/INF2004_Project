@@ -5,7 +5,13 @@
  * Each cycle averages the ~10 IR samples the 1 kHz interrupt took since
  * the last cycle (~20 at the original 20 ms cadence), normalises them
  * with the boot calibration, computes a continuous line error, detects
- * junctions and posts SYSTEM_EVENT_LINE with any decoded barcode.
+ * junctions and posts SYSTEM_EVENT_LINE.
+ *
+ * Routing (route.c): a decoded barcode is stored as the pending waypoint
+ * and reported once; the car keeps following the line.  At the next
+ * junction the stored character is looked up in the MQTT route table and
+ * the action travels to the controller with that junction event.  Route
+ * table messages from MQTT are applied here, once per cycle.
  */
 
 #include "subsystem3.h"
@@ -24,6 +30,9 @@
 #define LINE_SIM_CODE_GAP_MS    (10000U)
 #define LINE_SIM_NARROW_US      (20000U)    /* 2 mm at ~0.1 m/s */
 #define LINE_SIM_WIDE_US        (50000U)    /* 5 mm at ~0.1 m/s */
+#define LINE_SIM_JUNCTION_AT_MS (3000U)     /* barcode -> junction   */
+#define LINE_SIM_JUNCTION_MS    (300U)      /* all-black duration    */
+#define LINE_SIM_CODE_COUNT     (5U)
 
 typedef struct
 {
@@ -43,7 +52,12 @@ typedef struct
     uint16_t         held_center;
     bool             b_held_right_black;
     uint32_t         next_sim_barcode_ms;
-    bool             b_sim_left_next;
+    uint32_t         sim_code_index;
+    uint32_t         sim_junction_ms;
+    bool             b_sim_junction_armed;
+    bool             b_junction_retry;      /* last junction not sent  */
+    uint16_t         retry_action;
+    char             retry_char;
 } line_ctx_t;
 
 /* ------------------------------------------------------------------ */
@@ -169,13 +183,27 @@ line_calibrate (line_ctx_t * p_ctx)
 #endif /* !ROBOT_SIMULATION */
 
 #if ROBOT_SIMULATION
+/*
+ * Test data for SIM=1 builds only.  It is pushed through the same entry
+ * point as a real MQTT message (mqtt_utk_route_rx), so the simulation
+ * exercises the whole route path; SIM=0 firmware contains no mapping.
+ */
+static char const g_sim_route[]  = "A:L,B:R,C:S,D:U";
+#if !S3_BARCODE_HW
+static char const g_sim_codes[LINE_SIM_CODE_COUNT][2] =
+{
+    "A", "B", "C", "D", "E"     /* "E" is unmapped -> default action */
+};
+#endif
+
 /*!
- * @brief Simulation: line drifts between the sensors; every 10 s a
- *        "*L*" or "*R*" barcode is injected as if crossed at 0.1 m/s.
+ * @brief Simulation: the line drifts between the sensors; every 10 s a
+ *        barcode is injected (alternately read backwards), and 3 s later
+ *        a junction (all three sensors black for 300 ms).
  */
 static void
 line_simulate (line_ctx_t * p_ctx, uint32_t now_ms, uint16_t * p_left,
-               uint16_t * p_center)
+               uint16_t * p_center, bool * p_right_black)
 {
     float const    span  = (float) (IR_DEFAULT_BLACK_COUNTS -
                                     IR_DEFAULT_WHITE_COUNTS);
@@ -184,33 +212,55 @@ line_simulate (line_ctx_t * p_ctx, uint32_t now_ms, uint16_t * p_left,
                            ? ((float) phase / (float) LINE_SIM_HALF)
                            : ((float) (LINE_SIM_PHASES - phase) /
                               (float) LINE_SIM_HALF);
+#if !S3_BARCODE_HW
+    bool const        b_backward = (1U == (p_ctx->sim_code_index % 2U));
     uint32_t          widths[CODE39_MAX_ELEMENTS];
     barcode_element_t element;
-    uint32_t            count;
-    uint32_t            idx;
+    uint32_t          count;
+    uint32_t          idx;
+#endif
 
-    *p_left   = (uint16_t) ((float) IR_DEFAULT_WHITE_COUNTS +
-                            ((1.0f - drift) * span));
-    *p_center = (uint16_t) ((float) IR_DEFAULT_WHITE_COUNTS +
-                            (drift * span));
+    *p_left        = (uint16_t) ((float) IR_DEFAULT_WHITE_COUNTS +
+                                 ((1.0f - drift) * span));
+    *p_center      = (uint16_t) ((float) IR_DEFAULT_WHITE_COUNTS +
+                                 (drift * span));
+    *p_right_black = false;
 
+#if !S3_BARCODE_HW
     if ((int32_t) (now_ms - p_ctx->next_sim_barcode_ms) >= 0)
     {
-        count = code39_encode_widths(p_ctx->b_sim_left_next ? "L" : "R",
-                                     LINE_SIM_NARROW_US, LINE_SIM_WIDE_US,
-                                     widths, CODE39_MAX_ELEMENTS);
+        count = code39_encode_widths(
+                    g_sim_codes[p_ctx->sim_code_index % LINE_SIM_CODE_COUNT],
+                    LINE_SIM_NARROW_US, LINE_SIM_WIDE_US, widths,
+                    CODE39_MAX_ELEMENTS);
 
         for (idx = 0U; idx < count; idx++)
         {
-            element.width_us = widths[idx];
+            element.width_us = widths[b_backward ? (count - 1U - idx) : idx];
             element.end_us   = board_micros();
             element.is_black = (0U == (idx % 2U)) ? 1U : 0U;
             (void) tk_snd_mbf(gh_barcode_edge_mbf, &element,
                               (INT) sizeof(element), TMO_POL);
         }
 
-        p_ctx->b_sim_left_next     = !p_ctx->b_sim_left_next;
-        p_ctx->next_sim_barcode_ms = now_ms + LINE_SIM_CODE_GAP_MS;
+        p_ctx->sim_code_index++;
+        p_ctx->sim_junction_ms      = now_ms + LINE_SIM_JUNCTION_AT_MS;
+        p_ctx->b_sim_junction_armed = true;
+        p_ctx->next_sim_barcode_ms  = now_ms + LINE_SIM_CODE_GAP_MS;
+    }
+#endif /* !S3_BARCODE_HW */
+
+    if (p_ctx->b_sim_junction_armed &&
+        ((int32_t) (now_ms - p_ctx->sim_junction_ms) >= 0))
+    {
+        *p_left        = IR_DEFAULT_BLACK_COUNTS;
+        *p_center      = IR_DEFAULT_BLACK_COUNTS;
+        *p_right_black = true;
+
+        if ((now_ms - p_ctx->sim_junction_ms) >= LINE_SIM_JUNCTION_MS)
+        {
+            p_ctx->b_sim_junction_armed = false;
+        }
     }
 }
 #endif /* ROBOT_SIMULATION */
@@ -223,8 +273,7 @@ line_read (line_ctx_t * p_ctx, uint32_t now_ms, uint16_t * p_left,
            uint16_t * p_center, bool * p_right_black)
 {
 #if ROBOT_SIMULATION
-    line_simulate(p_ctx, now_ms, p_left, p_center);
-    *p_right_black = false;
+    line_simulate(p_ctx, now_ms, p_left, p_center, p_right_black);
 #else
     ir_window_t window;
 
@@ -277,24 +326,40 @@ line_junction (line_ctx_t * p_ctx, bool b_all_black, uint32_t now_ms)
     return (b_junction);
 }
 
+/*!
+ * @brief Post this cycle's SYSTEM_EVENT_LINE.
+ *
+ * A newly decoded barcode is stored as the pending waypoint and reported
+ * once.  On a junction, the action for the stored character is added.
+ * If the event buffer is full, a junction is re-sent next cycle so the
+ * controller never misses a turn.
+ */
 static void
-line_publish (float error, bool b_detected, bool b_junction,
-              uint32_t now_ms)
+line_publish (line_ctx_t * p_ctx, float error, bool b_detected,
+              bool b_junction, uint32_t now_ms)
 {
     system_event_t   event  = {0};
     barcode_result_t result = {0};
-    uint32_t           idx;
+    uint32_t         idx;
 
-    event.type                       = SYSTEM_EVENT_LINE;
-    event.timestamp_ms               = now_ms;
-    event.data.line.line_error       = error;
-    event.data.line.b_line_detected  = b_detected;
-    event.data.line.b_junction       = b_junction;
+    event.type                      = SYSTEM_EVENT_LINE;
+    event.timestamp_ms              = now_ms;
+    event.data.line.line_error      = error;
+    event.data.line.b_line_detected = b_detected;
 
     if (barcode_result_take(&result))
     {
-        event.data.line.b_barcode_valid = true;
-        event.data.line.barcode         = result.command;
+        route_store_waypoint(&result, now_ms);
+
+#if ROBOT_SIMULATION && S3_BARCODE_HW
+        /* Real barcode, simulated track: fake the junction 3 s later. */
+        p_ctx->sim_junction_ms      = now_ms + LINE_SIM_JUNCTION_AT_MS;
+        p_ctx->b_sim_junction_armed = true;
+#endif
+        event.data.line.b_barcode_valid    = true;
+        event.data.line.b_barcode_reversed = result.b_reversed;
+        event.data.line.barcode            = (uint16_t) (uint8_t)
+                                             result.text[0];
 
         for (idx = 0U; idx < sizeof(result.text); idx++)
         {
@@ -302,9 +367,23 @@ line_publish (float error, bool b_detected, bool b_junction,
         }
     }
 
-    if ((!controller_post_event(&event)) && event.data.line.b_barcode_valid)
+    if (b_junction)
     {
-        barcode_result_put(&result);    /* buffer full: retry next cycle */
+        p_ctx->retry_action     = route_take_junction_action(
+                                      &p_ctx->retry_char);
+        p_ctx->b_junction_retry = true;
+    }
+
+    if (p_ctx->b_junction_retry)
+    {
+        event.data.line.b_junction      = true;
+        event.data.line.junction_action = p_ctx->retry_action;
+        event.data.line.junction_char   = p_ctx->retry_char;
+    }
+
+    if (controller_post_event(&event))
+    {
+        p_ctx->b_junction_retry = false;
     }
 }
 
@@ -333,7 +412,12 @@ line_task (INT stacd, void * p_exinf)
     ctx.held_left           = IR_DEFAULT_WHITE_COUNTS;
     ctx.held_center         = IR_DEFAULT_WHITE_COUNTS;
     ctx.next_sim_barcode_ms = board_millis() + LINE_SIM_FIRST_CODE_MS;
-    ctx.b_sim_left_next     = true;
+
+    route_init();
+
+#if ROBOT_SIMULATION
+    mqtt_utk_route_rx(g_sim_route, (uint32_t) (sizeof(g_sim_route) - 1U));
+#endif
 
 #if !ROBOT_SIMULATION
     app_check(ir_sampler_start(), "ir_sampler_start");
@@ -346,6 +430,8 @@ line_task (INT stacd, void * p_exinf)
     for (;;)
     {
         (void) tk_slp_tsk(TMO_FEVR);    /* woken every 10 ms */
+
+        route_poll_config();            /* MQTT route table updates */
 
         now_ms = board_millis();
         line_read(&ctx, now_ms, &raw_left, &raw_center, &b_right_black);
@@ -363,7 +449,7 @@ line_task (INT stacd, void * p_exinf)
             ctx.last_error = error;
         }
 
-        line_publish(error, (b_left_on || b_center_on),
+        line_publish(&ctx, error, (b_left_on || b_center_on),
                      line_junction(&ctx, (b_left_on && b_center_on &&
                                           b_right_black), now_ms),
                      now_ms);

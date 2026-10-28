@@ -21,4 +21,8 @@
 #define MQTT_CLIENT_ID   "mtk3smp-pico"
 #define MQTT_TOPIC       "mtk3smp-pico/heartbeat"
 
+/* Subsystem 3 junction routes, e.g. publish (retained) "A:L,B:R,C:S,D:U".
+ * Format: app_program/subsystem3/route.c. */
+#define MQTT_ROUTE_TOPIC "inf2004/car/route"
+
 #endif /* WIFI_SECRETS_H */

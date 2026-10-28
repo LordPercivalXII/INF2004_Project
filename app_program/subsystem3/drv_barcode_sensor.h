@@ -12,6 +12,7 @@
 bool    barcode_sensor_init(void);
 uint8_t barcode_sensor_is_black(void);
 bool    barcode_sensor_take_overflow(void);
+void    barcode_sensor_take_counts(uint32_t * p_irqs, uint32_t * p_changes);
 
 #endif /* DRV_BARCODE_SENSOR_H */
 

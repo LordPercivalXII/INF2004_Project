@@ -18,6 +18,8 @@
 static volatile uint32_t g_last_edge_us = 0U;
 static volatile uint8_t  g_level_black  = 0U;
 static volatile bool     gb_overflow    = false;
+static volatile uint32_t g_irq_count    = 0U;  /* every GP28 interrupt  */
+static volatile uint32_t g_change_count = 0U;  /* real level changes    */
 
 /*!
  * @brief true (1) while the sensor sees black.  Callable from interrupts.
@@ -43,9 +45,12 @@ barcode_edge_isr (uint32_t pin, uint32_t events)
     (void) pin;
     (void) events;
 
+    g_irq_count++;
+
     /* Ignore edges that did not change the level (settled bounce). */
     if (black != g_level_black)
     {
+        g_change_count++;
         element.width_us = now_us - g_last_edge_us;
         element.end_us   = now_us;
         element.is_black = g_level_black;
@@ -88,6 +93,21 @@ barcode_sensor_take_overflow (void)
     gb_overflow = false;
 
     return (b_overflow);
+}
+
+/*!
+ * @brief Read and clear the edge counters (diagnostics).
+ *
+ * @param[out] p_irqs     GP28 interrupts since the last call.
+ * @param[out] p_changes  Of those, the ones that changed the level.
+ */
+void
+barcode_sensor_take_counts (uint32_t * p_irqs, uint32_t * p_changes)
+{
+    *p_irqs         = g_irq_count;
+    *p_changes      = g_change_count;
+    g_irq_count     = 0U;
+    g_change_count  = 0U;
 }
 
 /*** end of file ***/
