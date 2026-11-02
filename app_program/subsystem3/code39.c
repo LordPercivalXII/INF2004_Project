@@ -10,6 +10,9 @@
 #define CODE39_WIDE_COUNT       (3U)
 #define CODE39_GAP_LIMIT        (3U)
 #define CODE39_START_STOP       ('*')
+#define CODE39_NORM_BEFORE      (5U)    /* window: 5 before, 4 after   */
+#define CODE39_NORM_AFTER       (4U)
+#define CODE39_NORM_SCALE       (10000U)
 
 typedef struct
 {
@@ -208,6 +211,26 @@ code39_decode_char (uint32_t const * p_elements, char * p_symbol,
     return (b_ok);
 }
 
+/*!
+ * @brief Narrowest bar of a character, not counting element 'skip'.
+ */
+static uint32_t
+code39_min_bar (uint32_t const * p_elements, uint32_t skip)
+{
+    uint32_t min_bar = UINT32_MAX;
+    uint32_t idx;
+
+    for (idx = 0U; idx < CODE39_CHAR_ELEMENTS; idx += 2U)
+    {
+        if ((idx != skip) && (p_elements[idx] < min_bar))
+        {
+            min_bar = p_elements[idx];
+        }
+    }
+
+    return (min_bar);
+}
+
 static bool
 code39_decode_forward (uint32_t const * p_widths, uint32_t count,
                        char * p_out, uint32_t out_size)
@@ -230,8 +253,31 @@ code39_decode_forward (uint32_t const * p_widths, uint32_t count,
             uint32_t         split   = 0U;
             int32_t          bias    = 0;
             char             symbol  = '\0';
+            uint32_t         local[CODE39_CHAR_ELEMENTS];
+            uint32_t         idx;
 
-            b_ok = code39_decode_char(p_elem, &symbol, &split, &bias);
+            for (idx = 0U; idx < CODE39_CHAR_ELEMENTS; idx++)
+            {
+                local[idx] = p_elem[idx];
+            }
+
+            /* The outermost bar of the whole symbol is always a narrow
+               bar ('*' and reversed '*' both begin and end with one), but
+               it is where a scan speeds up or slows down, so its measured
+               length is unreliable.  Give it the width of the narrowest
+               bar of its character. */
+            if (0U == chr)
+            {
+                local[0] = code39_min_bar(local, 0U);
+            }
+
+            if ((characters - 1U) == chr)
+            {
+                local[CODE39_CHAR_ELEMENTS - 1U] =
+                    code39_min_bar(local, CODE39_CHAR_ELEMENTS - 1U);
+            }
+
+            b_ok = code39_decode_char(local, &symbol, &split, &bias);
 
             /* Inter-character gap (a space, so minus the bias) must be
                narrow-ish, not a quiet zone. */
@@ -258,6 +304,68 @@ code39_decode_forward (uint32_t const * p_widths, uint32_t count,
         {
             p_out[characters - 2U] = '\0';
         }
+    }
+
+    return (b_ok);
+}
+
+/*!
+ * @brief Speed-normalise a window of element widths.
+ *
+ * One Code 39 character plus its gap always spans 14.5 narrow units, so
+ * the summed duration of ~10 consecutive elements measures the local
+ * scan speed.  Each element is divided by the sum of the 10 elements
+ * around it, which cancels speed changes slower than about one
+ * character (a hand speeding up, slowing down or wavering).
+ *
+ * @param[in]  p_widths  Element durations.
+ * @param[in]  length    Number of elements (<= CODE39_MAX_ELEMENTS).
+ * @param[out] p_out     Normalised widths (dimensionless, x 10000).
+ */
+static void
+code39_normalise_speed (uint32_t const * p_widths, uint32_t length,
+                        uint32_t * p_out)
+{
+    uint32_t idx;
+    uint32_t lo;
+    uint32_t hi;
+    uint32_t pos;
+    uint64_t sum;
+
+    for (idx = 0U; idx < length; idx++)
+    {
+        lo  = (idx >= CODE39_NORM_BEFORE) ? (idx - CODE39_NORM_BEFORE) : 0U;
+        hi  = ((idx + CODE39_NORM_AFTER) < length)
+              ? (idx + CODE39_NORM_AFTER) : (length - 1U);
+        sum = 0U;
+
+        for (pos = lo; pos <= hi; pos++)
+        {
+            sum += p_widths[pos];
+        }
+
+        p_out[idx] = (0U == sum) ? 0U :
+                     (uint32_t) (((uint64_t) p_widths[idx] *
+                                  CODE39_NORM_SCALE * (hi - lo + 1U)) / sum);
+    }
+}
+
+/*!
+ * @brief Decode one window as measured, or else speed-normalised.
+ */
+static bool
+code39_decode_window (uint32_t const * p_widths, uint32_t length,
+                      char * p_out, uint32_t out_size)
+{
+    uint32_t normalised[CODE39_MAX_ELEMENTS];
+    bool     b_ok;
+
+    b_ok = code39_decode_forward(p_widths, length, p_out, out_size);
+
+    if (!b_ok)
+    {
+        code39_normalise_speed(p_widths, length, normalised);
+        b_ok = code39_decode_forward(normalised, length, p_out, out_size);
     }
 
     return (b_ok);
@@ -299,26 +407,31 @@ code39_decode_dir (uint32_t const * p_widths, uint32_t count, char * p_out,
             reversed[idx] = p_widths[count - 1U - idx];
         }
 
-        /* Try the whole scan first, then windows with an even number of
-           stray elements (an extra wobble when the swipe starts or stops)
-           removed from the ends, fewest removed first.  Windows keep a
-           bar at both ends; '*' start/stop and the gap checks reject
-           anything that is not a complete symbol. */
+        /* Try the whole scan first, then sub-windows with stray
+           elements removed from either end (a wobble when the swipe
+           starts or stops, the paper margin, or the sensor reading black
+           when lifted off the paper), fewest removed first.  A window
+           must start and end with a bar: an even number of elements
+           removed in front, any number behind.  The '*' start/stop and
+           gap checks reject anything that is not a complete symbol. */
         for (trim = 0U; ((trim + CODE39_MIN_ELEMENTS) <= count) && !b_ok;
-             trim += 2U)
+             trim++)
         {
             length = count - trim;
 
             for (lead = 0U; (lead <= trim) && !b_ok &&
                  (0U == ((length + 1U) % CODE39_CHAR_STRIDE)); lead += 2U)
             {
-                b_ok = code39_decode_forward(&p_widths[lead], length, p_out,
-                                             out_size);
+                b_ok = code39_decode_window(&p_widths[lead], length, p_out,
+                                            out_size);
 
                 if (!b_ok)
                 {
-                    b_ok = code39_decode_forward(&reversed[lead], length,
-                                                 p_out, out_size);
+                    /* Reversed copy: the same window counted from the
+                       other end. */
+                    b_ok = code39_decode_window(
+                               &reversed[count - lead - length], length,
+                               p_out, out_size);
                     b_backward = b_ok;
                 }
             }

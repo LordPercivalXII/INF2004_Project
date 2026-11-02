@@ -166,6 +166,66 @@ subsystem3_test (void)
                    "edge-biased scan with stray edges decodes \"A\"");
     }
 
+    /* Hand swipe: the first bar stretched 5x (speeding up from rest),
+       read right-to-left.  Outermost bars are always narrow in Code 39,
+       so this must still decode. */
+    count = code39_encode_widths("F", S3_TEST_NARROW * 3U, S3_TEST_WIDE * 3U,
+                                 widths, CODE39_MAX_ELEMENTS);
+    {
+        uint32_t idx;
+        uint32_t tmp;
+        bool     b_rev = false;
+
+        for (idx = 0U; idx < (count / 2U); idx++)
+        {
+            tmp = widths[idx];
+            widths[idx] = widths[count - 1U - idx];
+            widths[count - 1U - idx] = tmp;
+        }
+
+        widths[0] *= 5U;
+        TEST_CHECK("S3-U15",
+                   (code39_decode_dir(widths, count, text, sizeof(text),
+                                      &b_rev) &&
+                    ('F' == text[0]) && b_rev),
+                   "stretched first bar, right-to-left \"F\" decodes");
+    }
+
+    /* Hand-held scan: speed rises 50% and falls back across the barcode
+       (no element keeps its nominal width).  Must decode via the speed
+       normalisation, right-to-left as well. */
+    count = code39_encode_widths("R", S3_TEST_NARROW * 20U,
+                                 S3_TEST_WIDE * 20U, widths,
+                                 CODE39_MAX_ELEMENTS);
+    {
+        static uint32_t const speed_pct[] =
+        {
+            100U, 112U, 125U, 137U, 150U, 137U, 125U, 112U, 100U, 90U
+        };
+        uint32_t idx;
+        uint32_t tmp;
+        bool     b_rev = false;
+
+        for (idx = 0U; idx < count; idx++)
+        {
+            widths[idx] = (widths[idx] * 100U) /
+                          speed_pct[(idx * 10U) / count];
+        }
+
+        for (idx = 0U; idx < (count / 2U); idx++)
+        {
+            tmp = widths[idx];
+            widths[idx] = widths[count - 1U - idx];
+            widths[count - 1U - idx] = tmp;
+        }
+
+        TEST_CHECK("S3-U16",
+                   (code39_decode_dir(widths, count, text, sizeof(text),
+                                      &b_rev) &&
+                    ('R' == text[0]) && b_rev),
+                   "speed varying 50% during the scan, R-to-L \"R\"");
+    }
+
     TEST_CHECK("S3-U05",
                ((line_compute_error(1.0f, 0.0f, true, 0.0f) < -0.99f) &&
                 (line_compute_error(0.0f, 1.0f, true, 0.0f) > 0.99f) &&

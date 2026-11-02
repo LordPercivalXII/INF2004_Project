@@ -28,6 +28,11 @@ typedef struct
     uint32_t          last_edge_us;
     uint32_t          received;     /* elements received this scan   */
     uint32_t          merged;       /* of those, merged as glitches  */
+    uint32_t          restored;     /* elements rebuilt from chatter */
+    uint32_t          burst_us;     /* chatter merged into 'pending' */
+    uint32_t          burst_other_us; /* ...of the other colour      */
+    bool              b_tried;      /* decode failed at a short gap  */
+    bool              b_isr_overflow;
 } barcode_session_t;
 
 static barcode_result_t g_result;
@@ -90,6 +95,11 @@ barcode_session_reset (barcode_session_t * p_session)
     p_session->widest_us  = 0U;
     p_session->received   = 0U;
     p_session->merged     = 0U;
+    p_session->restored   = 0U;
+    p_session->burst_us   = 0U;
+    p_session->burst_other_us = 0U;
+    p_session->b_tried    = false;
+    p_session->b_isr_overflow = false;
 }
 
 static void
@@ -127,9 +137,10 @@ barcode_debug_dump (barcode_session_t const * p_session, bool b_decoded,
 
     barcode_sensor_take_counts(&irqs, &changes);
     tm_printf((UB *) "S3 dbg: GP28 IRQs %u, level changes %u, received %u,"
-              " merged %u, now %s\n", (unsigned int) irqs,
+              " merged %u, restored %u, now %s\n", (unsigned int) irqs,
               (unsigned int) changes, (unsigned int) p_session->received,
               (unsigned int) p_session->merged,
+              (unsigned int) p_session->restored,
               (0U != barcode_sensor_is_black()) ? "BLACK" : "WHITE");
     tm_printf((UB *) "S3 dbg: %u elements, ", (unsigned int) p_session->count);
 
@@ -155,17 +166,32 @@ barcode_debug_dump (barcode_session_t const * p_session, bool b_decoded,
 }
 #endif /* S3_BARCODE_DEBUG */
 
-static void
-barcode_session_finish (barcode_session_t * p_session)
+/*!
+ * @brief Try to decode the scan so far.
+ *
+ * The element in progress ('pending') is the last bar: the quiet zone
+ * after it has no closing edge.  If the decode fails and this is not the
+ * final attempt, the scan is left open: a slow swipe may simply be in
+ * the middle of a long wide space.
+ *
+ * @param[in,out] p_session  Scan.
+ * @param[in]     b_final    true: report and reset whatever the result.
+ *
+ * @return true if a barcode was decoded (the scan is then reset).
+ */
+static bool
+barcode_session_finish (barcode_session_t * p_session, bool b_final)
 {
-    barcode_result_t result = {0};
-    bool const       b_isr_overflow = barcode_sensor_take_overflow();
-    bool             b_decoded      = false;
+    barcode_result_t result     = {0};
+    uint32_t const   widest_us  = p_session->widest_us;
+    bool const       b_overflow = p_session->b_overflow;
+    bool             b_decoded  = false;
 
-    /* Final bar: the trailing quiet zone has no closing edge. */
+    p_session->b_isr_overflow = p_session->b_isr_overflow ||
+                                barcode_sensor_take_overflow();
     barcode_session_push(p_session, p_session->pending.width_us);
 
-    if ((!p_session->b_overflow) && (!b_isr_overflow) &&
+    if ((!p_session->b_overflow) && (!p_session->b_isr_overflow) &&
         code39_decode_dir(p_session->widths, p_session->count,
                           result.text, sizeof(result.text),
                           &result.b_reversed))
@@ -176,14 +202,28 @@ barcode_session_finish (barcode_session_t * p_session)
         barcode_result_put(&result);
     }
 
+    if (b_decoded || b_final)
+    {
 #if S3_BARCODE_DEBUG
-    barcode_debug_dump(p_session, b_decoded,
-                       (p_session->b_overflow || b_isr_overflow), &result);
-#else
-    (void) b_decoded;
+        barcode_debug_dump(p_session, b_decoded,
+                           (p_session->b_overflow ||
+                            p_session->b_isr_overflow), &result);
 #endif
+        barcode_session_reset(p_session);
+    }
+    else
+    {
+        /* Keep the scan open: take the trial bar back off again. */
+        if (p_session->count > 0U)
+        {
+            p_session->count--;
+        }
 
-    barcode_session_reset(p_session);
+        p_session->widest_us  = widest_us;
+        p_session->b_overflow = b_overflow;
+    }
+
+    return (b_decoded);
 }
 
 /*!
@@ -218,6 +258,13 @@ barcode_session_wait (barcode_session_t const * p_session)
             /* In range. */
         }
 
+        if (p_session->b_tried)
+        {
+            /* A decode at the short gap failed: give a slow scan up to
+               the cap before giving up on it. */
+            end_gap_ms = BARCODE_END_GAP_MAX_MS;
+        }
+
         elapsed_ms = (board_micros() - p_session->last_edge_us) / 1000U;
         wait = (elapsed_ms >= end_gap_ms) ? TMO_POL
                                           : (TMO) (end_gap_ms - elapsed_ms);
@@ -250,19 +297,51 @@ barcode_session_add (barcode_session_t * p_session,
     {
         p_session->last_edge_us = p_element->end_us;
         p_session->received++;
+        p_session->b_tried = false;     /* more data: try again later */
 
-        if ((p_element->width_us < BARCODE_GLITCH_US) ||
-            (p_element->is_black == p_session->pending.is_black))
+        if (p_element->width_us < BARCODE_GLITCH_US)
         {
-            /* Debounce: merge a short pulse (and the same-colour rest
-               after it) into the element in progress. */
+            /* Debounce: merge a short pulse into the element in
+               progress, but remember how much of the other colour the
+               chatter contained. */
             p_session->pending.width_us += p_element->width_us;
+            p_session->burst_us         += p_element->width_us;
             p_session->merged++;
+
+            if (p_element->is_black != p_session->pending.is_black)
+            {
+                p_session->burst_other_us += p_element->width_us;
+            }
+        }
+        else if (p_element->is_black == p_session->pending.is_black)
+        {
+            if (p_session->burst_other_us >= BARCODE_GLITCH_US)
+            {
+                /* Same colour on both sides of a chatter burst holding
+                   real other-colour time: a whole narrow element showed
+                   up only as chatter (sensor hovering at its threshold).
+                   Restore it as one element spanning the burst. */
+                barcode_session_push(p_session, p_session->pending.width_us -
+                                                p_session->burst_us);
+                barcode_session_push(p_session, p_session->burst_us);
+                p_session->pending = *p_element;
+                p_session->restored++;
+            }
+            else
+            {
+                p_session->pending.width_us += p_element->width_us;
+                p_session->merged++;
+            }
+
+            p_session->burst_us       = 0U;
+            p_session->burst_other_us = 0U;
         }
         else
         {
             barcode_session_push(p_session, p_session->pending.width_us);
-            p_session->pending = *p_element;
+            p_session->pending        = *p_element;
+            p_session->burst_us       = 0U;
+            p_session->burst_other_us = 0U;
         }
     }
 }
@@ -325,7 +404,13 @@ barcode_task (INT stacd, void * p_exinf)
         }
         else if (session.b_active)
         {
-            barcode_session_finish(&session);   /* quiet zone reached */
+            /* Quiet: decode now; if that fails, wait for the long gap
+               (slow scan) and make a final attempt. */
+            if ((!barcode_session_finish(&session, session.b_tried)) &&
+                session.b_active)
+            {
+                session.b_tried = true;
+            }
         }
         else
         {
