@@ -23,7 +23,7 @@
 
 static volatile uint32_t g_echo_drops         = 0U;
 
-#if !ROBOT_SIMULATION
+#if S5_ULTRASONIC_HW
 static volatile uint32_t g_echo_rise_us       = 0U;
 static volatile bool     gb_waiting_for_fall  = false;
 static volatile bool     gb_measuring         = false;
@@ -63,7 +63,7 @@ ultrasonic_echo_isr (uint32_t pin, uint32_t events)
         }
     }
 }
-#endif /* !ROBOT_SIMULATION */
+#endif /* S5_ULTRASONIC_HW */
 
 /*!
  * @brief Configure trigger/echo pins and the echo interrupt.
@@ -75,7 +75,7 @@ ultrasonic_init (void)
 {
     bool b_ok = true;
 
-#if !ROBOT_SIMULATION
+#if S5_ULTRASONIC_HW
     board_gpio_output(PIN_ULTRASONIC_TRIGGER, false);
     board_gpio_input(PIN_ULTRASONIC_ECHO, BOARD_PULL_NONE);
     b_ok = gpio_irq_register(PIN_ULTRASONIC_ECHO,
@@ -86,7 +86,7 @@ ultrasonic_init (void)
     return (b_ok);
 }
 
-#if !ROBOT_SIMULATION
+#if S5_ULTRASONIC_HW
 /*!
  * @brief Keep at least ULTRASONIC_MIN_PING_INTERVAL_MS between pings so
  *        old echoes have died away.
@@ -122,7 +122,7 @@ ultrasonic_measure_cm (uint32_t scan_number)
 {
     float distance_cm = ULTRASONIC_MAX_DISTANCE_CM;
 
-#if ROBOT_SIMULATION
+#if !S5_ULTRASONIC_HW
     uint32_t const angle = servo_get_angle();
 
     if ((0U == (scan_number % US_SIM_PERIOD)) &&

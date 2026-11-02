@@ -17,18 +17,11 @@
 #include "../common/rmath.h"
 #include "../subsystem1/subsystem1.h"
 #include "../subsystem2/subsystem2.h"
+#include "../subsystem5/avoidance.h"
 
-#define CTRL_TURN_OUT_MS        (350U)
-#define CTRL_PASS_MS            (900U)
-#define CTRL_TURN_BACK_MS       (350U)
-#define CTRL_REACQUIRE_MS       (2500U)
 #define CTRL_STEER_GAIN         (0.18f)
 #define CTRL_STEER_LIMIT        (0.25f)
-#define CTRL_REACQUIRE_ERROR    (0.5f)
 #define CTRL_BARCODE_SLOW_SIDE  (0.55f)
-#define CTRL_SPIN_FACTOR        (0.45f)
-#define CTRL_PASS_FACTOR        (0.55f)
-#define CTRL_CREEP_FACTOR       (0.35f)
 #define CTRL_SHOCK_FACTOR       (0.7f)
 
 #define FAULT_EXTERNAL          (1U)
@@ -40,15 +33,6 @@
 ID gh_event_mbf   = E_ID;
 ID gh_control_mbf = E_ID;
 ID gh_system_flg  = E_ID;
-
-typedef enum
-{
-    AVOIDANCE_NONE = 0,
-    AVOIDANCE_TURN_OUT,
-    AVOIDANCE_PASS_OBSTACLE,
-    AVOIDANCE_TURN_BACK,
-    AVOIDANCE_REACQUIRE
-} avoidance_phase_t;
 
 typedef struct
 {
@@ -65,9 +49,8 @@ typedef struct
     uint16_t            pending_turn;
     uint32_t            next_turn_id;
     uint32_t            active_turn_id;
-    avoidance_phase_t   phase;
-    int8_t              direction;
-    uint32_t            deadline_ms;
+    bool                b_line_detected;
+    avoid_t             avoid;
     uint32_t            last_telemetry_ms;
 } ctrl_state_t;
 
@@ -205,14 +188,6 @@ ctrl_stop_motion (void)
 }
 
 static void
-ctrl_spin (ctrl_state_t const * p_ctrl, int8_t direction)
-{
-    float const speed = p_ctrl->base_speed * CTRL_SPIN_FACTOR;
-
-    ctrl_set_motion(-(float) direction * speed, (float) direction * speed);
-}
-
-static void
 ctrl_enter_fault (ctrl_state_t * p_ctrl, uint32_t code)
 {
     p_ctrl->fault_code = code;
@@ -221,7 +196,7 @@ ctrl_enter_fault (ctrl_state_t * p_ctrl, uint32_t code)
     p_ctrl->active_turn_id = 0U;
     p_ctrl->pending_turn = (uint16_t) BARCODE_CMD_NONE;
     ctrl_set_bits(SYSTEM_BIT_FAULT);
-    ctrl_clear_bits(SYSTEM_BIT_MISSION_RUN);
+    ctrl_clear_bits(SYSTEM_BIT_MISSION_RUN | SYSTEM_BIT_OBSTACLE);
     ctrl_stop_motion();
 }
 
@@ -248,7 +223,7 @@ ctrl_handle_command (ctrl_state_t * p_ctrl,
             p_ctrl->b_turn_in_progress = false;
             p_ctrl->active_turn_id = 0U;
             p_ctrl->pending_turn = (uint16_t) BARCODE_CMD_NONE;
-            ctrl_clear_bits(SYSTEM_BIT_MISSION_RUN);
+            ctrl_clear_bits(SYSTEM_BIT_MISSION_RUN | SYSTEM_BIT_OBSTACLE);
             ctrl_stop_motion();
             break;
 
@@ -280,7 +255,8 @@ ctrl_handle_command (ctrl_state_t * p_ctrl,
 static void
 ctrl_handle_line (ctrl_state_t * p_ctrl, line_event_t const * p_line)
 {
-    p_ctrl->line_error = p_line->line_error;
+    p_ctrl->line_error      = p_line->line_error;
+    p_ctrl->b_line_detected = p_line->b_line_detected;
 
     if (p_line->b_barcode_valid)
     {
@@ -342,8 +318,10 @@ ctrl_handle_line (ctrl_state_t * p_ctrl, line_event_t const * p_line)
         }
     }
 
-    if ((MISSION_FOLLOWING == p_ctrl->state) &&
-        (!p_ctrl->b_turn_in_progress))
+    if (((MISSION_FOLLOWING == p_ctrl->state) &&
+         (!p_ctrl->b_turn_in_progress)) ||
+        ((MISSION_AVOIDING == p_ctrl->state) &&
+         avoid_is_following(&p_ctrl->avoid)))
     {
         float const correction =
             rmath_clampf(p_ctrl->line_error * CTRL_STEER_GAIN,
@@ -351,15 +329,6 @@ ctrl_handle_line (ctrl_state_t * p_ctrl, line_event_t const * p_line)
 
         ctrl_set_motion(p_ctrl->base_speed + correction,
                         p_ctrl->base_speed - correction);
-    }
-    else if ((MISSION_AVOIDING == p_ctrl->state) &&
-             (AVOIDANCE_REACQUIRE == p_ctrl->phase) &&
-             p_line->b_line_detected &&
-             (rmath_absf(p_ctrl->line_error) <= CTRL_REACQUIRE_ERROR))
-    {
-        p_ctrl->state = MISSION_FOLLOWING;
-        p_ctrl->phase = AVOIDANCE_NONE;
-        ctrl_clear_bits(SYSTEM_BIT_OBSTACLE);
     }
     else
     {
@@ -395,32 +364,19 @@ ctrl_handle_obstacle (ctrl_state_t * p_ctrl,
 {
     p_ctrl->obstacle_cm = p_obs->center_distance_cm;
 
-    if (p_obs->b_detected && p_obs->b_scan_complete &&
-        (MISSION_FOLLOWING == p_ctrl->state))
+    if ((MISSION_FOLLOWING == p_ctrl->state) &&
+        (OBSTACLE_ACTION_CONTINUE != p_obs->action))
     {
         ctrl_set_bits(SYSTEM_BIT_OBSTACLE);
-
-        if (0 == p_obs->bypass_direction)
-        {
-            ctrl_enter_fault(p_ctrl, FAULT_BOXED_IN);
-        }
-        else
-        {
-            p_ctrl->state       = MISSION_AVOIDING;
-            p_ctrl->b_turn_in_progress = false;
-            p_ctrl->active_turn_id = 0U;
-            p_ctrl->pending_turn = (uint16_t) BARCODE_CMD_NONE;
-            p_ctrl->phase       = AVOIDANCE_TURN_OUT;
-            p_ctrl->direction   = (p_obs->bypass_direction < 0) ? -1 : 1;
-            p_ctrl->deadline_ms = board_millis() + CTRL_TURN_OUT_MS;
-            ctrl_spin(p_ctrl, p_ctrl->direction);
-        }
+        p_ctrl->state = MISSION_AVOIDING;
+        p_ctrl->b_turn_in_progress = false;
+        p_ctrl->active_turn_id = 0U;
+        p_ctrl->pending_turn = (uint16_t) BARCODE_CMD_NONE;
+        avoid_start(&p_ctrl->avoid, board_millis(), p_ctrl->distance_m);
     }
-    else if ((!p_obs->b_detected) && (MISSION_AVOIDING == p_ctrl->state) &&
-             (AVOIDANCE_REACQUIRE == p_ctrl->phase))
+    else if (MISSION_AVOIDING == p_ctrl->state)
     {
-        ctrl_set_motion(p_ctrl->base_speed * CTRL_CREEP_FACTOR,
-                        p_ctrl->base_speed * CTRL_CREEP_FACTOR);
+        avoid_on_scan(&p_ctrl->avoid, p_obs);
     }
     else
     {
@@ -467,47 +423,76 @@ ctrl_handle_event (ctrl_state_t * p_ctrl, system_event_t const * p_event)
 }
 
 /* ------------------------------------------------------------------ */
-/* Timed avoidance manoeuvre and telemetry                             */
+/* Avoidance manoeuvre (subsystem5/avoidance.c) and telemetry          */
 /* ------------------------------------------------------------------ */
 
 static void
 ctrl_step_avoidance (ctrl_state_t * p_ctrl, uint32_t now_ms)
 {
-    float const pass = p_ctrl->base_speed * CTRL_PASS_FACTOR;
-    float const creep = p_ctrl->base_speed * CTRL_CREEP_FACTOR;
+    avoid_input_t  input;
+    avoid_output_t output;
+    avoid_status_t status;
 
-    if ((MISSION_AVOIDING == p_ctrl->state) &&
-        ((int32_t) (now_ms - p_ctrl->deadline_ms) >= 0))
+    if (MISSION_AVOIDING == p_ctrl->state)
     {
-        switch (p_ctrl->phase)
+        input.now_ms          = now_ms;
+        input.distance_m      = p_ctrl->distance_m;
+        input.b_line_detected = p_ctrl->b_line_detected;
+        input.b_turn_done     = !p_ctrl->b_turn_in_progress;
+
+        status = avoid_step(&p_ctrl->avoid, &input, &output);
+
+        if (AVOID_OUT_STOP == output.type)
         {
-            case AVOIDANCE_TURN_OUT:
-                p_ctrl->phase       = AVOIDANCE_PASS_OBSTACLE;
-                p_ctrl->deadline_ms = now_ms + CTRL_PASS_MS;
-                ctrl_set_motion(pass, pass);
-                break;
+            ctrl_stop_motion();
+        }
+        else if (AVOID_OUT_DRIVE == output.type)
+        {
+            ctrl_set_motion(output.left_speed, output.right_speed);
+        }
+        else if (AVOID_OUT_TURN == output.type)
+        {
+            p_ctrl->next_turn_id++;
+            if (0U == p_ctrl->next_turn_id)
+            {
+                p_ctrl->next_turn_id++;
+            }
 
-            case AVOIDANCE_PASS_OBSTACLE:
-                p_ctrl->phase       = AVOIDANCE_TURN_BACK;
-                p_ctrl->deadline_ms = now_ms + CTRL_TURN_BACK_MS;
-                ctrl_spin(p_ctrl, (int8_t) -p_ctrl->direction);
-                break;
+            if (ctrl_turn_motion(output.turn_deg, p_ctrl->next_turn_id))
+            {
+                p_ctrl->active_turn_id = p_ctrl->next_turn_id;
+                p_ctrl->b_turn_in_progress = true;
+            }
+            else
+            {
+                ctrl_enter_fault(p_ctrl, FAULT_MOTION_COMMAND);
+            }
+        }
+        else
+        {
+            /* Keep the last command. */
+        }
 
-            case AVOIDANCE_TURN_BACK:
-                p_ctrl->phase       = AVOIDANCE_REACQUIRE;
-                p_ctrl->deadline_ms = now_ms + CTRL_REACQUIRE_MS;
-                ctrl_set_motion(creep, creep);
-                break;
-
-            case AVOIDANCE_REACQUIRE:
-                p_ctrl->phase = AVOIDANCE_NONE;
-                ctrl_clear_bits(SYSTEM_BIT_OBSTACLE);
-                ctrl_enter_fault(p_ctrl, FAULT_REACQUIRE);
-                break;
-
-            default:
-                /* AVOIDANCE_NONE: nothing timed. */
-                break;
+        if (MISSION_AVOIDING != p_ctrl->state)
+        {
+            /* The turn command just failed. */
+        }
+        else if (AVOID_DONE == status)
+        {
+            p_ctrl->state = MISSION_FOLLOWING;
+            ctrl_clear_bits(SYSTEM_BIT_OBSTACLE);
+        }
+        else if (AVOID_FAILED_BOXED_IN == status)
+        {
+            ctrl_enter_fault(p_ctrl, FAULT_BOXED_IN);
+        }
+        else if (AVOID_RUNNING != status)
+        {
+            ctrl_enter_fault(p_ctrl, FAULT_REACQUIRE);
+        }
+        else
+        {
+            /* Manoeuvre still running. */
         }
     }
 }
@@ -557,8 +542,6 @@ controller_task (INT stacd, void * p_exinf)
     ctrl.pending_turn       = (uint16_t) BARCODE_CMD_NONE;
     ctrl.next_turn_id       = 0U;
     ctrl.active_turn_id     = 0U;
-    ctrl.phase             = AVOIDANCE_NONE;
-    ctrl.direction         = 1;
     ctrl.last_telemetry_ms = board_millis();
 
 #if ROBOT_SIMULATION

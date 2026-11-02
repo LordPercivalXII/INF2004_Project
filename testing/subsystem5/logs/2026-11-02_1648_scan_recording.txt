@@ -1,0 +1,1667 @@
+microT-Kernel Version 3.00
+=== INF2004 autonomous car on micro T-Kernel (spec 0x6300) simulation=1 ===
+S3: route table empty; waiting for MQTT route
+all tasks started
+S3 dbg: barcode sensor GP28 reads WHITE at start
+wifi: cyw43_utk_task starting (proc 1)
+wifi: cyw43_init() ...
+wifi: cyw43_init() returned, bringing interface up ...
+S3 dbg: white 48225 us  (+0 glitch edges)
+S3 dbg: white 15851 us  (+301 glitch edges)
+S3 dbg: white 14448 us  (+369 glitch edges)
+S3 dbg: white 14931 us  (+359 glitch edges)
+S3: route msg "A:L,B:R,C:S,D:U": 4 applied, 0 rejected
+S3: route map: AL BR CS DU (others STRAIGHT)
+S3 dbg: white 277493 us  (+411 glitch edges)
+S3 dbg: white 9877 us  (+243 glitch edges)
+S3 dbg: white 26434 us  (+495 glitch edges)
+S3 dbg: white 9355 us  (+439 glitch edges)
+S3 dbg: white 21011 us  (+481 glitch edges)
+S3 dbg: white 4205 us  (+512 glitch edges)
+S3 dbg: white 716 us  (+5948 glitch edges)
+S3 dbg: white 519 us  (+15875 glitch edges)
+S3 dbg: white 531 us  (+105 glitch edges)
+S3 dbg: white 565 us  (+2101 glitch edges)
+S3 dbg: white 503 us  (+1751 glitch edges)
+S3 dbg: white 514 us  (+1449 glitch edges)
+S3 dbg: white 536 us  (+577 glitch edges)
+S3 dbg: white 635 us  (+9057 glitch edges)
+S3 dbg: white 873 us  (+14061 glitch edges)
+S3 dbg: white 502 us  (+281 glitch edges)
+S3 dbg: white 605 us  (+909 glitch edges)
+S3 dbg: white 675 us  (+10137 glitch edges)
+S3 dbg: white 524 us  (+549 glitch edges)
+S3 dbg: white 659 us  (+1643 glitch edges)
+S3 dbg: white 555 us  (+579 glitch edges)
+S3 dbg: white 553 us  (+43 glitch edges)
+S3 dbg: white 508 us  (+257 glitch edges)
+S3 dbg: white 519 us  (+3189 glitch edges)
+S3 dbg: white 524 us  (+5447 glitch edges)
+S3 dbg: white 578 us  (+29927 glitch edges)
+S3 dbg: white 539 us  (+57389 glitch edges)
+S3 dbg: white 511 us  (+4203 glitch edges)
+S3 dbg: white 573 us  (+17431 glitch edges)
+S3 dbg: white 765 us  (+114301 glitch edges)
+S3 dbg: white 532 us  (+511 glitch edges)
+S3 dbg: white 631 us  (+15 glitch edges)
+S3 dbg: white 533 us  (+3621 glitch edges)
+S3 dbg: white 516 us  (+46653 glitch edges)
+S3 dbg: white 10225 us  (+22875 glitch edges)
+S3 dbg: BLACK 14628 us  (+134 glitch edges)
+S3 dbg: white 12092 us  (+0 glitch edges)
+S3 dbg: white 11915 us  (+39549 glitch edges)
+S3 dbg: white 8713 us  (+375 glitch edges)
+S3 dbg: white 519 us  (+291 glitch edges)
+S3 dbg: white 11615 us  (+1 glitch edges)
+S3 dbg: white 7290 us  (+336603 glitch edges)
+S3 dbg: white 11909 us  (+323 glitch edges)
+S3 dbg: white 662 us  (+101409 glitch edges)
+S3 dbg: white 548 us  (+92467 glitch edges)
+S3 dbg: white 8939 us  (+4313 glitch edges)
+S3 dbg: white 10588 us  (+355 glitch edges)
+S3 dbg: white 638 us  (+50419 glitch edges)
+S3 dbg: white 707 us  (+31481 glitch edges)
+S3 dbg: white 516 us  (+2319 glitch edges)
+S3 dbg: white 516 us  (+292039 glitch edges)
+S3 dbg: white 545 us  (+145167 glitch edges)
+S3 dbg: white 516 us  (+3523 glitch edges)
+S3 dbg: white 557 us  (+24353 glitch edges)
+S3 dbg: white 500 us  (+13135 glitch edges)
+S3 dbg: white 558 us  (+2701 glitch edges)
+S3 dbg: white 516 us  (+79 glitch edges)
+S3 dbg: white 667 us  (+2511 glitch edges)
+S3 dbg: white 748 us  (+27563 glitch edges)
+S3 dbg: white 505 us  (+973 glitch edges)
+S3 dbg: white 596 us  (+1059 glitch edges)
+S3 dbg: white 557 us  (+3191 glitch edges)
+S3 dbg: white 718 us  (+33447 glitch edges)
+S3 dbg: white 504 us  (+351 glitch edges)
+S3 dbg: white 620 us  (+20275 glitch edges)
+S3 dbg: white 597 us  (+9145 glitch edges)
+S3 dbg: white 516 us  (+4013 glitch edges)
+S3 dbg: white 666 us  (+1395 glitch edges)
+S3 dbg: white 597 us  (+14309 glitch edges)
+S3 dbg: white 545 us  (+59315 glitch edges)
+S3 dbg: white 540 us  (+8627 glitch edges)
+S3 dbg: white 516 us  (+7191 glitch edges)
+S3 dbg: white 1106 us  (+10335 glitch edges)
+S3 dbg: white 585 us  (+1811 glitch edges)
+S3 dbg: white 742 us  (+8457 glitch edges)
+S3 dbg: white 829 us  (+8339 glitch edges)
+S3 dbg: white 539 us  (+241 glitch edges)
+S3 dbg: white 782 us  (+433 glitch edges)
+S3 dbg: white 579 us  (+259 glitch edges)
+S3 dbg: white 580 us  (+249 glitch edges)
+S3 dbg: white 579 us  (+509 glitch edges)
+S3 dbg: white 504 us  (+561 glitch edges)
+S3 dbg: white 1147 us  (+593 glitch edges)
+S3 dbg: white 516 us  (+643 glitch edges)
+S3 dbg: white 516 us  (+1309 glitch edges)
+S3 dbg: white 516 us  (+3905 glitch edges)
+S3 dbg: white 504 us  (+31467 glitch edges)
+S3 dbg: white 760 us  (+3907 glitch edges)
+S3 dbg: white 701 us  (+2253 glitch edges)
+S3 dbg: white 516 us  (+7883 glitch edges)
+S3 dbg: white 585 us  (+1339 glitch edges)
+S3 dbg: white 921 us  (+9909 glitch edges)
+S3 dbg: white 516 us  (+387 glitch edges)
+S3 dbg: white 534 us  (+11377 glitch edges)
+S3 dbg: white 504 us  (+3405 glitch edges)
+S3 dbg: white 515 us  (+41091 glitch edges)
+S3 dbg: white 638 us  (+1083 glitch edges)
+S3 dbg: white 556 us  (+10779 glitch edges)
+S3 dbg: white 556 us  (+38103 glitch edges)
+S3 dbg: white 579 us  (+64839 glitch edges)
+S3 dbg: white 539 us  (+7757 glitch edges)
+S3 dbg: white 921 us  (+8599 glitch edges)
+S3 dbg: white 505 us  (+31 glitch edges)
+S3 dbg: white 556 us  (+12907 glitch edges)
+S3 dbg: white 619 us  (+28569 glitch edges)
+S3 dbg: white 503 us  (+1383 glitch edges)
+S3 dbg: white 567 us  (+44427 glitch edges)
+S3 dbg: white 515 us  (+7219 glitch edges)
+S3 dbg: white 557 us  (+35839 glitch edges)
+S3 dbg: white 557 us  (+12055 glitch edges)
+S3 dbg: white 598 us  (+13857 glitch edges)
+S3 dbg: white 660 us  (+1943 glitch edges)
+S3 dbg: white 579 us  (+125 glitch edges)
+S3 dbg: white 660 us  (+2459 glitch edges)
+S3 dbg: white 557 us  (+2299 glitch edges)
+S3 dbg: white 615 us  (+84975 glitch edges)
+S3 dbg: white 615 us  (+66893 glitch edges)
+S3 dbg: white 515 us  (+16089 glitch edges)
+S3 dbg: white 759 us  (+28829 glitch edges)
+S3 dbg: white 557 us  (+4591 glitch edges)
+S3 dbg: white 615 us  (+16319 glitch edges)
+S3 dbg: white 538 us  (+2317 glitch edges)
+S3 dbg: white 638 us  (+6901 glitch edges)
+S3 dbg: white 9797 us  (+9587 glitch edges)
+S3 dbg: white 512 us  (+5683 glitch edges)
+S3 dbg: white 512 us  (+4049 glitch edges)
+S3 dbg: white 517 us  (+263 glitch edges)
+S3 dbg: white 7794 us  (+17079 glitch edges)
+S5: servo test start
+S3 dbg: white 813 us  (+16469 glitch edges)
+S3 dbg: white 640 us  (+38511 glitch edges)
+S3 dbg: white 559 us  (+5439 glitch edges)
+S3 dbg: white 617 us  (+19 glitch edges)
+S3 dbg: white 553 us  (+46227 glitch edges)
+S3 dbg: white 12557 us  (+17877 glitch edges)
+S3 dbg: white 15223 us  (+351 glitch edges)
+S3 dbg: white 11830 us  (+307 glitch edges)
+S3 dbg: white 8613 us  (+355 glitch edges)
+S3 dbg: white 5867 us  (+2413 glitch edges)
+S3 dbg: white 10143 us  (+405 glitch edges)
+{"heartbeat_ms":1000}
+{"t_ms":1000,"mission":1,"speed":0.350,"line":0.000,"distance":0.343,"hump_m":0.000,"obstacle_cm":156.4,"barcode":0,"fault":0}
+S3 dbg: BLACK 288011 us  (+53482 glitch edges)
+S3 dbg: white 1351 us  (+0 glitch edges)
+S3 dbg: white 4323 us  (+3 glitch edges)
+S3 dbg: white 3160 us  (+1 glitch edges)
+S3 dbg: white 2706 us  (+9 glitch edges)
+S3 dbg: white 619 us  (+117 glitch edges)
+S3 dbg: white 532 us  (+163 glitch edges)
+S3 dbg: white 712 us  (+11 glitch edges)
+S3 dbg: white 11953 us  (+207 glitch edges)
+S3 dbg: white 24817 us  (+512 glitch edges)
+S3 dbg: white 584 us  (+25 glitch edges)
+S3 dbg: white 27339 us  (+149 glitch edges)
+S3 dbg: white 532 us  (+77 glitch edges)
+S3 dbg: white 15069 us  (+143 glitch edges)
+S3 dbg: white 585 us  (+441 glitch edges)
+S3 dbg: white 503 us  (+9 glitch edges)
+S3 dbg: GP28 IRQs 26749392, level changes 5578268, received 2226679, merged 2226569, restored 106, now WHITE
+S3 dbg: 99 elements, NOT decoded (overflow)
+B14628 s12092 B2226211 s11915 B20611 s8713 B16998 s12226 B17273662 s7290
+B18491 s11909 B4729209 s662 B4254180 s548 B197805 s8939 B19735 s10588
+B2759633 s638 B1734351 s707 B136360 s516 B15965922 s516 B7962280 s545
+B201801 s516 B1360211 s557 B744771 s500 B154376 s558 B4815 s516
+B147730 s667 B1577628 s748 B58560 s505 B62477 s596 B188009 s557
+B1892077 s718 B21202 s504 B1158052 s620 B519548 s597 B232139 s516
+B82631 s666 B822791 s597 B3327482 s545 B503547 s540 B423334 s516
+B585722 s1106 B104098 s585 B476401 s742 B474863 s829 B15257 s539
+B25774 s782 B16064 s579 B15236 s580 B30134 s579 B35496 s504
+B37150 s1147 B39355 s516 B77388 s516 B230455 s516 B2767
+S3 dbg: white 219118 us  (+60 glitch edges)
+S3 dbg: white 843 us  (+25 glitch edges)
+S3 dbg: white 634 us  (+55 glitch edges)
+S3 dbg: white 821 us  (+49 glitch edges)
+S3 dbg: white 548 us  (+81 glitch edges)
+S3 dbg: white 502 us  (+21 glitch edges)
+S3 dbg: white 710 us  (+11 glitch edges)
+S3 dbg: white 710 us  (+75 glitch edges)
+S3 dbg: white 860 us  (+19 glitch edges)
+S3 dbg: white 612 us  (+105 glitch edges)
+S3 dbg: white 554 us  (+15 glitch edges)
+S3 dbg: white 553 us  (+5 glitch edges)
+S3 dbg: white 599 us  (+149 glitch edges)
+S3 dbg: white 560 us  (+17 glitch edges)
+S3 dbg: white 553 us  (+31 glitch edges)
+S3 dbg: white 734 us  (+45 glitch edges)
+S3 dbg: white 673 us  (+7 glitch edges)
+S3 dbg: white 634 us  (+7 glitch edges)
+S3 dbg: white 599 us  (+59 glitch edges)
+S3 dbg: white 791 us  (+99 glitch edges)
+S3 dbg: white 502 us  (+29 glitch edges)
+S3 dbg: white 520 us  (+53 glitch edges)
+S3 dbg: white 669 us  (+85 glitch edges)
+S3 dbg: white 872 us  (+25 glitch edges)
+S3 dbg: white 966 us  (+63 glitch edges)
+S3 dbg: white 536 us  (+23 glitch edges)
+S3 dbg: white 589 us  (+9 glitch edges)
+S3 dbg: white 797 us  (+53 glitch edges)
+S3 dbg: white 724 us  (+7 glitch edges)
+S3 dbg: white 768 us  (+23 glitch edges)
+S3 dbg: white 727 us  (+11 glitch edges)
+S3 dbg: white 519 us  (+45 glitch edges)
+S3 dbg: white 925 us  (+55 glitch edges)
+S3 dbg: white 889 us  (+7 glitch edges)
+S3 dbg: white 710 us  (+87 glitch edges)
+S3 dbg: white 1162 us  (+17 glitch edges)
+S3 dbg: white 502 us  (+93 glitch edges)
+S3 dbg: white 579 us  (+5 glitch edges)
+S3 dbg: white 616 us  (+31 glitch edges)
+S3 dbg: white 536 us  (+9 glitch edges)
+S3 dbg: white 589 us  (+13 glitch edges)
+S3 dbg: white 670 us  (+33 glitch edges)
+S3 dbg: white 513 us  (+45 glitch edges)
+S3 dbg: white 763 us  (+15 glitch edges)
+S3 dbg: white 553 us  (+13 glitch edges)
+S3 dbg: white 977 us  (+409 glitch edges)
+S3 dbg: white 565 us  (+49 glitch edges)
+S3 dbg: white 537 us  (+49 glitch edges)
+S3 dbg: white 623 us  (+53 glitch edges)
+S3 dbg: white 1237 us  (+57 glitch edges)
+S3 dbg: white 520 us  (+39 glitch edges)
+S3 dbg: white 709 us  (+83 glitch edges)
+S3 dbg: white 15837 us  (+73 glitch edges)
+S3 dbg: white 903 us  (+207 glitch edges)
+S3 dbg: white 1754 us  (+261 glitch edges)
+S5: servo test at -30 deg, reads 8 cm
+{"t_ms":2000,"mission":1,"speed":0.350,"line":1.000,"distance":0.693,"hump_m":0.000,"obstacle_cm":156.4,"barcode":0,"fault":0}
+{"heartbeat_ms":2000}
+S5: servo test at 30 deg, reads 7 cm
+{"t_ms":3000,"mission":1,"speed":0.350,"line":0.000,"distance":1.043,"hump_m":0.000,"obstacle_cm":156.4,"barcode":0,"fault":0}
+{"heartbeat_ms":3000}
+S3 dbg: BLACK 1731440 us  (+42 glitch edges)
+{"t_ms":4000,"mission":1,"speed":0.350,"line":-1.000,"distance":1.393,"hump_m":0.000,"obstacle_cm":156.4,"barcode":0,"fault":0}
+{"heartbeat_ms":4000}
+S3 dbg: GP28 IRQs 153854, level changes 21427, received 513, merged 512, restored 0, now BLACK
+S3 dbg: 1 elements, NOT decoded (overflow)
+B1749072
+S5: servo test at -30 deg, reads 30 cm
+{"t_ms":5000,"mission":1,"speed":0.350,"line":0.000,"distance":1.743,"hump_m":0.000,"obstacle_cm":156.4,"barcode":0,"fault":0}
+{"heartbeat_ms":5000}
+S5: servo test at 30 deg, reads 400 cm
+{"t_ms":6000,"mission":1,"speed":0.350,"line":1.000,"distance":2.093,"hump_m":0.000,"obstacle_cm":156.4,"barcode":0,"fault":0}
+{"heartbeat_ms":6000}
+S5: servo test at 0 deg, reads 157 cm
+S5: servo test done
+{"t_ms":7000,"mission":1,"speed":0.350,"line":0.000,"distance":2.443,"hump_m":0.000,"obstacle_cm":157.0,"barcode":0,"fault":0}
+{"heartbeat_ms":7000}
+{"t_ms":8000,"mission":1,"speed":0.350,"line":-1.000,"distance":2.793,"hump_m":0.000,"obstacle_cm":157.0,"barcode":0,"fault":0}
+{"heartbeat_ms":8000}
+{"t_ms":9000,"mission":1,"speed":0.350,"line":0.000,"distance":3.143,"hump_m":0.000,"obstacle_cm":157.0,"barcode":0,"fault":0}
+{"heartbeat_ms":9000}
+{"t_ms":10000,"mission":1,"speed":0.350,"line":1.000,"distance":3.493,"hump_m":0.000,"obstacle_cm":157.0,"barcode":0,"fault":0}
+{"heartbeat_ms":10000}
+{"t_ms":11000,"mission":1,"speed":0.350,"line":0.000,"distance":3.843,"hump_m":0.000,"obstacle_cm":157.0,"barcode":0,"fault":0}
+{"heartbeat_ms":11000}
+{"t_ms":12000,"mission":1,"speed":0.350,"line":-1.000,"distance":4.193,"hump_m":0.000,"obstacle_cm":157.0,"barcode":0,"fault":0}
+{"heartbeat_ms":12000}
+{"t_ms":13000,"mission":1,"speed":0.350,"line":0.000,"distance":4.543,"hump_m":0.000,"obstacle_cm":157.0,"barcode":0,"fault":0}
+{"heartbeat_ms":13000}
+{"t_ms":14000,"mission":1,"speed":0.350,"line":1.000,"distance":4.893,"hump_m":0.000,"obstacle_cm":157.0,"barcode":0,"fault":0}
+{"heartbeat_ms":14000}
+{"t_ms":15000,"mission":1,"speed":0.350,"line":0.000,"distance":5.243,"hump_m":0.000,"obstacle_cm":157.0,"barcode":0,"fault":0}
+{"heartbeat_ms":15000}
+{"t_ms":16000,"mission":1,"speed":0.350,"line":-1.000,"distance":5.593,"hump_m":0.000,"obstacle_cm":157.0,"barcode":0,"fault":0}
+{"heartbeat_ms":16000}
+{"t_ms":17000,"mission":1,"speed":0.350,"line":0.000,"distance":5.943,"hump_m":0.000,"obstacle_cm":157.0,"barcode":0,"fault":0}
+{"heartbeat_ms":17000}
+{"t_ms":18000,"mission":1,"speed":0.350,"line":1.000,"distance":6.293,"hump_m":0.000,"obstacle_cm":156.6,"barcode":0,"fault":0}
+{"heartbeat_ms":18000}
+{"t_ms":19000,"mission":1,"speed":0.350,"line":0.000,"distance":6.643,"hump_m":0.000,"obstacle_cm":157.0,"barcode":0,"fault":0}
+{"heartbeat_ms":19000}
+{"t_ms":20000,"mission":1,"speed":0.350,"line":-1.000,"distance":6.993,"hump_m":0.000,"obstacle_cm":157.0,"barcode":0,"fault":0}
+{"heartbeat_ms":20000}
+{"t_ms":21000,"mission":1,"speed":0.350,"line":0.000,"distance":7.343,"hump_m":0.000,"obstacle_cm":157.0,"barcode":0,"fault":0}
+{"heartbeat_ms":21000}
+{"t_ms":22000,"mission":1,"speed":0.350,"line":1.000,"distance":7.693,"hump_m":0.000,"obstacle_cm":157.0,"barcode":0,"fault":0}
+{"heartbeat_ms":22000}
+S5: servo test start
+{"t_ms":23000,"mission":1,"speed":0.350,"line":0.000,"distance":8.043,"hump_m":0.000,"obstacle_cm":157.0,"barcode":0,"fault":0}
+{"heartbeat_ms":23000}
+{"t_ms":24000,"mission":1,"speed":0.350,"line":-1.000,"distance":8.393,"hump_m":0.000,"obstacle_cm":157.0,"barcode":0,"fault":0}
+{"heartbeat_ms":24000}
+S5: servo test at -30 deg, reads 156 cm
+{"t_ms":25000,"mission":1,"speed":0.350,"line":0.000,"distance":8.743,"hump_m":0.000,"obstacle_cm":157.0,"barcode":0,"fault":0}
+{"heartbeat_ms":25000}
+S5: servo test at 30 deg, reads 400 cm
+{"t_ms":26000,"mission":1,"speed":0.350,"line":1.000,"distance":9.093,"hump_m":0.000,"obstacle_cm":157.0,"barcode":0,"fault":0}
+{"heartbeat_ms":26000}
+S5: servo test at -30 deg, reads 155 cm
+{"t_ms":27000,"mission":1,"speed":0.350,"line":0.000,"distance":9.443,"hump_m":0.000,"obstacle_cm":157.0,"barcode":0,"fault":0}
+{"heartbeat_ms":27000}
+S5: servo test at 30 deg, reads 400 cm
+{"t_ms":28000,"mission":1,"speed":0.350,"line":-1.000,"distance":9.793,"hump_m":0.000,"obstacle_cm":157.0,"barcode":0,"fault":0}
+{"heartbeat_ms":28000}
+S5: servo test at 0 deg, reads 157 cm
+S5: servo test done
+{"t_ms":29000,"mission":1,"speed":0.350,"line":0.000,"distance":10.143,"hump_m":0.000,"obstacle_cm":157.0,"barcode":0,"fault":0}
+{"heartbeat_ms":29000}
+{"t_ms":30000,"mission":1,"speed":0.350,"line":1.000,"distance":10.493,"hump_m":0.000,"obstacle_cm":156.4,"barcode":0,"fault":0}
+{"heartbeat_ms":30000}
+{"t_ms":31000,"mission":1,"speed":0.350,"line":0.000,"distance":10.843,"hump_m":0.000,"obstacle_cm":156.9,"barcode":0,"fault":0}
+{"heartbeat_ms":31000}
+{"t_ms":32000,"mission":1,"speed":0.350,"line":-1.000,"distance":11.193,"hump_m":0.000,"obstacle_cm":156.8,"barcode":0,"fault":0}
+{"heartbeat_ms":32000}
+{"t_ms":33000,"mission":1,"speed":0.350,"line":0.000,"distance":11.543,"hump_m":0.000,"obstacle_cm":156.9,"barcode":0,"fault":0}
+{"heartbeat_ms":33000}
+{"t_ms":34000,"mission":1,"speed":0.350,"line":1.000,"distance":11.893,"hump_m":0.000,"obstacle_cm":156.8,"barcode":0,"fault":0}
+{"heartbeat_ms":34000}
+{"t_ms":35000,"mission":1,"speed":0.350,"line":0.000,"distance":12.243,"hump_m":0.000,"obstacle_cm":156.9,"barcode":0,"fault":0}
+{"heartbeat_ms":35000}
+{"t_ms":36000,"mission":1,"speed":0.350,"line":-1.000,"distance":12.593,"hump_m":0.000,"obstacle_cm":156.9,"barcode":0,"fault":0}
+{"heartbeat_ms":36000}
+{"t_ms":37000,"mission":1,"speed":0.350,"line":0.000,"distance":12.943,"hump_m":0.000,"obstacle_cm":156.9,"barcode":0,"fault":0}
+{"heartbeat_ms":37000}
+{"t_ms":38000,"mission":1,"speed":0.350,"line":1.000,"distance":13.293,"hump_m":0.000,"obstacle_cm":156.8,"barcode":0,"fault":0}
+{"heartbeat_ms":38000}
+{"t_ms":39000,"mission":1,"speed":0.350,"line":0.000,"distance":13.643,"hump_m":0.000,"obstacle_cm":156.4,"barcode":0,"fault":0}
+{"heartbeat_ms":39000}
+{"t_ms":40000,"mission":1,"speed":0.350,"line":-1.000,"distance":13.993,"hump_m":0.000,"obstacle_cm":156.9,"barcode":0,"fault":0}
+{"heartbeat_ms":40000}
+{"t_ms":41000,"mission":1,"speed":0.350,"line":0.000,"distance":14.343,"hump_m":0.000,"obstacle_cm":156.9,"barcode":0,"fault":0}
+{"heartbeat_ms":41000}
+{"t_ms":42000,"mission":1,"speed":0.350,"line":1.000,"distance":14.693,"hump_m":0.000,"obstacle_cm":156.9,"barcode":0,"fault":0}
+{"heartbeat_ms":42000}
+{"t_ms":43000,"mission":1,"speed":0.350,"line":0.000,"distance":15.043,"hump_m":0.000,"obstacle_cm":156.9,"barcode":0,"fault":0}
+{"heartbeat_ms":43000}
+{"t_ms":44000,"mission":1,"speed":0.350,"line":-1.000,"distance":15.393,"hump_m":0.000,"obstacle_cm":156.9,"barcode":0,"fault":0}
+{"heartbeat_ms":44000}
+{"t_ms":45000,"mission":1,"speed":0.350,"line":0.000,"distance":15.743,"hump_m":0.000,"obstacle_cm":156.9,"barcode":0,"fault":0}
+{"heartbeat_ms":45000}
+{"t_ms":46000,"mission":1,"speed":0.350,"line":1.000,"distance":16.093,"hump_m":0.000,"obstacle_cm":156.9,"barcode":0,"fault":0}
+{"heartbeat_ms":46000}
+{"t_ms":47000,"mission":1,"speed":0.350,"line":0.000,"distance":16.443,"hump_m":0.000,"obstacle_cm":156.9,"barcode":0,"fault":0}
+{"heartbeat_ms":47000}
+{"t_ms":48000,"mission":1,"speed":0.350,"line":-1.000,"distance":16.793,"hump_m":0.000,"obstacle_cm":156.9,"barcode":0,"fault":0}
+{"heartbeat_ms":48000}
+{"t_ms":49000,"mission":1,"speed":0.350,"line":0.000,"distance":17.143,"hump_m":0.000,"obstacle_cm":156.9,"barcode":0,"fault":0}
+{"heartbeat_ms":49000}
+{"t_ms":50000,"mission":1,"speed":0.350,"line":1.000,"distance":17.493,"hump_m":0.000,"obstacle_cm":156.5,"barcode":0,"fault":0}
+{"heartbeat_ms":50000}
+{"t_ms":51000,"mission":1,"speed":0.350,"line":0.000,"distance":17.843,"hump_m":0.000,"obstacle_cm":156.8,"barcode":0,"fault":0}
+{"heartbeat_ms":51000}
+{"t_ms":52000,"mission":1,"speed":0.350,"line":-1.000,"distance":18.193,"hump_m":0.000,"obstacle_cm":156.9,"barcode":0,"fault":0}
+{"heartbeat_ms":52000}
+{"t_ms":53000,"mission":1,"speed":0.350,"line":0.000,"distance":18.543,"hump_m":0.000,"obstacle_cm":156.9,"barcode":0,"fault":0}
+{"heartbeat_ms":53000}
+{"t_ms":54000,"mission":1,"speed":0.350,"line":1.000,"distance":18.893,"hump_m":0.000,"obstacle_cm":156.9,"barcode":0,"fault":0}
+{"heartbeat_ms":54000}
+{"t_ms":55000,"mission":1,"speed":0.350,"line":0.000,"distance":19.243,"hump_m":0.000,"obstacle_cm":156.4,"barcode":0,"fault":0}
+{"heartbeat_ms":55000}
+{"t_ms":56000,"mission":1,"speed":0.350,"line":-1.000,"distance":19.593,"hump_m":0.000,"obstacle_cm":157.3,"barcode":0,"fault":0}
+{"heartbeat_ms":56000}
+{"t_ms":57000,"mission":1,"speed":0.350,"line":0.000,"distance":19.943,"hump_m":0.000,"obstacle_cm":156.8,"barcode":0,"fault":0}
+{"heartbeat_ms":57000}
+{"t_ms":58000,"mission":1,"speed":0.350,"line":1.000,"distance":20.293,"hump_m":0.000,"obstacle_cm":156.4,"barcode":0,"fault":0}
+{"heartbeat_ms":58000}
+{"t_ms":59000,"mission":1,"speed":0.350,"line":0.000,"distance":20.643,"hump_m":0.000,"obstacle_cm":156.8,"barcode":0,"fault":0}
+{"heartbeat_ms":59000}
+{"t_ms":60000,"mission":1,"speed":0.350,"line":-1.000,"distance":20.993,"hump_m":0.000,"obstacle_cm":156.8,"barcode":0,"fault":0}
+{"heartbeat_ms":60000}
+{"t_ms":61000,"mission":1,"speed":0.350,"line":0.000,"distance":21.343,"hump_m":0.000,"obstacle_cm":156.5,"barcode":0,"fault":0}
+{"heartbeat_ms":61000}
+{"t_ms":62000,"mission":1,"speed":0.350,"line":1.000,"distance":21.693,"hump_m":0.000,"obstacle_cm":156.4,"barcode":0,"fault":0}
+{"heartbeat_ms":62000}
+{"t_ms":63000,"mission":1,"speed":0.350,"line":0.000,"distance":22.043,"hump_m":0.000,"obstacle_cm":156.9,"barcode":0,"fault":0}
+{"heartbeat_ms":63000}
+{"t_ms":64000,"mission":1,"speed":0.350,"line":-1.000,"distance":22.393,"hump_m":0.000,"obstacle_cm":156.9,"barcode":0,"fault":0}
+{"heartbeat_ms":64000}
+{"t_ms":65000,"mission":1,"speed":0.350,"line":0.000,"distance":22.743,"hump_m":0.000,"obstacle_cm":156.8,"barcode":0,"fault":0}
+{"heartbeat_ms":65000}
+{"t_ms":66000,"mission":1,"speed":0.350,"line":1.000,"distance":23.093,"hump_m":0.000,"obstacle_cm":156.9,"barcode":0,"fault":0}
+{"heartbeat_ms":66000}
+{"t_ms":67000,"mission":1,"speed":0.350,"line":0.000,"distance":23.443,"hump_m":0.000,"obstacle_cm":156.8,"barcode":0,"fault":0}
+{"heartbeat_ms":67000}
+{"t_ms":68000,"mission":1,"speed":0.350,"line":-1.000,"distance":23.793,"hump_m":0.000,"obstacle_cm":156.8,"barcode":0,"fault":0}
+{"heartbeat_ms":68000}
+{"t_ms":69000,"mission":1,"speed":0.350,"line":0.000,"distance":24.143,"hump_m":0.000,"obstacle_cm":156.9,"barcode":0,"fault":0}
+{"heartbeat_ms":69000}
+{"t_ms":70000,"mission":1,"speed":0.350,"line":1.000,"distance":24.493,"hump_m":0.000,"obstacle_cm":156.9,"barcode":0,"fault":0}
+{"heartbeat_ms":70000}
+{"t_ms":71000,"mission":1,"speed":0.350,"line":0.000,"distance":24.843,"hump_m":0.000,"obstacle_cm":156.9,"barcode":0,"fault":0}
+{"heartbeat_ms":71000}
+{"t_ms":72000,"mission":1,"speed":0.350,"line":-1.000,"distance":25.193,"hump_m":0.000,"obstacle_cm":156.9,"barcode":0,"fault":0}
+{"heartbeat_ms":72000}
+{"t_ms":73000,"mission":1,"speed":0.350,"line":0.000,"distance":25.543,"hump_m":0.000,"obstacle_cm":156.9,"barcode":0,"fault":0}
+{"heartbeat_ms":73000}
+{"t_ms":74000,"mission":1,"speed":0.350,"line":1.000,"distance":25.893,"hump_m":0.000,"obstacle_cm":156.5,"barcode":0,"fault":0}
+{"heartbeat_ms":74000}
+{"t_ms":75000,"mission":1,"speed":0.350,"line":0.000,"distance":26.243,"hump_m":0.000,"obstacle_cm":156.9,"barcode":0,"fault":0}
+{"heartbeat_ms":75000}
+{"t_ms":76000,"mission":1,"speed":0.350,"line":-1.000,"distance":26.593,"hump_m":0.000,"obstacle_cm":156.9,"barcode":0,"fault":0}
+{"heartbeat_ms":76000}
+{"t_ms":77000,"mission":1,"speed":0.350,"line":0.000,"distance":26.943,"hump_m":0.000,"obstacle_cm":156.5,"barcode":0,"fault":0}
+{"heartbeat_ms":77000}
+{"t_ms":78000,"mission":1,"speed":0.350,"line":1.000,"distance":27.294,"hump_m":0.000,"obstacle_cm":156.9,"barcode":0,"fault":0}
+{"heartbeat_ms":78000}
+{"t_ms":79000,"mission":1,"speed":0.350,"line":0.000,"distance":27.644,"hump_m":0.000,"obstacle_cm":156.5,"barcode":0,"fault":0}
+{"heartbeat_ms":79000}
+{"t_ms":80000,"mission":1,"speed":0.350,"line":-1.000,"distance":27.993,"hump_m":0.000,"obstacle_cm":156.9,"barcode":0,"fault":0}
+{"heartbeat_ms":80000}
+{"t_ms":81000,"mission":1,"speed":0.350,"line":0.000,"distance":28.344,"hump_m":0.000,"obstacle_cm":157.4,"barcode":0,"fault":0}
+{"heartbeat_ms":81000}
+{"t_ms":82000,"mission":1,"speed":0.350,"line":1.000,"distance":28.694,"hump_m":0.000,"obstacle_cm":157.0,"barcode":0,"fault":0}
+{"heartbeat_ms":82000}
+{"t_ms":83000,"mission":1,"speed":0.350,"line":0.000,"distance":29.044,"hump_m":0.000,"obstacle_cm":156.9,"barcode":0,"fault":0}
+{"heartbeat_ms":83000}
+{"t_ms":84000,"mission":1,"speed":0.350,"line":-1.000,"distance":29.394,"hump_m":0.000,"obstacle_cm":156.9,"barcode":0,"fault":0}
+{"heartbeat_ms":84000}
+{"t_ms":85000,"mission":1,"speed":0.350,"line":0.000,"distance":29.744,"hump_m":0.000,"obstacle_cm":157.0,"barcode":0,"fault":0}
+{"heartbeat_ms":85000}
+{"t_ms":86000,"mission":1,"speed":0.350,"line":1.000,"distance":30.094,"hump_m":0.000,"obstacle_cm":157.0,"barcode":0,"fault":0}
+{"heartbeat_ms":86000}
+{"t_ms":87000,"mission":1,"speed":0.350,"line":0.000,"distance":30.444,"hump_m":0.000,"obstacle_cm":157.0,"barcode":0,"fault":0}
+{"heartbeat_ms":87000}
+{"t_ms":88000,"mission":1,"speed":0.350,"line":-1.000,"distance":30.794,"hump_m":0.000,"obstacle_cm":156.9,"barcode":0,"fault":0}
+{"heartbeat_ms":88000}
+{"t_ms":89000,"mission":1,"speed":0.350,"line":0.000,"distance":31.144,"hump_m":0.000,"obstacle_cm":156.5,"barcode":0,"fault":0}
+{"heartbeat_ms":89000}
+{"t_ms":90000,"mission":1,"speed":0.350,"line":1.000,"distance":31.494,"hump_m":0.000,"obstacle_cm":156.9,"barcode":0,"fault":0}
+{"heartbeat_ms":90000}
+{"t_ms":91000,"mission":1,"speed":0.350,"line":0.000,"distance":31.844,"hump_m":0.000,"obstacle_cm":156.9,"barcode":0,"fault":0}
+{"heartbeat_ms":91000}
+{"t_ms":92000,"mission":1,"speed":0.350,"line":-1.000,"distance":32.194,"hump_m":0.000,"obstacle_cm":156.9,"barcode":0,"fault":0}
+{"heartbeat_ms":92000}
+{"t_ms":93000,"mission":1,"speed":0.350,"line":0.000,"distance":32.544,"hump_m":0.000,"obstacle_cm":157.0,"barcode":0,"fault":0}
+{"heartbeat_ms":93000}
+{"t_ms":94000,"mission":1,"speed":0.350,"line":1.000,"distance":32.894,"hump_m":0.000,"obstacle_cm":156.9,"barcode":0,"fault":0}
+{"heartbeat_ms":94000}
+{"t_ms":95000,"mission":1,"speed":0.350,"line":0.000,"distance":33.244,"hump_m":0.000,"obstacle_cm":156.9,"barcode":0,"fault":0}
+{"heartbeat_ms":95000}
+{"t_ms":96000,"mission":1,"speed":0.350,"line":-1.000,"distance":33.594,"hump_m":0.000,"obstacle_cm":157.0,"barcode":0,"fault":0}
+{"heartbeat_ms":96000}
+{"t_ms":97000,"mission":1,"speed":0.350,"line":0.000,"distance":33.944,"hump_m":0.000,"obstacle_cm":156.9,"barcode":0,"fault":0}
+{"heartbeat_ms":97000}
+{"t_ms":98000,"mission":1,"speed":0.350,"line":1.000,"distance":34.294,"hump_m":0.000,"obstacle_cm":157.0,"barcode":0,"fault":0}
+{"heartbeat_ms":98000}
+{"t_ms":99000,"mission":1,"speed":0.350,"line":0.000,"distance":34.644,"hump_m":0.000,"obstacle_cm":157.0,"barcode":0,"fault":0}
+{"heartbeat_ms":99000}
+{"t_ms":100000,"mission":1,"speed":0.350,"line":-1.000,"distance":34.994,"hump_m":0.000,"obstacle_cm":157.0,"barcode":0,"fault":0}
+{"heartbeat_ms":100000}
+{"t_ms":101000,"mission":1,"speed":0.350,"line":0.000,"distance":35.344,"hump_m":0.000,"obstacle_cm":157.0,"barcode":0,"fault":0}
+{"heartbeat_ms":101000}
+{"t_ms":102000,"mission":1,"speed":0.350,"line":1.000,"distance":35.694,"hump_m":0.000,"obstacle_cm":156.5,"barcode":0,"fault":0}
+{"heartbeat_ms":102000}
+{"t_ms":103000,"mission":1,"speed":0.350,"line":0.000,"distance":36.044,"hump_m":0.000,"obstacle_cm":157.0,"barcode":0,"fault":0}
+{"heartbeat_ms":103000}
+{"t_ms":104000,"mission":1,"speed":0.350,"line":-1.000,"distance":36.394,"hump_m":0.000,"obstacle_cm":156.6,"barcode":0,"fault":0}
+{"heartbeat_ms":104000}
+{"t_ms":105000,"mission":1,"speed":0.350,"line":0.000,"distance":36.744,"hump_m":0.000,"obstacle_cm":157.0,"barcode":0,"fault":0}
+{"heartbeat_ms":105000}
+{"t_ms":106000,"mission":1,"speed":0.350,"line":1.000,"distance":37.094,"hump_m":0.000,"obstacle_cm":157.0,"barcode":0,"fault":0}
+{"heartbeat_ms":106000}
+{"t_ms":107000,"mission":1,"speed":0.350,"line":0.000,"distance":37.444,"hump_m":0.000,"obstacle_cm":156.9,"barcode":0,"fault":0}
+{"heartbeat_ms":107000}
+{"t_ms":108000,"mission":1,"speed":0.350,"line":-1.000,"distance":37.794,"hump_m":0.000,"obstacle_cm":156.9,"barcode":0,"fault":0}
+{"heartbeat_ms":108000}
+{"t_ms":109000,"mission":1,"speed":0.350,"line":0.000,"distance":38.144,"hump_m":0.000,"obstacle_cm":156.9,"barcode":0,"fault":0}
+{"heartbeat_ms":109000}
+{"t_ms":110000,"mission":1,"speed":0.350,"line":1.000,"distance":38.494,"hump_m":0.000,"obstacle_cm":157.0,"barcode":0,"fault":0}
+{"heartbeat_ms":110000}
+{"t_ms":111000,"mission":1,"speed":0.350,"line":0.000,"distance":38.844,"hump_m":0.000,"obstacle_cm":156.9,"barcode":0,"fault":0}
+{"heartbeat_ms":111000}
+{"t_ms":112000,"mission":1,"speed":0.350,"line":-1.000,"distance":39.194,"hump_m":0.000,"obstacle_cm":157.0,"barcode":0,"fault":0}
+{"heartbeat_ms":112000}
+{"t_ms":113000,"mission":1,"speed":0.350,"line":0.000,"distance":39.544,"hump_m":0.000,"obstacle_cm":157.0,"barcode":0,"fault":0}
+{"heartbeat_ms":113000}
+{"t_ms":114000,"mission":1,"speed":0.350,"line":1.000,"distance":39.894,"hump_m":0.000,"obstacle_cm":156.9,"barcode":0,"fault":0}
+{"heartbeat_ms":114000}
+{"t_ms":115000,"mission":1,"speed":0.350,"line":0.000,"distance":40.244,"hump_m":0.000,"obstacle_cm":157.0,"barcode":0,"fault":0}
+{"heartbeat_ms":115000}
+{"t_ms":116000,"mission":1,"speed":0.350,"line":-1.000,"distance":40.594,"hump_m":0.000,"obstacle_cm":156.9,"barcode":0,"fault":0}
+{"heartbeat_ms":116000}
+{"t_ms":117000,"mission":1,"speed":0.350,"line":0.000,"distance":40.944,"hump_m":0.000,"obstacle_cm":157.0,"barcode":0,"fault":0}
+{"heartbeat_ms":117000}
+{"t_ms":118000,"mission":1,"speed":0.350,"line":1.000,"distance":41.294,"hump_m":0.000,"obstacle_cm":156.9,"barcode":0,"fault":0}
+{"heartbeat_ms":118000}
+{"t_ms":119000,"mission":1,"speed":0.350,"line":0.000,"distance":41.644,"hump_m":0.000,"obstacle_cm":156.9,"barcode":0,"fault":0}
+{"heartbeat_ms":119000}
+{"t_ms":120000,"mission":1,"speed":0.350,"line":-1.000,"distance":41.994,"hump_m":0.000,"obstacle_cm":156.9,"barcode":0,"fault":0}
+{"heartbeat_ms":120000}
+{"t_ms":121000,"mission":1,"speed":0.350,"line":0.000,"distance":42.344,"hump_m":0.000,"obstacle_cm":156.9,"barcode":0,"fault":0}
+{"heartbeat_ms":121000}
+{"t_ms":122000,"mission":1,"speed":0.350,"line":1.000,"distance":42.694,"hump_m":0.000,"obstacle_cm":156.9,"barcode":0,"fault":0}
+{"heartbeat_ms":122000}
+{"t_ms":123000,"mission":1,"speed":0.350,"line":0.000,"distance":43.045,"hump_m":0.000,"obstacle_cm":156.9,"barcode":0,"fault":0}
+{"heartbeat_ms":123000}
+{"t_ms":124000,"mission":1,"speed":0.350,"line":-1.000,"distance":43.394,"hump_m":0.000,"obstacle_cm":156.9,"barcode":0,"fault":0}
+{"heartbeat_ms":124000}
+{"t_ms":125000,"mission":1,"speed":0.350,"line":0.000,"distance":43.745,"hump_m":0.000,"obstacle_cm":156.9,"barcode":0,"fault":0}
+{"heartbeat_ms":125000}
+{"t_ms":126000,"mission":1,"speed":0.350,"line":1.000,"distance":44.094,"hump_m":0.000,"obstacle_cm":156.9,"barcode":0,"fault":0}
+{"heartbeat_ms":126000}
+{"t_ms":127000,"mission":1,"speed":0.350,"line":0.000,"distance":44.445,"hump_m":0.000,"obstacle_cm":156.9,"barcode":0,"fault":0}
+{"heartbeat_ms":127000}
+{"t_ms":128000,"mission":1,"speed":0.350,"line":-1.000,"distance":44.795,"hump_m":0.000,"obstacle_cm":156.5,"barcode":0,"fault":0}
+{"heartbeat_ms":128000}
+{"t_ms":129000,"mission":1,"speed":0.350,"line":0.000,"distance":45.145,"hump_m":0.000,"obstacle_cm":156.5,"barcode":0,"fault":0}
+{"heartbeat_ms":129000}
+{"t_ms":130000,"mission":1,"speed":0.350,"line":1.000,"distance":45.495,"hump_m":0.000,"obstacle_cm":157.0,"barcode":0,"fault":0}
+{"heartbeat_ms":130000}
+{"t_ms":131000,"mission":1,"speed":0.350,"line":0.000,"distance":45.845,"hump_m":0.000,"obstacle_cm":157.0,"barcode":0,"fault":0}
+{"heartbeat_ms":131000}
+{"t_ms":132000,"mission":1,"speed":0.350,"line":-1.000,"distance":46.195,"hump_m":0.000,"obstacle_cm":156.9,"barcode":0,"fault":0}
+{"heartbeat_ms":132000}
+{"t_ms":133000,"mission":1,"speed":0.350,"line":0.000,"distance":46.545,"hump_m":0.000,"obstacle_cm":156.9,"barcode":0,"fault":0}
+{"heartbeat_ms":133000}
+{"t_ms":134000,"mission":1,"speed":0.350,"line":1.000,"distance":46.895,"hump_m":0.000,"obstacle_cm":156.9,"barcode":0,"fault":0}
+{"heartbeat_ms":134000}
+{"t_ms":135000,"mission":1,"speed":0.350,"line":0.000,"distance":47.245,"hump_m":0.000,"obstacle_cm":156.9,"barcode":0,"fault":0}
+{"heartbeat_ms":135000}
+{"t_ms":136000,"mission":1,"speed":0.350,"line":-1.000,"distance":47.595,"hump_m":0.000,"obstacle_cm":156.9,"barcode":0,"fault":0}
+{"heartbeat_ms":136000}
+{"t_ms":137000,"mission":1,"speed":0.350,"line":0.000,"distance":47.945,"hump_m":0.000,"obstacle_cm":157.0,"barcode":0,"fault":0}
+{"heartbeat_ms":137000}
+{"t_ms":138000,"mission":1,"speed":0.350,"line":1.000,"distance":48.295,"hump_m":0.000,"obstacle_cm":157.0,"barcode":0,"fault":0}
+{"heartbeat_ms":138000}
+{"t_ms":139000,"mission":1,"speed":0.350,"line":0.000,"distance":48.645,"hump_m":0.000,"obstacle_cm":156.9,"barcode":0,"fault":0}
+{"heartbeat_ms":139000}
+{"t_ms":140000,"mission":1,"speed":0.350,"line":-1.000,"distance":48.995,"hump_m":0.000,"obstacle_cm":156.5,"barcode":0,"fault":0}
+{"heartbeat_ms":140000}
+{"t_ms":141000,"mission":1,"speed":0.350,"line":0.000,"distance":49.345,"hump_m":0.000,"obstacle_cm":156.9,"barcode":0,"fault":0}
+{"heartbeat_ms":141000}
+{"t_ms":142000,"mission":1,"speed":0.350,"line":1.000,"distance":49.695,"hump_m":0.000,"obstacle_cm":157.0,"barcode":0,"fault":0}
+{"heartbeat_ms":142000}
+{"t_ms":143000,"mission":1,"speed":0.350,"line":0.000,"distance":50.045,"hump_m":0.000,"obstacle_cm":156.5,"barcode":0,"fault":0}
+{"heartbeat_ms":143000}
+{"t_ms":144000,"mission":1,"speed":0.350,"line":-1.000,"distance":50.395,"hump_m":0.000,"obstacle_cm":156.9,"barcode":0,"fault":0}
+{"heartbeat_ms":144000}
+{"t_ms":145000,"mission":1,"speed":0.350,"line":0.000,"distance":50.745,"hump_m":0.000,"obstacle_cm":156.5,"barcode":0,"fault":0}
+{"heartbeat_ms":145000}
+{"t_ms":146000,"mission":1,"speed":0.350,"line":1.000,"distance":51.095,"hump_m":0.000,"obstacle_cm":157.4,"barcode":0,"fault":0}
+{"heartbeat_ms":146000}
+{"t_ms":147000,"mission":1,"speed":0.350,"line":0.000,"distance":51.445,"hump_m":0.000,"obstacle_cm":157.1,"barcode":0,"fault":0}
+{"heartbeat_ms":147000}
+{"t_ms":148000,"mission":1,"speed":0.350,"line":-1.000,"distance":51.795,"hump_m":0.000,"obstacle_cm":157.1,"barcode":0,"fault":0}
+{"heartbeat_ms":148000}
+S5: STOP obstacle in path at 20 cm, 0 deg
+{"t_ms":149000,"mission":2,"speed":0.350,"line":0.000,"distance":52.075,"hump_m":0.000,"obstacle_cm":20.3,"barcode":0,"fault":0}
+{"heartbeat_ms":149000}
+{"t_ms":150000,"mission":2,"speed":0.350,"line":1.000,"distance":52.075,"hump_m":0.000,"obstacle_cm":20.3,"barcode":0,"fault":0}
+{"heartbeat_ms":150000}
+{"t_ms":151000,"mission":2,"speed":0.350,"line":0.000,"distance":52.075,"hump_m":0.000,"obstacle_cm":20.3,"barcode":0,"fault":0}
+{"heartbeat_ms":151000}
+{"t_ms":152000,"mission":2,"speed":0.350,"line":-1.000,"distance":52.075,"hump_m":0.000,"obstacle_cm":20.3,"barcode":0,"fault":0}
+{"heartbeat_ms":152000}
+S5: obstacle -25..20 deg, centre -3 deg / -1 cm, closest 16 cm at 0 deg, width 14 cm, clear L 0 R 30 cm, action TURN_RIGHT
+S5: points 60:18 65:18 70:17 75:18 80:17 85:17 90:16 95:18 100:19 105:17 110:17 115:19 120:30
+{"t_ms":153000,"mission":2,"speed":0.350,"line":0.000,"distance":52.183,"hump_m":0.000,"obstacle_cm":17.4,"barcode":0,"fault":0}
+{"heartbeat_ms":153000}
+{"t_ms":154000,"mission":2,"speed":0.350,"line":1.000,"distance":52.306,"hump_m":0.000,"obstacle_cm":17.4,"barcode":0,"fault":0}
+{"heartbeat_ms":154000}
+S5: obstacle -25..0 deg, centre -13 deg / -4 cm, closest 17 cm at -25 deg, width 8 cm, clear L 0 R 33 cm, action TURN_RIGHT
+S5: points 60:19 65:17 70:17 75:19 80:18 85:18 90:23 95:30 100:33 105:36 110:37 115:38 120:36
+{"t_ms":155000,"mission":2,"speed":0.350,"line":0.000,"distance":52.485,"hump_m":0.000,"obstacle_cm":20.0,"barcode":0,"fault":0}
+{"heartbeat_ms":155000}
+{"t_ms":156000,"mission":2,"speed":0.350,"line":-1.000,"distance":52.622,"hump_m":0.000,"obstacle_cm":35.2,"barcode":0,"fault":0}
+{"heartbeat_ms":156000}
+{"t_ms":157000,"mission":2,"speed":0.350,"line":0.000,"distance":52.781,"hump_m":0.000,"obstacle_cm":34.7,"barcode":0,"fault":0}
+{"heartbeat_ms":157000}
+{"t_ms":158000,"mission":1,"speed":0.350,"line":1.000,"distance":53.131,"hump_m":0.000,"obstacle_cm":34.2,"barcode":0,"fault":0}
+{"heartbeat_ms":158000}
+S5: STOP obstacle in path at 35 cm, 0 deg
+{"t_ms":159000,"mission":2,"speed":0.350,"line":0.000,"distance":53.166,"hump_m":0.000,"obstacle_cm":35.0,"barcode":0,"fault":0}
+{"heartbeat_ms":159000}
+{"t_ms":160000,"mission":1,"speed":0.350,"line":-1.000,"distance":53.362,"hump_m":0.000,"obstacle_cm":35.5,"barcode":0,"fault":0}
+{"heartbeat_ms":160000}
+{"t_ms":161000,"mission":1,"speed":0.350,"line":0.000,"distance":53.712,"hump_m":0.000,"obstacle_cm":157.1,"barcode":0,"fault":0}
+{"heartbeat_ms":161000}
+{"t_ms":162000,"mission":1,"speed":0.350,"line":1.000,"distance":54.062,"hump_m":0.000,"obstacle_cm":156.9,"barcode":0,"fault":0}
+{"heartbeat_ms":162000}
+{"t_ms":163000,"mission":1,"speed":0.350,"line":0.000,"distance":54.412,"hump_m":0.000,"obstacle_cm":156.9,"barcode":0,"fault":0}
+{"heartbeat_ms":163000}
+{"t_ms":164000,"mission":1,"speed":0.350,"line":-1.000,"distance":54.762,"hump_m":0.000,"obstacle_cm":156.5,"barcode":0,"fault":0}
+{"heartbeat_ms":164000}
+{"t_ms":165000,"mission":1,"speed":0.350,"line":0.000,"distance":55.112,"hump_m":0.000,"obstacle_cm":157.0,"barcode":0,"fault":0}
+{"heartbeat_ms":165000}
+{"t_ms":166000,"mission":1,"speed":0.350,"line":1.000,"distance":55.462,"hump_m":0.000,"obstacle_cm":157.0,"barcode":0,"fault":0}
+{"heartbeat_ms":166000}
+{"t_ms":167000,"mission":1,"speed":0.350,"line":0.000,"distance":55.812,"hump_m":0.000,"obstacle_cm":156.6,"barcode":0,"fault":0}
+{"heartbeat_ms":167000}
+{"t_ms":168000,"mission":1,"speed":0.350,"line":-1.000,"distance":56.162,"hump_m":0.000,"obstacle_cm":156.5,"barcode":0,"fault":0}
+{"heartbeat_ms":168000}
+{"t_ms":169000,"mission":1,"speed":0.350,"line":0.000,"distance":56.512,"hump_m":0.000,"obstacle_cm":156.5,"barcode":0,"fault":0}
+{"heartbeat_ms":169000}
+{"t_ms":170000,"mission":1,"speed":0.350,"line":1.000,"distance":56.862,"hump_m":0.000,"obstacle_cm":156.9,"barcode":0,"fault":0}
+{"heartbeat_ms":170000}
+{"t_ms":171000,"mission":1,"speed":0.350,"line":0.000,"distance":57.212,"hump_m":0.000,"obstacle_cm":157.0,"barcode":0,"fault":0}
+{"heartbeat_ms":171000}
+{"t_ms":172000,"mission":1,"speed":0.350,"line":-1.000,"distance":57.562,"hump_m":0.000,"obstacle_cm":157.0,"barcode":0,"fault":0}
+{"heartbeat_ms":172000}
+{"t_ms":173000,"mission":1,"speed":0.350,"line":0.000,"distance":57.912,"hump_m":0.000,"obstacle_cm":157.0,"barcode":0,"fault":0}
+{"heartbeat_ms":173000}
+{"t_ms":174000,"mission":1,"speed":0.350,"line":1.000,"distance":58.262,"hump_m":0.000,"obstacle_cm":157.0,"barcode":0,"fault":0}
+{"heartbeat_ms":174000}
+{"t_ms":175000,"mission":1,"speed":0.350,"line":0.000,"distance":58.612,"hump_m":0.000,"obstacle_cm":156.9,"barcode":0,"fault":0}
+{"heartbeat_ms":175000}
+{"t_ms":176000,"mission":1,"speed":0.350,"line":-1.000,"distance":58.962,"hump_m":0.000,"obstacle_cm":157.0,"barcode":0,"fault":0}
+{"heartbeat_ms":176000}
+{"t_ms":177000,"mission":1,"speed":0.350,"line":0.000,"distance":59.312,"hump_m":0.000,"obstacle_cm":156.5,"barcode":0,"fault":0}
+{"heartbeat_ms":177000}
+{"t_ms":178000,"mission":1,"speed":0.350,"line":1.000,"distance":59.662,"hump_m":0.000,"obstacle_cm":156.9,"barcode":0,"fault":0}
+{"heartbeat_ms":178000}
+{"t_ms":179000,"mission":1,"speed":0.350,"line":0.000,"distance":60.012,"hump_m":0.000,"obstacle_cm":156.9,"barcode":0,"fault":0}
+{"heartbeat_ms":179000}
+{"t_ms":180000,"mission":1,"speed":0.350,"line":-1.000,"distance":60.362,"hump_m":0.000,"obstacle_cm":157.0,"barcode":0,"fault":0}
+{"heartbeat_ms":180000}
+{"t_ms":181000,"mission":1,"speed":0.350,"line":0.000,"distance":60.712,"hump_m":0.000,"obstacle_cm":157.0,"barcode":0,"fault":0}
+{"heartbeat_ms":181000}
+{"t_ms":182000,"mission":1,"speed":0.350,"line":1.000,"distance":61.062,"hump_m":0.000,"obstacle_cm":156.9,"barcode":0,"fault":0}
+{"heartbeat_ms":182000}
+{"t_ms":183000,"mission":1,"speed":0.350,"line":0.000,"distance":61.412,"hump_m":0.000,"obstacle_cm":156.9,"barcode":0,"fault":0}
+{"heartbeat_ms":183000}
+{"t_ms":184000,"mission":1,"speed":0.350,"line":-1.000,"distance":61.762,"hump_m":0.000,"obstacle_cm":157.0,"barcode":0,"fault":0}
+{"heartbeat_ms":184000}
+S3 dbg: BLACK 181711702 us  (+512 glitch edges)
+{"t_ms":185000,"mission":1,"speed":0.350,"line":0.000,"distance":62.112,"hump_m":0.000,"obstacle_cm":156.6,"barcode":0,"fault":0}
+{"heartbeat_ms":185000}
+S3 dbg: GP28 IRQs 1, level changes 1, received 1, merged 0, restored 0, now WHITE
+S3 dbg: 1 elements, NOT decoded
+B181711702
+{"t_ms":186000,"mission":1,"speed":0.350,"line":1.000,"distance":62.463,"hump_m":0.000,"obstacle_cm":157.0,"barcode":0,"fault":0}
+{"heartbeat_ms":186000}
+S3 dbg: white 1210337 us  (+0 glitch edges)
+S3 dbg: white 19368 us  (+215 glitch edges)
+S3 dbg: white 20288 us  (+163 glitch edges)
+S3 dbg: white 10354 us  (+512 glitch edges)
+S3 dbg: white 16170 us  (+512 glitch edges)
+S3 dbg: BLACK 17871 us  (+86 glitch edges)
+S3 dbg: white 5483 us  (+0 glitch edges)
+S3 dbg: BLACK 13718 us  (+152 glitch edges)
+S3 dbg: white 12415 us  (+0 glitch edges)
+{"t_ms":187000,"mission":1,"speed":0.350,"line":0.000,"distance":62.812,"hump_m":0.000,"obstacle_cm":157.0,"barcode":0,"fault":0}
+{"heartbeat_ms":187000}
+S3 dbg: GP28 IRQs 13846982, level changes 2692841, received 352, merged 348, restored 0, now BLACK
+S3 dbg: 4 elements, NOT decoded (overflow)
+B17871 s9677 B13718 s17790
+{"t_ms":188000,"mission":1,"speed":0.350,"line":-1.000,"distance":63.162,"hump_m":0.000,"obstacle_cm":156.5,"barcode":0,"fault":0}
+{"heartbeat_ms":188000}
+{"t_ms":189000,"mission":1,"speed":0.350,"line":0.000,"distance":63.513,"hump_m":0.000,"obstacle_cm":156.7,"barcode":0,"fault":0}
+{"heartbeat_ms":189000}
+{"t_ms":190000,"mission":1,"speed":0.350,"line":1.000,"distance":63.863,"hump_m":0.000,"obstacle_cm":156.7,"barcode":0,"fault":0}
+{"heartbeat_ms":190000}
+{"t_ms":191000,"mission":1,"speed":0.350,"line":0.000,"distance":64.213,"hump_m":0.000,"obstacle_cm":157.1,"barcode":0,"fault":0}
+{"heartbeat_ms":191000}
+{"t_ms":192000,"mission":1,"speed":0.350,"line":-1.000,"distance":64.562,"hump_m":0.000,"obstacle_cm":156.7,"barcode":0,"fault":0}
+{"heartbeat_ms":192000}
+{"t_ms":193000,"mission":1,"speed":0.350,"line":0.000,"distance":64.912,"hump_m":0.000,"obstacle_cm":157.5,"barcode":0,"fault":0}
+{"heartbeat_ms":193000}
+{"t_ms":194000,"mission":1,"speed":0.350,"line":1.000,"distance":65.262,"hump_m":0.000,"obstacle_cm":157.5,"barcode":0,"fault":0}
+{"heartbeat_ms":194000}
+{"t_ms":195000,"mission":1,"speed":0.350,"line":0.000,"distance":65.612,"hump_m":0.000,"obstacle_cm":157.5,"barcode":0,"fault":0}
+{"heartbeat_ms":195000}
+{"t_ms":196000,"mission":1,"speed":0.350,"line":-1.000,"distance":65.962,"hump_m":0.000,"obstacle_cm":157.5,"barcode":0,"fault":0}
+{"heartbeat_ms":196000}
+{"t_ms":197000,"mission":1,"speed":0.350,"line":0.000,"distance":66.312,"hump_m":0.000,"obstacle_cm":157.9,"barcode":0,"fault":0}
+{"heartbeat_ms":197000}
+{"t_ms":198000,"mission":1,"speed":0.350,"line":1.000,"distance":66.662,"hump_m":0.000,"obstacle_cm":157.9,"barcode":0,"fault":0}
+{"heartbeat_ms":198000}
+{"t_ms":199000,"mission":1,"speed":0.350,"line":0.000,"distance":67.012,"hump_m":0.000,"obstacle_cm":157.0,"barcode":0,"fault":0}
+{"heartbeat_ms":199000}
+{"t_ms":200000,"mission":1,"speed":0.350,"line":-1.000,"distance":67.362,"hump_m":0.000,"obstacle_cm":156.6,"barcode":0,"fault":0}
+{"heartbeat_ms":200000}
+S3 dbg: BLACK 14396359 us  (+196 glitch edges)
+S3 dbg: white 130146 us  (+0 glitch edges)
+S3 dbg: BLACK 100933 us  (+12 glitch edges)
+{"t_ms":201000,"mission":1,"speed":0.350,"line":0.000,"distance":67.712,"hump_m":0.000,"obstacle_cm":67.7,"barcode":0,"fault":0}
+{"heartbeat_ms":201000}
+S3 dbg: white 84981 us  (+0 glitch edges)
+S3 dbg: BLACK 774161 us  (+56 glitch edges)
+{"t_ms":202000,"mission":1,"speed":0.350,"line":1.000,"distance":68.062,"hump_m":0.000,"obstacle_cm":400.0,"barcode":0,"fault":0}
+{"heartbeat_ms":202000}
+S5: STOP obstacle in path at 19 cm, 0 deg
+S3 dbg: GP28 IRQs 318, level changes 73, received 73, merged 68, restored 0, now WHITE
+S3 dbg: 5 elements, NOT decoded
+B14396359 s130850 B100933 s86750 B774161
+{"t_ms":203000,"mission":2,"speed":0.350,"line":0.000,"distance":68.139,"hump_m":0.000,"obstacle_cm":18.7,"barcode":0,"fault":0}
+{"heartbeat_ms":203000}
+{"t_ms":204000,"mission":1,"speed":0.350,"line":-1.000,"distance":68.257,"hump_m":0.000,"obstacle_cm":156.7,"barcode":0,"fault":0}
+{"heartbeat_ms":204000}
+{"t_ms":205000,"mission":1,"speed":0.350,"line":0.000,"distance":68.607,"hump_m":0.000,"obstacle_cm":157.1,"barcode":0,"fault":0}
+{"heartbeat_ms":205000}
+{"t_ms":206000,"mission":1,"speed":0.350,"line":1.000,"distance":68.957,"hump_m":0.000,"obstacle_cm":156.7,"barcode":0,"fault":0}
+{"heartbeat_ms":206000}
+{"t_ms":207000,"mission":1,"speed":0.350,"line":0.000,"distance":69.307,"hump_m":0.000,"obstacle_cm":157.1,"barcode":0,"fault":0}
+{"heartbeat_ms":207000}
+{"t_ms":208000,"mission":1,"speed":0.350,"line":-1.000,"distance":69.657,"hump_m":0.000,"obstacle_cm":157.1,"barcode":0,"fault":0}
+{"heartbeat_ms":208000}
+{"t_ms":209000,"mission":1,"speed":0.350,"line":0.000,"distance":70.007,"hump_m":0.000,"obstacle_cm":156.6,"barcode":0,"fault":0}
+{"heartbeat_ms":209000}
+{"t_ms":210000,"mission":1,"speed":0.350,"line":1.000,"distance":70.357,"hump_m":0.000,"obstacle_cm":156.6,"barcode":0,"fault":0}
+{"heartbeat_ms":210000}
+{"t_ms":211000,"mission":1,"speed":0.350,"line":0.000,"distance":70.707,"hump_m":0.000,"obstacle_cm":156.6,"barcode":0,"fault":0}
+{"heartbeat_ms":211000}
+{"t_ms":212000,"mission":1,"speed":0.350,"line":-1.000,"distance":71.057,"hump_m":0.000,"obstacle_cm":157.0,"barcode":0,"fault":0}
+{"heartbeat_ms":212000}
+{"t_ms":213000,"mission":1,"speed":0.350,"line":0.000,"distance":71.407,"hump_m":0.000,"obstacle_cm":157.0,"barcode":0,"fault":0}
+{"heartbeat_ms":213000}
+{"t_ms":214000,"mission":1,"speed":0.350,"line":1.000,"distance":71.757,"hump_m":0.000,"obstacle_cm":156.6,"barcode":0,"fault":0}
+{"heartbeat_ms":214000}
+{"t_ms":215000,"mission":1,"speed":0.350,"line":0.000,"distance":72.107,"hump_m":0.000,"obstacle_cm":156.7,"barcode":0,"fault":0}
+{"heartbeat_ms":215000}
+{"t_ms":216000,"mission":1,"speed":0.350,"line":-1.000,"distance":72.457,"hump_m":0.000,"obstacle_cm":157.0,"barcode":0,"fault":0}
+{"heartbeat_ms":216000}
+{"t_ms":217000,"mission":1,"speed":0.350,"line":0.000,"distance":72.806,"hump_m":0.000,"obstacle_cm":157.0,"barcode":0,"fault":0}
+{"heartbeat_ms":217000}
+{"t_ms":218000,"mission":1,"speed":0.350,"line":1.000,"distance":73.156,"hump_m":0.000,"obstacle_cm":157.0,"barcode":0,"fault":0}
+{"heartbeat_ms":218000}
+{"t_ms":219000,"mission":1,"speed":0.350,"line":0.000,"distance":73.506,"hump_m":0.000,"obstacle_cm":156.6,"barcode":0,"fault":0}
+{"heartbeat_ms":219000}
+{"t_ms":220000,"mission":1,"speed":0.350,"line":-1.000,"distance":73.856,"hump_m":0.000,"obstacle_cm":157.0,"barcode":0,"fault":0}
+{"heartbeat_ms":220000}
+{"t_ms":221000,"mission":1,"speed":0.350,"line":0.000,"distance":74.206,"hump_m":0.000,"obstacle_cm":157.0,"barcode":0,"fault":0}
+{"heartbeat_ms":221000}
+{"t_ms":222000,"mission":1,"speed":0.350,"line":1.000,"distance":74.556,"hump_m":0.000,"obstacle_cm":157.1,"barcode":0,"fault":0}
+{"heartbeat_ms":222000}
+{"t_ms":223000,"mission":1,"speed":0.350,"line":0.000,"distance":74.906,"hump_m":0.000,"obstacle_cm":157.1,"barcode":0,"fault":0}
+{"heartbeat_ms":223000}
+{"t_ms":224000,"mission":1,"speed":0.350,"line":-1.000,"distance":75.256,"hump_m":0.000,"obstacle_cm":156.7,"barcode":0,"fault":0}
+{"heartbeat_ms":224000}
+{"t_ms":225000,"mission":1,"speed":0.350,"line":0.000,"distance":75.606,"hump_m":0.000,"obstacle_cm":156.7,"barcode":0,"fault":0}
+{"heartbeat_ms":225000}
+{"t_ms":226000,"mission":1,"speed":0.350,"line":1.000,"distance":75.956,"hump_m":0.000,"obstacle_cm":157.1,"barcode":0,"fault":0}
+{"heartbeat_ms":226000}
+{"t_ms":227000,"mission":1,"speed":0.350,"line":0.000,"distance":76.306,"hump_m":0.000,"obstacle_cm":157.1,"barcode":0,"fault":0}
+{"heartbeat_ms":227000}
+{"t_ms":228000,"mission":1,"speed":0.350,"line":-1.000,"distance":76.656,"hump_m":0.000,"obstacle_cm":157.1,"barcode":0,"fault":0}
+{"heartbeat_ms":228000}
+{"t_ms":229000,"mission":1,"speed":0.350,"line":0.000,"distance":77.006,"hump_m":0.000,"obstacle_cm":157.1,"barcode":0,"fault":0}
+{"heartbeat_ms":229000}
+{"t_ms":230000,"mission":1,"speed":0.350,"line":1.000,"distance":77.355,"hump_m":0.000,"obstacle_cm":157.1,"barcode":0,"fault":0}
+{"heartbeat_ms":230000}
+{"t_ms":231000,"mission":1,"speed":0.350,"line":0.000,"distance":77.706,"hump_m":0.000,"obstacle_cm":156.7,"barcode":0,"fault":0}
+{"heartbeat_ms":231000}
+{"t_ms":232000,"mission":1,"speed":0.350,"line":-1.000,"distance":78.055,"hump_m":0.000,"obstacle_cm":157.1,"barcode":0,"fault":0}
+{"heartbeat_ms":232000}
+{"t_ms":233000,"mission":1,"speed":0.350,"line":0.000,"distance":78.405,"hump_m":0.000,"obstacle_cm":155.7,"barcode":0,"fault":0}
+{"heartbeat_ms":233000}
+{"t_ms":234000,"mission":1,"speed":0.350,"line":1.000,"distance":78.755,"hump_m":0.000,"obstacle_cm":157.2,"barcode":0,"fault":0}
+{"heartbeat_ms":234000}
+{"t_ms":235000,"mission":1,"speed":0.350,"line":0.000,"distance":79.105,"hump_m":0.000,"obstacle_cm":156.6,"barcode":0,"fault":0}
+{"heartbeat_ms":235000}
+{"t_ms":236000,"mission":1,"speed":0.350,"line":-1.000,"distance":79.455,"hump_m":0.000,"obstacle_cm":156.6,"barcode":0,"fault":0}
+{"heartbeat_ms":236000}
+{"t_ms":237000,"mission":1,"speed":0.350,"line":0.000,"distance":79.805,"hump_m":0.000,"obstacle_cm":156.6,"barcode":0,"fault":0}
+{"heartbeat_ms":237000}
+{"t_ms":238000,"mission":1,"speed":0.350,"line":1.000,"distance":80.155,"hump_m":0.000,"obstacle_cm":157.0,"barcode":0,"fault":0}
+{"heartbeat_ms":238000}
+{"t_ms":239000,"mission":1,"speed":0.350,"line":0.000,"distance":80.505,"hump_m":0.000,"obstacle_cm":156.5,"barcode":0,"fault":0}
+{"heartbeat_ms":239000}
+{"t_ms":240000,"mission":1,"speed":0.350,"line":-1.000,"distance":80.855,"hump_m":0.000,"obstacle_cm":156.8,"barcode":0,"fault":0}
+{"heartbeat_ms":240000}
+{"t_ms":241000,"mission":1,"speed":0.350,"line":0.000,"distance":81.205,"hump_m":0.000,"obstacle_cm":156.4,"barcode":0,"fault":0}
+{"heartbeat_ms":241000}
+{"t_ms":242000,"mission":1,"speed":0.350,"line":1.000,"distance":81.555,"hump_m":0.000,"obstacle_cm":156.8,"barcode":0,"fault":0}
+{"heartbeat_ms":242000}
+{"t_ms":243000,"mission":1,"speed":0.350,"line":0.000,"distance":81.905,"hump_m":0.000,"obstacle_cm":156.3,"barcode":0,"fault":0}
+{"heartbeat_ms":243000}
+{"t_ms":244000,"mission":1,"speed":0.350,"line":-1.000,"distance":82.254,"hump_m":0.000,"obstacle_cm":156.3,"barcode":0,"fault":0}
+{"heartbeat_ms":244000}
+{"t_ms":245000,"mission":1,"speed":0.350,"line":0.000,"distance":82.604,"hump_m":0.000,"obstacle_cm":156.3,"barcode":0,"fault":0}
+{"heartbeat_ms":245000}
+{"t_ms":246000,"mission":1,"speed":0.350,"line":1.000,"distance":82.954,"hump_m":0.000,"obstacle_cm":400.0,"barcode":0,"fault":0}
+{"heartbeat_ms":246000}
+{"t_ms":247000,"mission":1,"speed":0.350,"line":0.000,"distance":83.304,"hump_m":0.000,"obstacle_cm":156.3,"barcode":0,"fault":0}
+{"heartbeat_ms":247000}
+{"t_ms":248000,"mission":1,"speed":0.350,"line":-1.000,"distance":83.654,"hump_m":0.000,"obstacle_cm":156.7,"barcode":0,"fault":0}
+{"heartbeat_ms":248000}
+{"t_ms":249000,"mission":1,"speed":0.350,"line":0.000,"distance":84.004,"hump_m":0.000,"obstacle_cm":156.2,"barcode":0,"fault":0}
+{"heartbeat_ms":249000}
+{"t_ms":250000,"mission":1,"speed":0.350,"line":1.000,"distance":84.354,"hump_m":0.000,"obstacle_cm":156.7,"barcode":0,"fault":0}
+{"heartbeat_ms":250000}
+{"t_ms":251000,"mission":1,"speed":0.350,"line":0.000,"distance":84.704,"hump_m":0.000,"obstacle_cm":156.6,"barcode":0,"fault":0}
+{"heartbeat_ms":251000}
+{"t_ms":252000,"mission":1,"speed":0.350,"line":-1.000,"distance":85.054,"hump_m":0.000,"obstacle_cm":156.6,"barcode":0,"fault":0}
+{"heartbeat_ms":252000}
+{"t_ms":253000,"mission":1,"speed":0.350,"line":0.000,"distance":85.404,"hump_m":0.000,"obstacle_cm":156.3,"barcode":0,"fault":0}
+{"heartbeat_ms":253000}
+{"t_ms":254000,"mission":1,"speed":0.350,"line":1.000,"distance":85.754,"hump_m":0.000,"obstacle_cm":156.7,"barcode":0,"fault":0}
+{"heartbeat_ms":254000}
+{"t_ms":255000,"mission":1,"speed":0.350,"line":0.000,"distance":86.104,"hump_m":0.000,"obstacle_cm":156.7,"barcode":0,"fault":0}
+{"heartbeat_ms":255000}
+{"t_ms":256000,"mission":1,"speed":0.350,"line":-1.000,"distance":86.454,"hump_m":0.000,"obstacle_cm":156.3,"barcode":0,"fault":0}
+{"heartbeat_ms":256000}
+{"t_ms":257000,"mission":1,"speed":0.350,"line":0.000,"distance":86.803,"hump_m":0.000,"obstacle_cm":156.3,"barcode":0,"fault":0}
+{"heartbeat_ms":257000}
+{"t_ms":258000,"mission":1,"speed":0.350,"line":1.000,"distance":87.153,"hump_m":0.000,"obstacle_cm":156.3,"barcode":0,"fault":0}
+{"heartbeat_ms":258000}
+{"t_ms":259000,"mission":1,"speed":0.350,"line":0.000,"distance":87.503,"hump_m":0.000,"obstacle_cm":156.7,"barcode":0,"fault":0}
+{"heartbeat_ms":259000}
+{"t_ms":260000,"mission":1,"speed":0.350,"line":-1.000,"distance":87.853,"hump_m":0.000,"obstacle_cm":156.3,"barcode":0,"fault":0}
+{"heartbeat_ms":260000}
+{"t_ms":261000,"mission":1,"speed":0.350,"line":0.000,"distance":88.203,"hump_m":0.000,"obstacle_cm":156.3,"barcode":0,"fault":0}
+{"heartbeat_ms":261000}
+{"t_ms":262000,"mission":1,"speed":0.350,"line":1.000,"distance":88.553,"hump_m":0.000,"obstacle_cm":156.3,"barcode":0,"fault":0}
+{"heartbeat_ms":262000}
+{"t_ms":263000,"mission":1,"speed":0.350,"line":0.000,"distance":88.903,"hump_m":0.000,"obstacle_cm":156.7,"barcode":0,"fault":0}
+{"heartbeat_ms":263000}
+{"t_ms":264000,"mission":1,"speed":0.350,"line":-1.000,"distance":89.253,"hump_m":0.000,"obstacle_cm":156.3,"barcode":0,"fault":0}
+{"heartbeat_ms":264000}
+{"t_ms":265000,"mission":1,"speed":0.350,"line":0.000,"distance":89.603,"hump_m":0.000,"obstacle_cm":156.7,"barcode":0,"fault":0}
+{"heartbeat_ms":265000}
+{"t_ms":266000,"mission":1,"speed":0.350,"line":1.000,"distance":89.953,"hump_m":0.000,"obstacle_cm":156.3,"barcode":0,"fault":0}
+{"heartbeat_ms":266000}
+{"t_ms":267000,"mission":1,"speed":0.350,"line":0.000,"distance":90.303,"hump_m":0.000,"obstacle_cm":156.3,"barcode":0,"fault":0}
+{"heartbeat_ms":267000}
+{"t_ms":268000,"mission":1,"speed":0.350,"line":-1.000,"distance":90.653,"hump_m":0.000,"obstacle_cm":156.3,"barcode":0,"fault":0}
+{"heartbeat_ms":268000}
+{"t_ms":269000,"mission":1,"speed":0.350,"line":0.000,"distance":91.002,"hump_m":0.000,"obstacle_cm":156.3,"barcode":0,"fault":0}
+{"heartbeat_ms":269000}
+{"t_ms":270000,"mission":1,"speed":0.350,"line":1.000,"distance":91.353,"hump_m":0.000,"obstacle_cm":156.3,"barcode":0,"fault":0}
+{"heartbeat_ms":270000}
+{"t_ms":271000,"mission":1,"speed":0.350,"line":0.000,"distance":91.702,"hump_m":0.000,"obstacle_cm":156.7,"barcode":0,"fault":0}
+{"heartbeat_ms":271000}
+{"t_ms":272000,"mission":1,"speed":0.350,"line":-1.000,"distance":92.052,"hump_m":0.000,"obstacle_cm":156.3,"barcode":0,"fault":0}
+{"heartbeat_ms":272000}
+{"t_ms":273000,"mission":1,"speed":0.350,"line":0.000,"distance":92.402,"hump_m":0.000,"obstacle_cm":156.3,"barcode":0,"fault":0}
+{"heartbeat_ms":273000}
+{"t_ms":274000,"mission":1,"speed":0.350,"line":1.000,"distance":92.752,"hump_m":0.000,"obstacle_cm":156.7,"barcode":0,"fault":0}
+{"heartbeat_ms":274000}
+{"t_ms":275000,"mission":1,"speed":0.350,"line":0.000,"distance":93.102,"hump_m":0.000,"obstacle_cm":156.3,"barcode":0,"fault":0}
+{"heartbeat_ms":275000}
+{"t_ms":276000,"mission":1,"speed":0.350,"line":-1.000,"distance":93.452,"hump_m":0.000,"obstacle_cm":156.7,"barcode":0,"fault":0}
+{"heartbeat_ms":276000}
+{"t_ms":277000,"mission":1,"speed":0.350,"line":0.000,"distance":93.802,"hump_m":0.000,"obstacle_cm":156.7,"barcode":0,"fault":0}
+{"heartbeat_ms":277000}
+{"t_ms":278000,"mission":1,"speed":0.350,"line":1.000,"distance":94.152,"hump_m":0.000,"obstacle_cm":156.7,"barcode":0,"fault":0}
+{"heartbeat_ms":278000}
+{"t_ms":279000,"mission":1,"speed":0.350,"line":0.000,"distance":94.502,"hump_m":0.000,"obstacle_cm":156.7,"barcode":0,"fault":0}
+{"heartbeat_ms":279000}
+{"t_ms":280000,"mission":1,"speed":0.350,"line":-1.000,"distance":94.852,"hump_m":0.000,"obstacle_cm":156.7,"barcode":0,"fault":0}
+{"heartbeat_ms":280000}
+{"t_ms":281000,"mission":1,"speed":0.350,"line":0.000,"distance":95.202,"hump_m":0.000,"obstacle_cm":156.7,"barcode":0,"fault":0}
+{"heartbeat_ms":281000}
+{"t_ms":282000,"mission":1,"speed":0.350,"line":1.000,"distance":95.552,"hump_m":0.000,"obstacle_cm":156.6,"barcode":0,"fault":0}
+{"heartbeat_ms":282000}
+{"t_ms":283000,"mission":1,"speed":0.350,"line":0.000,"distance":95.901,"hump_m":0.000,"obstacle_cm":156.2,"barcode":0,"fault":0}
+{"heartbeat_ms":283000}
+{"t_ms":284000,"mission":1,"speed":0.350,"line":-1.000,"distance":96.251,"hump_m":0.000,"obstacle_cm":156.7,"barcode":0,"fault":0}
+{"heartbeat_ms":284000}
+{"t_ms":285000,"mission":1,"speed":0.350,"line":0.000,"distance":96.601,"hump_m":0.000,"obstacle_cm":156.7,"barcode":0,"fault":0}
+{"heartbeat_ms":285000}
+{"t_ms":286000,"mission":1,"speed":0.350,"line":1.000,"distance":96.951,"hump_m":0.000,"obstacle_cm":156.3,"barcode":0,"fault":0}
+{"heartbeat_ms":286000}
+{"t_ms":287000,"mission":1,"speed":0.350,"line":0.000,"distance":97.301,"hump_m":0.000,"obstacle_cm":156.3,"barcode":0,"fault":0}
+{"heartbeat_ms":287000}
+{"t_ms":288000,"mission":1,"speed":0.350,"line":-1.000,"distance":97.651,"hump_m":0.000,"obstacle_cm":156.3,"barcode":0,"fault":0}
+{"heartbeat_ms":288000}
+{"t_ms":289000,"mission":1,"speed":0.350,"line":0.000,"distance":98.001,"hump_m":0.000,"obstacle_cm":156.3,"barcode":0,"fault":0}
+{"heartbeat_ms":289000}
+{"t_ms":290000,"mission":1,"speed":0.350,"line":1.000,"distance":98.351,"hump_m":0.000,"obstacle_cm":156.3,"barcode":0,"fault":0}
+{"heartbeat_ms":290000}
+{"t_ms":291000,"mission":1,"speed":0.350,"line":0.000,"distance":98.701,"hump_m":0.000,"obstacle_cm":156.7,"barcode":0,"fault":0}
+{"heartbeat_ms":291000}
+{"t_ms":292000,"mission":1,"speed":0.350,"line":-1.000,"distance":99.051,"hump_m":0.000,"obstacle_cm":156.7,"barcode":0,"fault":0}
+{"heartbeat_ms":292000}
+{"t_ms":293000,"mission":1,"speed":0.350,"line":0.000,"distance":99.401,"hump_m":0.000,"obstacle_cm":156.7,"barcode":0,"fault":0}
+{"heartbeat_ms":293000}
+{"t_ms":294000,"mission":1,"speed":0.350,"line":1.000,"distance":99.751,"hump_m":0.000,"obstacle_cm":156.7,"barcode":0,"fault":0}
+{"heartbeat_ms":294000}
+{"t_ms":295000,"mission":1,"speed":0.350,"line":0.000,"distance":100.100,"hump_m":0.000,"obstacle_cm":156.7,"barcode":0,"fault":0}
+{"heartbeat_ms":295000}
+{"t_ms":296000,"mission":1,"speed":0.350,"line":-1.000,"distance":100.450,"hump_m":0.000,"obstacle_cm":156.7,"barcode":0,"fault":0}
+{"heartbeat_ms":296000}
+{"t_ms":297000,"mission":1,"speed":0.350,"line":0.000,"distance":100.800,"hump_m":0.000,"obstacle_cm":156.7,"barcode":0,"fault":0}
+{"heartbeat_ms":297000}
+{"t_ms":298000,"mission":1,"speed":0.350,"line":1.000,"distance":101.150,"hump_m":0.000,"obstacle_cm":156.3,"barcode":0,"fault":0}
+{"heartbeat_ms":298000}
+{"t_ms":299000,"mission":1,"speed":0.350,"line":0.000,"distance":101.500,"hump_m":0.000,"obstacle_cm":156.7,"barcode":0,"fault":0}
+{"heartbeat_ms":299000}
+{"t_ms":300000,"mission":1,"speed":0.350,"line":-1.000,"distance":101.850,"hump_m":0.000,"obstacle_cm":156.3,"barcode":0,"fault":0}
+{"heartbeat_ms":300000}
+{"t_ms":301000,"mission":1,"speed":0.350,"line":0.000,"distance":102.200,"hump_m":0.000,"obstacle_cm":156.6,"barcode":0,"fault":0}
+{"heartbeat_ms":301000}
+{"t_ms":302000,"mission":1,"speed":0.350,"line":1.000,"distance":102.550,"hump_m":0.000,"obstacle_cm":156.7,"barcode":0,"fault":0}
+{"heartbeat_ms":302000}
+{"t_ms":303000,"mission":1,"speed":0.350,"line":0.000,"distance":102.900,"hump_m":0.000,"obstacle_cm":156.3,"barcode":0,"fault":0}
+{"heartbeat_ms":303000}
+{"t_ms":304000,"mission":1,"speed":0.350,"line":-1.000,"distance":103.250,"hump_m":0.000,"obstacle_cm":156.7,"barcode":0,"fault":0}
+{"heartbeat_ms":304000}
+{"t_ms":305000,"mission":1,"speed":0.350,"line":0.000,"distance":103.600,"hump_m":0.000,"obstacle_cm":156.3,"barcode":0,"fault":0}
+{"heartbeat_ms":305000}
+{"t_ms":306000,"mission":1,"speed":0.350,"line":1.000,"distance":103.950,"hump_m":0.000,"obstacle_cm":156.3,"barcode":0,"fault":0}
+{"heartbeat_ms":306000}
+{"t_ms":307000,"mission":1,"speed":0.350,"line":0.000,"distance":104.299,"hump_m":0.000,"obstacle_cm":156.7,"barcode":0,"fault":0}
+{"heartbeat_ms":307000}
+{"t_ms":308000,"mission":1,"speed":0.350,"line":-1.000,"distance":104.649,"hump_m":0.000,"obstacle_cm":156.7,"barcode":0,"fault":0}
+{"heartbeat_ms":308000}
+{"t_ms":309000,"mission":1,"speed":0.350,"line":0.000,"distance":104.999,"hump_m":0.000,"obstacle_cm":156.6,"barcode":0,"fault":0}
+{"heartbeat_ms":309000}
+{"t_ms":310000,"mission":1,"speed":0.350,"line":1.000,"distance":105.349,"hump_m":0.000,"obstacle_cm":156.3,"barcode":0,"fault":0}
+{"heartbeat_ms":310000}
+{"t_ms":311000,"mission":1,"speed":0.350,"line":0.000,"distance":105.699,"hump_m":0.000,"obstacle_cm":156.3,"barcode":0,"fault":0}
+{"heartbeat_ms":311000}
+{"t_ms":312000,"mission":1,"speed":0.350,"line":-1.000,"distance":106.049,"hump_m":0.000,"obstacle_cm":156.7,"barcode":0,"fault":0}
+{"heartbeat_ms":312000}
+{"t_ms":313000,"mission":1,"speed":0.350,"line":0.000,"distance":106.399,"hump_m":0.000,"obstacle_cm":156.3,"barcode":0,"fault":0}
+{"heartbeat_ms":313000}
+{"t_ms":314000,"mission":1,"speed":0.350,"line":1.000,"distance":106.749,"hump_m":0.000,"obstacle_cm":156.3,"barcode":0,"fault":0}
+{"heartbeat_ms":314000}
+{"t_ms":315000,"mission":1,"speed":0.350,"line":0.000,"distance":107.099,"hump_m":0.000,"obstacle_cm":156.7,"barcode":0,"fault":0}
+{"heartbeat_ms":315000}
+{"t_ms":316000,"mission":1,"speed":0.350,"line":-1.000,"distance":107.449,"hump_m":0.000,"obstacle_cm":156.3,"barcode":0,"fault":0}
+{"heartbeat_ms":316000}
+{"t_ms":317000,"mission":1,"speed":0.350,"line":0.000,"distance":107.799,"hump_m":0.000,"obstacle_cm":156.3,"barcode":0,"fault":0}
+{"heartbeat_ms":317000}
+{"t_ms":318000,"mission":1,"speed":0.350,"line":1.000,"distance":108.149,"hump_m":0.000,"obstacle_cm":156.3,"barcode":0,"fault":0}
+{"heartbeat_ms":318000}
+{"t_ms":319000,"mission":1,"speed":0.350,"line":0.000,"distance":108.499,"hump_m":0.000,"obstacle_cm":156.7,"barcode":0,"fault":0}
+{"heartbeat_ms":319000}
+{"t_ms":320000,"mission":1,"speed":0.350,"line":-1.000,"distance":108.848,"hump_m":0.000,"obstacle_cm":156.2,"barcode":0,"fault":0}
+{"heartbeat_ms":320000}
+{"t_ms":321000,"mission":1,"speed":0.350,"line":0.000,"distance":109.199,"hump_m":0.000,"obstacle_cm":156.3,"barcode":0,"fault":0}
+{"heartbeat_ms":321000}
+{"t_ms":322000,"mission":1,"speed":0.350,"line":1.000,"distance":109.548,"hump_m":0.000,"obstacle_cm":156.7,"barcode":0,"fault":0}
+{"heartbeat_ms":322000}
+{"t_ms":323000,"mission":1,"speed":0.350,"line":0.000,"distance":109.898,"hump_m":0.000,"obstacle_cm":156.3,"barcode":0,"fault":0}
+{"heartbeat_ms":323000}
+{"t_ms":324000,"mission":1,"speed":0.350,"line":-1.000,"distance":110.248,"hump_m":0.000,"obstacle_cm":156.7,"barcode":0,"fault":0}
+{"heartbeat_ms":324000}
+{"t_ms":325000,"mission":1,"speed":0.350,"line":0.000,"distance":110.598,"hump_m":0.000,"obstacle_cm":156.3,"barcode":0,"fault":0}
+{"heartbeat_ms":325000}
+{"t_ms":326000,"mission":1,"speed":0.350,"line":1.000,"distance":110.948,"hump_m":0.000,"obstacle_cm":156.7,"barcode":0,"fault":0}
+{"heartbeat_ms":326000}
+{"t_ms":327000,"mission":1,"speed":0.350,"line":0.000,"distance":111.298,"hump_m":0.000,"obstacle_cm":156.6,"barcode":0,"fault":0}
+{"heartbeat_ms":327000}
+{"t_ms":328000,"mission":1,"speed":0.350,"line":-1.000,"distance":111.648,"hump_m":0.000,"obstacle_cm":156.3,"barcode":0,"fault":0}
+{"heartbeat_ms":328000}
+{"t_ms":329000,"mission":1,"speed":0.350,"line":0.000,"distance":111.998,"hump_m":0.000,"obstacle_cm":156.6,"barcode":0,"fault":0}
+{"heartbeat_ms":329000}
+{"t_ms":330000,"mission":1,"speed":0.350,"line":1.000,"distance":112.348,"hump_m":0.000,"obstacle_cm":156.7,"barcode":0,"fault":0}
+{"heartbeat_ms":330000}
+{"t_ms":331000,"mission":1,"speed":0.350,"line":0.000,"distance":112.698,"hump_m":0.000,"obstacle_cm":156.7,"barcode":0,"fault":0}
+{"heartbeat_ms":331000}
+{"t_ms":332000,"mission":1,"speed":0.350,"line":-1.000,"distance":113.048,"hump_m":0.000,"obstacle_cm":156.3,"barcode":0,"fault":0}
+{"heartbeat_ms":332000}
+{"t_ms":333000,"mission":1,"speed":0.350,"line":0.000,"distance":113.397,"hump_m":0.000,"obstacle_cm":156.7,"barcode":0,"fault":0}
+{"heartbeat_ms":333000}
+{"t_ms":334000,"mission":1,"speed":0.350,"line":1.000,"distance":113.747,"hump_m":0.000,"obstacle_cm":156.3,"barcode":0,"fault":0}
+{"heartbeat_ms":334000}
+{"t_ms":335000,"mission":1,"speed":0.350,"line":0.000,"distance":114.097,"hump_m":0.000,"obstacle_cm":156.3,"barcode":0,"fault":0}
+{"heartbeat_ms":335000}
+{"t_ms":336000,"mission":1,"speed":0.350,"line":-1.000,"distance":114.447,"hump_m":0.000,"obstacle_cm":156.3,"barcode":0,"fault":0}
+{"heartbeat_ms":336000}
+{"t_ms":337000,"mission":1,"speed":0.350,"line":0.000,"distance":114.797,"hump_m":0.000,"obstacle_cm":156.3,"barcode":0,"fault":0}
+{"heartbeat_ms":337000}
+{"t_ms":338000,"mission":1,"speed":0.350,"line":1.000,"distance":115.147,"hump_m":0.000,"obstacle_cm":156.3,"barcode":0,"fault":0}
+{"heartbeat_ms":338000}
+{"t_ms":339000,"mission":1,"speed":0.350,"line":0.000,"distance":115.497,"hump_m":0.000,"obstacle_cm":156.3,"barcode":0,"fault":0}
+{"heartbeat_ms":339000}
+{"t_ms":340000,"mission":1,"speed":0.350,"line":-1.000,"distance":115.847,"hump_m":0.000,"obstacle_cm":156.3,"barcode":0,"fault":0}
+{"heartbeat_ms":340000}
+{"t_ms":341000,"mission":1,"speed":0.350,"line":0.000,"distance":116.197,"hump_m":0.000,"obstacle_cm":156.3,"barcode":0,"fault":0}
+{"heartbeat_ms":341000}
+{"t_ms":342000,"mission":1,"speed":0.350,"line":1.000,"distance":116.547,"hump_m":0.000,"obstacle_cm":156.3,"barcode":0,"fault":0}
+{"heartbeat_ms":342000}
+{"t_ms":343000,"mission":1,"speed":0.350,"line":0.000,"distance":116.897,"hump_m":0.000,"obstacle_cm":156.7,"barcode":0,"fault":0}
+{"heartbeat_ms":343000}
+{"t_ms":344000,"mission":1,"speed":0.350,"line":-1.000,"distance":117.247,"hump_m":0.000,"obstacle_cm":156.3,"barcode":0,"fault":0}
+{"heartbeat_ms":344000}
+{"t_ms":345000,"mission":1,"speed":0.350,"line":0.000,"distance":117.597,"hump_m":0.000,"obstacle_cm":156.3,"barcode":0,"fault":0}
+{"heartbeat_ms":345000}
+{"t_ms":346000,"mission":1,"speed":0.350,"line":1.000,"distance":117.946,"hump_m":0.000,"obstacle_cm":156.7,"barcode":0,"fault":0}
+{"heartbeat_ms":346000}
+{"t_ms":347000,"mission":1,"speed":0.350,"line":0.000,"distance":118.296,"hump_m":0.000,"obstacle_cm":156.3,"barcode":0,"fault":0}
+{"heartbeat_ms":347000}
+{"t_ms":348000,"mission":1,"speed":0.350,"line":-1.000,"distance":118.646,"hump_m":0.000,"obstacle_cm":156.6,"barcode":0,"fault":0}
+{"heartbeat_ms":348000}
+{"t_ms":349000,"mission":1,"speed":0.350,"line":0.000,"distance":118.996,"hump_m":0.000,"obstacle_cm":156.7,"barcode":0,"fault":0}
+{"heartbeat_ms":349000}
+{"t_ms":350000,"mission":1,"speed":0.350,"line":1.000,"distance":119.346,"hump_m":0.000,"obstacle_cm":156.3,"barcode":0,"fault":0}
+{"heartbeat_ms":350000}
+{"t_ms":351000,"mission":1,"speed":0.350,"line":0.000,"distance":119.696,"hump_m":0.000,"obstacle_cm":156.7,"barcode":0,"fault":0}
+{"heartbeat_ms":351000}
+{"t_ms":352000,"mission":1,"speed":0.350,"line":-1.000,"distance":120.046,"hump_m":0.000,"obstacle_cm":156.7,"barcode":0,"fault":0}
+{"heartbeat_ms":352000}
+{"t_ms":353000,"mission":1,"speed":0.350,"line":0.000,"distance":120.396,"hump_m":0.000,"obstacle_cm":156.8,"barcode":0,"fault":0}
+{"heartbeat_ms":353000}
+{"t_ms":354000,"mission":1,"speed":0.350,"line":1.000,"distance":120.746,"hump_m":0.000,"obstacle_cm":156.5,"barcode":0,"fault":0}
+{"heartbeat_ms":354000}
+{"t_ms":355000,"mission":1,"speed":0.350,"line":0.000,"distance":121.096,"hump_m":0.000,"obstacle_cm":156.8,"barcode":0,"fault":0}
+{"heartbeat_ms":355000}
+{"t_ms":356000,"mission":1,"speed":0.350,"line":-1.000,"distance":121.446,"hump_m":0.000,"obstacle_cm":156.5,"barcode":0,"fault":0}
+{"heartbeat_ms":356000}
+{"t_ms":357000,"mission":1,"speed":0.350,"line":0.000,"distance":121.796,"hump_m":0.000,"obstacle_cm":156.4,"barcode":0,"fault":0}
+{"heartbeat_ms":357000}
+{"t_ms":358000,"mission":1,"speed":0.350,"line":1.000,"distance":122.146,"hump_m":0.000,"obstacle_cm":156.4,"barcode":0,"fault":0}
+{"heartbeat_ms":358000}
+{"t_ms":359000,"mission":1,"speed":0.350,"line":0.000,"distance":122.495,"hump_m":0.000,"obstacle_cm":156.4,"barcode":0,"fault":0}
+{"heartbeat_ms":359000}
+{"t_ms":360000,"mission":1,"speed":0.350,"line":-1.000,"distance":122.846,"hump_m":0.000,"obstacle_cm":156.8,"barcode":0,"fault":0}
+{"heartbeat_ms":360000}
+{"t_ms":361000,"mission":1,"speed":0.350,"line":0.000,"distance":123.195,"hump_m":0.000,"obstacle_cm":156.4,"barcode":0,"fault":0}
+{"heartbeat_ms":361000}
+{"t_ms":362000,"mission":1,"speed":0.350,"line":1.000,"distance":123.545,"hump_m":0.000,"obstacle_cm":156.9,"barcode":0,"fault":0}
+{"heartbeat_ms":362000}
+{"t_ms":363000,"mission":1,"speed":0.350,"line":0.000,"distance":123.895,"hump_m":0.000,"obstacle_cm":156.5,"barcode":0,"fault":0}
+{"heartbeat_ms":363000}
+{"t_ms":364000,"mission":1,"speed":0.350,"line":-1.000,"distance":124.245,"hump_m":0.000,"obstacle_cm":156.9,"barcode":0,"fault":0}
+{"heartbeat_ms":364000}
+{"t_ms":365000,"mission":1,"speed":0.350,"line":0.000,"distance":124.595,"hump_m":0.000,"obstacle_cm":156.5,"barcode":0,"fault":0}
+{"heartbeat_ms":365000}
+{"t_ms":366000,"mission":1,"speed":0.350,"line":1.000,"distance":124.945,"hump_m":0.000,"obstacle_cm":156.5,"barcode":0,"fault":0}
+{"heartbeat_ms":366000}
+{"t_ms":367000,"mission":1,"speed":0.350,"line":0.000,"distance":125.295,"hump_m":0.000,"obstacle_cm":156.9,"barcode":0,"fault":0}
+{"heartbeat_ms":367000}
+{"t_ms":368000,"mission":1,"speed":0.350,"line":-1.000,"distance":125.645,"hump_m":0.000,"obstacle_cm":156.9,"barcode":0,"fault":0}
+{"heartbeat_ms":368000}
+{"t_ms":369000,"mission":1,"speed":0.350,"line":0.000,"distance":125.995,"hump_m":0.000,"obstacle_cm":156.5,"barcode":0,"fault":0}
+{"heartbeat_ms":369000}
+{"t_ms":370000,"mission":1,"speed":0.350,"line":1.000,"distance":126.345,"hump_m":0.000,"obstacle_cm":156.9,"barcode":0,"fault":0}
+{"heartbeat_ms":370000}
+{"t_ms":371000,"mission":1,"speed":0.350,"line":0.000,"distance":126.695,"hump_m":0.000,"obstacle_cm":156.5,"barcode":0,"fault":0}
+{"heartbeat_ms":371000}
+{"t_ms":372000,"mission":1,"speed":0.350,"line":-1.000,"distance":127.045,"hump_m":0.000,"obstacle_cm":156.9,"barcode":0,"fault":0}
+{"heartbeat_ms":372000}
+{"t_ms":373000,"mission":1,"speed":0.350,"line":0.000,"distance":127.394,"hump_m":0.000,"obstacle_cm":156.8,"barcode":0,"fault":0}
+{"heartbeat_ms":373000}
+{"t_ms":374000,"mission":1,"speed":0.350,"line":1.000,"distance":127.744,"hump_m":0.000,"obstacle_cm":156.4,"barcode":0,"fault":0}
+{"heartbeat_ms":374000}
+{"t_ms":375000,"mission":1,"speed":0.350,"line":0.000,"distance":128.094,"hump_m":0.000,"obstacle_cm":156.8,"barcode":0,"fault":0}
+{"heartbeat_ms":375000}
+{"t_ms":376000,"mission":1,"speed":0.350,"line":-1.000,"distance":128.445,"hump_m":0.000,"obstacle_cm":156.4,"barcode":0,"fault":0}
+{"heartbeat_ms":376000}
+{"t_ms":377000,"mission":1,"speed":0.350,"line":0.000,"distance":128.795,"hump_m":0.000,"obstacle_cm":156.5,"barcode":0,"fault":0}
+{"heartbeat_ms":377000}
+{"t_ms":378000,"mission":1,"speed":0.350,"line":1.000,"distance":129.145,"hump_m":0.000,"obstacle_cm":156.8,"barcode":0,"fault":0}
+{"heartbeat_ms":378000}
+{"t_ms":379000,"mission":1,"speed":0.350,"line":0.000,"distance":129.495,"hump_m":0.000,"obstacle_cm":156.8,"barcode":0,"fault":0}
+{"heartbeat_ms":379000}
+{"t_ms":380000,"mission":1,"speed":0.350,"line":-1.000,"distance":129.845,"hump_m":0.000,"obstacle_cm":156.8,"barcode":0,"fault":0}
+{"heartbeat_ms":380000}
+{"t_ms":381000,"mission":1,"speed":0.350,"line":0.000,"distance":130.195,"hump_m":0.000,"obstacle_cm":156.8,"barcode":0,"fault":0}
+{"heartbeat_ms":381000}
+{"t_ms":382000,"mission":1,"speed":0.350,"line":1.000,"distance":130.545,"hump_m":0.000,"obstacle_cm":156.4,"barcode":0,"fault":0}
+{"heartbeat_ms":382000}
+{"t_ms":383000,"mission":1,"speed":0.350,"line":0.000,"distance":130.895,"hump_m":0.000,"obstacle_cm":156.4,"barcode":0,"fault":0}
+{"heartbeat_ms":383000}
+{"t_ms":384000,"mission":1,"speed":0.350,"line":-1.000,"distance":131.245,"hump_m":0.000,"obstacle_cm":156.5,"barcode":0,"fault":0}
+{"heartbeat_ms":384000}
+{"t_ms":385000,"mission":1,"speed":0.350,"line":0.000,"distance":131.596,"hump_m":0.000,"obstacle_cm":156.5,"barcode":0,"fault":0}
+{"heartbeat_ms":385000}
+{"t_ms":386000,"mission":1,"speed":0.350,"line":1.000,"distance":131.946,"hump_m":0.000,"obstacle_cm":156.8,"barcode":0,"fault":0}
+{"heartbeat_ms":386000}
+{"t_ms":387000,"mission":1,"speed":0.350,"line":0.000,"distance":132.296,"hump_m":0.000,"obstacle_cm":156.8,"barcode":0,"fault":0}
+{"heartbeat_ms":387000}
+{"t_ms":388000,"mission":1,"speed":0.350,"line":-1.000,"distance":132.646,"hump_m":0.000,"obstacle_cm":156.8,"barcode":0,"fault":0}
+{"heartbeat_ms":388000}
+{"t_ms":389000,"mission":1,"speed":0.350,"line":0.000,"distance":132.996,"hump_m":0.000,"obstacle_cm":156.9,"barcode":0,"fault":0}
+{"heartbeat_ms":389000}
+{"t_ms":390000,"mission":1,"speed":0.350,"line":1.000,"distance":133.346,"hump_m":0.000,"obstacle_cm":156.9,"barcode":0,"fault":0}
+{"heartbeat_ms":390000}
+{"t_ms":391000,"mission":1,"speed":0.350,"line":0.000,"distance":133.696,"hump_m":0.000,"obstacle_cm":156.5,"barcode":0,"fault":0}
+{"heartbeat_ms":391000}
+{"t_ms":392000,"mission":1,"speed":0.350,"line":-1.000,"distance":134.046,"hump_m":0.000,"obstacle_cm":156.8,"barcode":0,"fault":0}
+{"heartbeat_ms":392000}
+{"t_ms":393000,"mission":1,"speed":0.350,"line":0.000,"distance":134.397,"hump_m":0.000,"obstacle_cm":156.8,"barcode":0,"fault":0}
+{"heartbeat_ms":393000}
+{"t_ms":394000,"mission":1,"speed":0.350,"line":1.000,"distance":134.747,"hump_m":0.000,"obstacle_cm":156.4,"barcode":0,"fault":0}
+{"heartbeat_ms":394000}
+{"t_ms":395000,"mission":1,"speed":0.350,"line":0.000,"distance":135.097,"hump_m":0.000,"obstacle_cm":156.8,"barcode":0,"fault":0}
+{"heartbeat_ms":395000}
+{"t_ms":396000,"mission":1,"speed":0.350,"line":-1.000,"distance":135.447,"hump_m":0.000,"obstacle_cm":156.8,"barcode":0,"fault":0}
+{"heartbeat_ms":396000}
+{"t_ms":397000,"mission":1,"speed":0.350,"line":0.000,"distance":135.797,"hump_m":0.000,"obstacle_cm":156.8,"barcode":0,"fault":0}
+{"heartbeat_ms":397000}
+{"t_ms":398000,"mission":1,"speed":0.350,"line":1.000,"distance":136.147,"hump_m":0.000,"obstacle_cm":156.8,"barcode":0,"fault":0}
+{"heartbeat_ms":398000}
+{"t_ms":399000,"mission":1,"speed":0.350,"line":0.000,"distance":136.497,"hump_m":0.000,"obstacle_cm":156.5,"barcode":0,"fault":0}
+{"heartbeat_ms":399000}
+{"t_ms":400000,"mission":1,"speed":0.350,"line":-1.000,"distance":136.848,"hump_m":0.000,"obstacle_cm":156.5,"barcode":0,"fault":0}
+{"heartbeat_ms":400000}
+{"t_ms":401000,"mission":1,"speed":0.350,"line":0.000,"distance":137.197,"hump_m":0.000,"obstacle_cm":156.5,"barcode":0,"fault":0}
+{"heartbeat_ms":401000}
+{"t_ms":402000,"mission":1,"speed":0.350,"line":1.000,"distance":137.548,"hump_m":0.000,"obstacle_cm":156.9,"barcode":0,"fault":0}
+{"heartbeat_ms":402000}
+{"t_ms":403000,"mission":1,"speed":0.350,"line":0.000,"distance":137.898,"hump_m":0.000,"obstacle_cm":156.4,"barcode":0,"fault":0}
+{"heartbeat_ms":403000}
+{"t_ms":404000,"mission":1,"speed":0.350,"line":-1.000,"distance":138.248,"hump_m":0.000,"obstacle_cm":156.9,"barcode":0,"fault":0}
+{"heartbeat_ms":404000}
+{"t_ms":405000,"mission":1,"speed":0.350,"line":0.000,"distance":138.598,"hump_m":0.000,"obstacle_cm":156.5,"barcode":0,"fault":0}
+{"heartbeat_ms":405000}
+{"t_ms":406000,"mission":1,"speed":0.350,"line":1.000,"distance":138.948,"hump_m":0.000,"obstacle_cm":156.9,"barcode":0,"fault":0}
+{"heartbeat_ms":406000}
+{"t_ms":407000,"mission":1,"speed":0.350,"line":0.000,"distance":139.298,"hump_m":0.000,"obstacle_cm":156.4,"barcode":0,"fault":0}
+{"heartbeat_ms":407000}
+{"t_ms":408000,"mission":1,"speed":0.350,"line":-1.000,"distance":139.648,"hump_m":0.000,"obstacle_cm":156.6,"barcode":0,"fault":0}
+{"heartbeat_ms":408000}
+{"t_ms":409000,"mission":1,"speed":0.350,"line":0.000,"distance":139.999,"hump_m":0.000,"obstacle_cm":156.3,"barcode":0,"fault":0}
+{"heartbeat_ms":409000}
+{"t_ms":410000,"mission":1,"speed":0.350,"line":1.000,"distance":140.349,"hump_m":0.000,"obstacle_cm":156.3,"barcode":0,"fault":0}
+{"heartbeat_ms":410000}
+{"t_ms":411000,"mission":1,"speed":0.350,"line":0.000,"distance":140.699,"hump_m":0.000,"obstacle_cm":156.8,"barcode":0,"fault":0}
+{"heartbeat_ms":411000}
+{"t_ms":412000,"mission":1,"speed":0.350,"line":-1.000,"distance":141.049,"hump_m":0.000,"obstacle_cm":156.4,"barcode":0,"fault":0}
+{"heartbeat_ms":412000}
+{"t_ms":413000,"mission":1,"speed":0.350,"line":0.000,"distance":141.399,"hump_m":0.000,"obstacle_cm":156.8,"barcode":0,"fault":0}
+{"heartbeat_ms":413000}
+{"t_ms":414000,"mission":1,"speed":0.350,"line":1.000,"distance":141.749,"hump_m":0.000,"obstacle_cm":156.3,"barcode":0,"fault":0}
+{"heartbeat_ms":414000}
+{"t_ms":415000,"mission":1,"speed":0.350,"line":0.000,"distance":142.099,"hump_m":0.000,"obstacle_cm":156.3,"barcode":0,"fault":0}
+{"heartbeat_ms":415000}
+{"t_ms":416000,"mission":1,"speed":0.350,"line":-1.000,"distance":142.449,"hump_m":0.000,"obstacle_cm":156.4,"barcode":0,"fault":0}
+{"heartbeat_ms":416000}
+{"t_ms":417000,"mission":1,"speed":0.350,"line":0.000,"distance":142.800,"hump_m":0.000,"obstacle_cm":156.4,"barcode":0,"fault":0}
+{"heartbeat_ms":417000}
+{"t_ms":418000,"mission":1,"speed":0.350,"line":1.000,"distance":143.150,"hump_m":0.000,"obstacle_cm":156.8,"barcode":0,"fault":0}
+{"heartbeat_ms":418000}
+{"t_ms":419000,"mission":1,"speed":0.350,"line":0.000,"distance":143.500,"hump_m":0.000,"obstacle_cm":156.8,"barcode":0,"fault":0}
+{"heartbeat_ms":419000}
+{"t_ms":420000,"mission":1,"speed":0.350,"line":-1.000,"distance":143.850,"hump_m":0.000,"obstacle_cm":156.8,"barcode":0,"fault":0}
+{"heartbeat_ms":420000}
+{"t_ms":421000,"mission":1,"speed":0.350,"line":0.000,"distance":144.200,"hump_m":0.000,"obstacle_cm":156.8,"barcode":0,"fault":0}
+{"heartbeat_ms":421000}
+{"t_ms":422000,"mission":1,"speed":0.350,"line":1.000,"distance":144.550,"hump_m":0.000,"obstacle_cm":156.8,"barcode":0,"fault":0}
+{"heartbeat_ms":422000}
+{"t_ms":423000,"mission":1,"speed":0.350,"line":0.000,"distance":144.900,"hump_m":0.000,"obstacle_cm":156.8,"barcode":0,"fault":0}
+{"heartbeat_ms":423000}
+{"t_ms":424000,"mission":1,"speed":0.350,"line":-1.000,"distance":145.250,"hump_m":0.000,"obstacle_cm":156.4,"barcode":0,"fault":0}
+{"heartbeat_ms":424000}
+{"t_ms":425000,"mission":1,"speed":0.350,"line":0.000,"distance":145.601,"hump_m":0.000,"obstacle_cm":156.9,"barcode":0,"fault":0}
+{"heartbeat_ms":425000}
+{"t_ms":426000,"mission":1,"speed":0.350,"line":1.000,"distance":145.951,"hump_m":0.000,"obstacle_cm":156.8,"barcode":0,"fault":0}
+{"heartbeat_ms":426000}
+{"t_ms":427000,"mission":1,"speed":0.350,"line":0.000,"distance":146.301,"hump_m":0.000,"obstacle_cm":156.4,"barcode":0,"fault":0}
+{"heartbeat_ms":427000}
+{"t_ms":428000,"mission":1,"speed":0.350,"line":-1.000,"distance":146.651,"hump_m":0.000,"obstacle_cm":156.8,"barcode":0,"fault":0}
+{"heartbeat_ms":428000}
+{"t_ms":429000,"mission":1,"speed":0.350,"line":0.000,"distance":147.001,"hump_m":0.000,"obstacle_cm":156.5,"barcode":0,"fault":0}
+{"heartbeat_ms":429000}
+{"t_ms":430000,"mission":1,"speed":0.350,"line":1.000,"distance":147.351,"hump_m":0.000,"obstacle_cm":156.8,"barcode":0,"fault":0}
+{"heartbeat_ms":430000}
+{"t_ms":431000,"mission":1,"speed":0.350,"line":0.000,"distance":147.701,"hump_m":0.000,"obstacle_cm":156.5,"barcode":0,"fault":0}
+{"heartbeat_ms":431000}
+{"t_ms":432000,"mission":1,"speed":0.350,"line":-1.000,"distance":148.051,"hump_m":0.000,"obstacle_cm":156.5,"barcode":0,"fault":0}
+{"heartbeat_ms":432000}
+{"t_ms":433000,"mission":1,"speed":0.350,"line":0.000,"distance":148.402,"hump_m":0.000,"obstacle_cm":156.5,"barcode":0,"fault":0}
+{"heartbeat_ms":433000}
+{"t_ms":434000,"mission":1,"speed":0.350,"line":1.000,"distance":148.752,"hump_m":0.000,"obstacle_cm":156.5,"barcode":0,"fault":0}
+{"heartbeat_ms":434000}
+{"t_ms":435000,"mission":1,"speed":0.350,"line":0.000,"distance":149.102,"hump_m":0.000,"obstacle_cm":156.5,"barcode":0,"fault":0}
+{"heartbeat_ms":435000}
+{"t_ms":436000,"mission":1,"speed":0.350,"line":-1.000,"distance":149.452,"hump_m":0.000,"obstacle_cm":156.5,"barcode":0,"fault":0}
+{"heartbeat_ms":436000}
+{"t_ms":437000,"mission":1,"speed":0.350,"line":0.000,"distance":149.802,"hump_m":0.000,"obstacle_cm":156.9,"barcode":0,"fault":0}
+{"heartbeat_ms":437000}
+{"t_ms":438000,"mission":1,"speed":0.350,"line":1.000,"distance":150.152,"hump_m":0.000,"obstacle_cm":156.9,"barcode":0,"fault":0}
+{"heartbeat_ms":438000}
+{"t_ms":439000,"mission":1,"speed":0.350,"line":0.000,"distance":150.502,"hump_m":0.000,"obstacle_cm":156.9,"barcode":0,"fault":0}
+{"heartbeat_ms":439000}
+{"t_ms":440000,"mission":1,"speed":0.350,"line":-1.000,"distance":150.852,"hump_m":0.000,"obstacle_cm":157.0,"barcode":0,"fault":0}
+{"heartbeat_ms":440000}
+{"t_ms":441000,"mission":1,"speed":0.350,"line":0.000,"distance":151.203,"hump_m":0.000,"obstacle_cm":156.9,"barcode":0,"fault":0}
+{"heartbeat_ms":441000}
+{"t_ms":442000,"mission":1,"speed":0.350,"line":1.000,"distance":151.553,"hump_m":0.000,"obstacle_cm":156.5,"barcode":0,"fault":0}
+{"heartbeat_ms":442000}
+{"t_ms":443000,"mission":1,"speed":0.350,"line":0.000,"distance":151.903,"hump_m":0.000,"obstacle_cm":156.9,"barcode":0,"fault":0}
+{"heartbeat_ms":443000}
+{"t_ms":444000,"mission":1,"speed":0.350,"line":-1.000,"distance":152.253,"hump_m":0.000,"obstacle_cm":156.8,"barcode":0,"fault":0}
+{"heartbeat_ms":444000}
+{"t_ms":445000,"mission":1,"speed":0.350,"line":0.000,"distance":152.603,"hump_m":0.000,"obstacle_cm":156.8,"barcode":0,"fault":0}
+{"heartbeat_ms":445000}
+{"t_ms":446000,"mission":1,"speed":0.350,"line":1.000,"distance":152.953,"hump_m":0.000,"obstacle_cm":156.8,"barcode":0,"fault":0}
+{"heartbeat_ms":446000}
+{"t_ms":447000,"mission":1,"speed":0.350,"line":0.000,"distance":153.303,"hump_m":0.000,"obstacle_cm":156.8,"barcode":0,"fault":0}
+{"heartbeat_ms":447000}
+{"t_ms":448000,"mission":1,"speed":0.350,"line":-1.000,"distance":153.654,"hump_m":0.000,"obstacle_cm":156.4,"barcode":0,"fault":0}
+{"heartbeat_ms":448000}
+{"t_ms":449000,"mission":1,"speed":0.350,"line":0.000,"distance":154.004,"hump_m":0.000,"obstacle_cm":156.5,"barcode":0,"fault":0}
+{"heartbeat_ms":449000}
+{"t_ms":450000,"mission":1,"speed":0.350,"line":1.000,"distance":154.354,"hump_m":0.000,"obstacle_cm":156.6,"barcode":0,"fault":0}
+{"heartbeat_ms":450000}
+{"t_ms":451000,"mission":1,"speed":0.350,"line":0.000,"distance":154.704,"hump_m":0.000,"obstacle_cm":156.5,"barcode":0,"fault":0}
+{"heartbeat_ms":451000}
+{"t_ms":452000,"mission":1,"speed":0.350,"line":-1.000,"distance":155.054,"hump_m":0.000,"obstacle_cm":156.8,"barcode":0,"fault":0}
+{"heartbeat_ms":452000}
+{"t_ms":453000,"mission":1,"speed":0.350,"line":0.000,"distance":155.404,"hump_m":0.000,"obstacle_cm":156.4,"barcode":0,"fault":0}
+{"heartbeat_ms":453000}
+{"t_ms":454000,"mission":1,"speed":0.350,"line":1.000,"distance":155.754,"hump_m":0.000,"obstacle_cm":156.3,"barcode":0,"fault":0}
+{"heartbeat_ms":454000}
+{"t_ms":455000,"mission":1,"speed":0.350,"line":0.000,"distance":156.104,"hump_m":0.000,"obstacle_cm":156.8,"barcode":0,"fault":0}
+{"heartbeat_ms":455000}
+{"t_ms":456000,"mission":1,"speed":0.350,"line":-1.000,"distance":156.454,"hump_m":0.000,"obstacle_cm":156.3,"barcode":0,"fault":0}
+{"heartbeat_ms":456000}
+{"t_ms":457000,"mission":1,"speed":0.350,"line":0.000,"distance":156.805,"hump_m":0.000,"obstacle_cm":156.8,"barcode":0,"fault":0}
+{"heartbeat_ms":457000}
+{"t_ms":458000,"mission":1,"speed":0.350,"line":1.000,"distance":157.155,"hump_m":0.000,"obstacle_cm":156.3,"barcode":0,"fault":0}
+{"heartbeat_ms":458000}
+{"t_ms":459000,"mission":1,"speed":0.350,"line":0.000,"distance":157.505,"hump_m":0.000,"obstacle_cm":156.8,"barcode":0,"fault":0}
+{"heartbeat_ms":459000}
+{"t_ms":460000,"mission":1,"speed":0.350,"line":-1.000,"distance":157.855,"hump_m":0.000,"obstacle_cm":156.7,"barcode":0,"fault":0}
+{"heartbeat_ms":460000}
+{"t_ms":461000,"mission":1,"speed":0.350,"line":0.000,"distance":158.205,"hump_m":0.000,"obstacle_cm":156.4,"barcode":0,"fault":0}
+{"heartbeat_ms":461000}
+{"t_ms":462000,"mission":1,"speed":0.350,"line":1.000,"distance":158.555,"hump_m":0.000,"obstacle_cm":156.8,"barcode":0,"fault":0}
+{"heartbeat_ms":462000}
+{"t_ms":463000,"mission":1,"speed":0.350,"line":0.000,"distance":158.905,"hump_m":0.000,"obstacle_cm":156.7,"barcode":0,"fault":0}
+{"heartbeat_ms":463000}
+{"t_ms":464000,"mission":1,"speed":0.350,"line":-1.000,"distance":159.256,"hump_m":0.000,"obstacle_cm":156.3,"barcode":0,"fault":0}
+{"heartbeat_ms":464000}
+{"t_ms":465000,"mission":1,"speed":0.350,"line":0.000,"distance":159.605,"hump_m":0.000,"obstacle_cm":156.4,"barcode":0,"fault":0}
+{"heartbeat_ms":465000}
+{"t_ms":466000,"mission":1,"speed":0.350,"line":1.000,"distance":159.956,"hump_m":0.000,"obstacle_cm":156.3,"barcode":0,"fault":0}
+{"heartbeat_ms":466000}
+{"t_ms":467000,"mission":1,"speed":0.350,"line":0.000,"distance":160.306,"hump_m":0.000,"obstacle_cm":156.7,"barcode":0,"fault":0}
+{"heartbeat_ms":467000}
+{"t_ms":468000,"mission":1,"speed":0.350,"line":-1.000,"distance":160.656,"hump_m":0.000,"obstacle_cm":156.4,"barcode":0,"fault":0}
+{"heartbeat_ms":468000}
+{"t_ms":469000,"mission":1,"speed":0.350,"line":0.000,"distance":161.006,"hump_m":0.000,"obstacle_cm":156.3,"barcode":0,"fault":0}
+{"heartbeat_ms":469000}
+{"t_ms":470000,"mission":1,"speed":0.350,"line":1.000,"distance":161.356,"hump_m":0.000,"obstacle_cm":156.7,"barcode":0,"fault":0}
+{"heartbeat_ms":470000}
+{"t_ms":471000,"mission":1,"speed":0.350,"line":0.000,"distance":161.706,"hump_m":0.000,"obstacle_cm":156.3,"barcode":0,"fault":0}
+{"heartbeat_ms":471000}
+{"t_ms":472000,"mission":1,"speed":0.350,"line":-1.000,"distance":162.056,"hump_m":0.000,"obstacle_cm":156.3,"barcode":0,"fault":0}
+{"heartbeat_ms":472000}
+{"t_ms":473000,"mission":1,"speed":0.350,"line":0.000,"distance":162.406,"hump_m":0.000,"obstacle_cm":156.4,"barcode":0,"fault":0}
+{"heartbeat_ms":473000}
+{"t_ms":474000,"mission":1,"speed":0.350,"line":1.000,"distance":162.757,"hump_m":0.000,"obstacle_cm":156.4,"barcode":0,"fault":0}
+{"heartbeat_ms":474000}
+{"t_ms":475000,"mission":1,"speed":0.350,"line":0.000,"distance":163.107,"hump_m":0.000,"obstacle_cm":156.3,"barcode":0,"fault":0}
+{"heartbeat_ms":475000}
+{"t_ms":476000,"mission":1,"speed":0.350,"line":-1.000,"distance":163.457,"hump_m":0.000,"obstacle_cm":156.7,"barcode":0,"fault":0}
+{"heartbeat_ms":476000}
+{"t_ms":477000,"mission":1,"speed":0.350,"line":0.000,"distance":163.807,"hump_m":0.000,"obstacle_cm":156.7,"barcode":0,"fault":0}
+{"heartbeat_ms":477000}
+{"t_ms":478000,"mission":1,"speed":0.350,"line":1.000,"distance":164.157,"hump_m":0.000,"obstacle_cm":156.3,"barcode":0,"fault":0}
+{"heartbeat_ms":478000}
+{"t_ms":479000,"mission":1,"speed":0.350,"line":0.000,"distance":164.507,"hump_m":0.000,"obstacle_cm":156.7,"barcode":0,"fault":0}
+{"heartbeat_ms":479000}
+{"t_ms":480000,"mission":1,"speed":0.350,"line":-1.000,"distance":164.857,"hump_m":0.000,"obstacle_cm":156.7,"barcode":0,"fault":0}
+{"heartbeat_ms":480000}
+{"t_ms":481000,"mission":1,"speed":0.350,"line":0.000,"distance":165.208,"hump_m":0.000,"obstacle_cm":156.3,"barcode":0,"fault":0}
+{"heartbeat_ms":481000}
+{"t_ms":482000,"mission":1,"speed":0.350,"line":1.000,"distance":165.558,"hump_m":0.000,"obstacle_cm":156.8,"barcode":0,"fault":0}
+{"heartbeat_ms":482000}
+{"t_ms":483000,"mission":1,"speed":0.350,"line":0.000,"distance":165.908,"hump_m":0.000,"obstacle_cm":156.8,"barcode":0,"fault":0}
+{"heartbeat_ms":483000}
+{"t_ms":484000,"mission":1,"speed":0.350,"line":-1.000,"distance":166.258,"hump_m":0.000,"obstacle_cm":156.8,"barcode":0,"fault":0}
+{"heartbeat_ms":484000}
+{"t_ms":485000,"mission":1,"speed":0.350,"line":0.000,"distance":166.608,"hump_m":0.000,"obstacle_cm":156.4,"barcode":0,"fault":0}
+{"heartbeat_ms":485000}
+{"t_ms":486000,"mission":1,"speed":0.350,"line":1.000,"distance":166.958,"hump_m":0.000,"obstacle_cm":156.8,"barcode":0,"fault":0}
+{"heartbeat_ms":486000}
+{"t_ms":487000,"mission":1,"speed":0.350,"line":0.000,"distance":167.308,"hump_m":0.000,"obstacle_cm":156.7,"barcode":0,"fault":0}
+{"heartbeat_ms":487000}
+{"t_ms":488000,"mission":1,"speed":0.350,"line":-1.000,"distance":167.658,"hump_m":0.000,"obstacle_cm":156.3,"barcode":0,"fault":0}
+{"heartbeat_ms":488000}
+{"t_ms":489000,"mission":1,"speed":0.350,"line":0.000,"distance":168.008,"hump_m":0.000,"obstacle_cm":156.7,"barcode":0,"fault":0}
+{"heartbeat_ms":489000}
+{"t_ms":490000,"mission":1,"speed":0.350,"line":1.000,"distance":168.359,"hump_m":0.000,"obstacle_cm":156.3,"barcode":0,"fault":0}
+{"heartbeat_ms":490000}
+{"t_ms":491000,"mission":1,"speed":0.350,"line":0.000,"distance":168.709,"hump_m":0.000,"obstacle_cm":156.7,"barcode":0,"fault":0}
+{"heartbeat_ms":491000}
+{"t_ms":492000,"mission":1,"speed":0.350,"line":-1.000,"distance":169.059,"hump_m":0.000,"obstacle_cm":156.7,"barcode":0,"fault":0}
+{"heartbeat_ms":492000}
+{"t_ms":493000,"mission":1,"speed":0.350,"line":0.000,"distance":169.409,"hump_m":0.000,"obstacle_cm":156.3,"barcode":0,"fault":0}
+{"heartbeat_ms":493000}
+{"t_ms":494000,"mission":1,"speed":0.350,"line":1.000,"distance":169.759,"hump_m":0.000,"obstacle_cm":156.3,"barcode":0,"fault":0}
+{"heartbeat_ms":494000}
+{"t_ms":495000,"mission":1,"speed":0.350,"line":0.000,"distance":170.109,"hump_m":0.000,"obstacle_cm":156.6,"barcode":0,"fault":0}
+{"heartbeat_ms":495000}
+{"t_ms":496000,"mission":1,"speed":0.350,"line":-1.000,"distance":170.459,"hump_m":0.000,"obstacle_cm":156.3,"barcode":0,"fault":0}
+{"heartbeat_ms":496000}
+{"t_ms":497000,"mission":1,"speed":0.350,"line":0.000,"distance":170.810,"hump_m":0.000,"obstacle_cm":156.7,"barcode":0,"fault":0}
+{"heartbeat_ms":497000}
+{"t_ms":498000,"mission":1,"speed":0.350,"line":1.000,"distance":171.160,"hump_m":0.000,"obstacle_cm":156.7,"barcode":0,"fault":0}
+{"heartbeat_ms":498000}
+{"t_ms":499000,"mission":1,"speed":0.350,"line":0.000,"distance":171.510,"hump_m":0.000,"obstacle_cm":156.7,"barcode":0,"fault":0}
+{"heartbeat_ms":499000}
+{"t_ms":500000,"mission":1,"speed":0.350,"line":-1.000,"distance":171.860,"hump_m":0.000,"obstacle_cm":156.3,"barcode":0,"fault":0}
+{"heartbeat_ms":500000}
+{"t_ms":501000,"mission":1,"speed":0.350,"line":0.000,"distance":172.210,"hump_m":0.000,"obstacle_cm":156.3,"barcode":0,"fault":0}
+{"heartbeat_ms":501000}
+{"t_ms":502000,"mission":1,"speed":0.350,"line":1.000,"distance":172.560,"hump_m":0.000,"obstacle_cm":156.7,"barcode":0,"fault":0}
+{"heartbeat_ms":502000}
+{"t_ms":503000,"mission":1,"speed":0.350,"line":0.000,"distance":172.910,"hump_m":0.000,"obstacle_cm":156.3,"barcode":0,"fault":0}
+{"heartbeat_ms":503000}
+{"t_ms":504000,"mission":1,"speed":0.350,"line":-1.000,"distance":173.260,"hump_m":0.000,"obstacle_cm":156.3,"barcode":0,"fault":0}
+{"heartbeat_ms":504000}
+{"t_ms":505000,"mission":1,"speed":0.350,"line":0.000,"distance":173.611,"hump_m":0.000,"obstacle_cm":156.3,"barcode":0,"fault":0}
+{"heartbeat_ms":505000}
+{"t_ms":506000,"mission":1,"speed":0.350,"line":1.000,"distance":173.961,"hump_m":0.000,"obstacle_cm":156.3,"barcode":0,"fault":0}
+{"heartbeat_ms":506000}
+{"t_ms":507000,"mission":1,"speed":0.350,"line":0.000,"distance":174.311,"hump_m":0.000,"obstacle_cm":156.7,"barcode":0,"fault":0}
+{"heartbeat_ms":507000}
+{"t_ms":508000,"mission":1,"speed":0.350,"line":-1.000,"distance":174.661,"hump_m":0.000,"obstacle_cm":156.7,"barcode":0,"fault":0}
+{"heartbeat_ms":508000}
+{"t_ms":509000,"mission":1,"speed":0.350,"line":0.000,"distance":175.011,"hump_m":0.000,"obstacle_cm":156.3,"barcode":0,"fault":0}
+{"heartbeat_ms":509000}
+{"t_ms":510000,"mission":1,"speed":0.350,"line":1.000,"distance":175.361,"hump_m":0.000,"obstacle_cm":156.7,"barcode":0,"fault":0}
+{"heartbeat_ms":510000}
+{"t_ms":511000,"mission":1,"speed":0.350,"line":0.000,"distance":175.711,"hump_m":0.000,"obstacle_cm":156.3,"barcode":0,"fault":0}
+{"heartbeat_ms":511000}
+{"t_ms":512000,"mission":1,"speed":0.350,"line":-1.000,"distance":176.061,"hump_m":0.000,"obstacle_cm":156.3,"barcode":0,"fault":0}
+{"heartbeat_ms":512000}
+{"t_ms":513000,"mission":1,"speed":0.350,"line":0.000,"distance":176.412,"hump_m":0.000,"obstacle_cm":156.7,"barcode":0,"fault":0}
+{"heartbeat_ms":513000}
+{"t_ms":514000,"mission":1,"speed":0.350,"line":1.000,"distance":176.762,"hump_m":0.000,"obstacle_cm":156.7,"barcode":0,"fault":0}
+{"heartbeat_ms":514000}
+{"t_ms":515000,"mission":1,"speed":0.350,"line":0.000,"distance":177.112,"hump_m":0.000,"obstacle_cm":156.7,"barcode":0,"fault":0}
+{"heartbeat_ms":515000}
+{"t_ms":516000,"mission":1,"speed":0.350,"line":-1.000,"distance":177.462,"hump_m":0.000,"obstacle_cm":156.8,"barcode":0,"fault":0}
+{"heartbeat_ms":516000}
+{"t_ms":517000,"mission":1,"speed":0.350,"line":0.000,"distance":177.812,"hump_m":0.000,"obstacle_cm":156.7,"barcode":0,"fault":0}
+{"heartbeat_ms":517000}
+{"t_ms":518000,"mission":1,"speed":0.350,"line":1.000,"distance":178.162,"hump_m":0.000,"obstacle_cm":156.7,"barcode":0,"fault":0}
+{"heartbeat_ms":518000}
+{"t_ms":519000,"mission":1,"speed":0.350,"line":0.000,"distance":178.512,"hump_m":0.000,"obstacle_cm":156.7,"barcode":0,"fault":0}
+{"heartbeat_ms":519000}
+{"t_ms":520000,"mission":1,"speed":0.350,"line":-1.000,"distance":178.862,"hump_m":0.000,"obstacle_cm":156.7,"barcode":0,"fault":0}
+{"heartbeat_ms":520000}
+{"t_ms":521000,"mission":1,"speed":0.350,"line":0.000,"distance":179.213,"hump_m":0.000,"obstacle_cm":156.8,"barcode":0,"fault":0}
+{"heartbeat_ms":521000}
+{"t_ms":522000,"mission":1,"speed":0.350,"line":1.000,"distance":179.563,"hump_m":0.000,"obstacle_cm":156.9,"barcode":0,"fault":0}
+{"heartbeat_ms":522000}
+{"t_ms":523000,"mission":1,"speed":0.350,"line":0.000,"distance":179.913,"hump_m":0.000,"obstacle_cm":156.4,"barcode":0,"fault":0}
+{"heartbeat_ms":523000}
+{"t_ms":524000,"mission":1,"speed":0.350,"line":-1.000,"distance":180.263,"hump_m":0.000,"obstacle_cm":156.4,"barcode":0,"fault":0}
+{"heartbeat_ms":524000}
+{"t_ms":525000,"mission":1,"speed":0.350,"line":0.000,"distance":180.613,"hump_m":0.000,"obstacle_cm":156.5,"barcode":0,"fault":0}
+{"heartbeat_ms":525000}
+{"t_ms":526000,"mission":1,"speed":0.350,"line":1.000,"distance":180.963,"hump_m":0.000,"obstacle_cm":156.9,"barcode":0,"fault":0}
+{"heartbeat_ms":526000}
+{"t_ms":527000,"mission":1,"speed":0.350,"line":0.000,"distance":181.313,"hump_m":0.000,"obstacle_cm":156.4,"barcode":0,"fault":0}
+{"heartbeat_ms":527000}
+{"t_ms":528000,"mission":1,"speed":0.350,"line":-1.000,"distance":181.663,"hump_m":0.000,"obstacle_cm":156.5,"barcode":0,"fault":0}
+{"heartbeat_ms":528000}
+{"t_ms":529000,"mission":1,"speed":0.350,"line":0.000,"distance":182.014,"hump_m":0.000,"obstacle_cm":156.4,"barcode":0,"fault":0}
+{"heartbeat_ms":529000}
+{"t_ms":530000,"mission":1,"speed":0.350,"line":1.000,"distance":182.364,"hump_m":0.000,"obstacle_cm":156.5,"barcode":0,"fault":0}
+{"heartbeat_ms":530000}
+{"t_ms":531000,"mission":1,"speed":0.350,"line":0.000,"distance":182.714,"hump_m":0.000,"obstacle_cm":156.4,"barcode":0,"fault":0}
+{"heartbeat_ms":531000}
+{"t_ms":532000,"mission":1,"speed":0.350,"line":-1.000,"distance":183.064,"hump_m":0.000,"obstacle_cm":156.4,"barcode":0,"fault":0}
+{"heartbeat_ms":532000}
+{"t_ms":533000,"mission":1,"speed":0.350,"line":0.000,"distance":183.414,"hump_m":0.000,"obstacle_cm":156.4,"barcode":0,"fault":0}
+{"heartbeat_ms":533000}
+{"t_ms":534000,"mission":1,"speed":0.350,"line":1.000,"distance":183.764,"hump_m":0.000,"obstacle_cm":156.5,"barcode":0,"fault":0}
+{"heartbeat_ms":534000}
+{"t_ms":535000,"mission":1,"speed":0.350,"line":0.000,"distance":184.114,"hump_m":0.000,"obstacle_cm":156.5,"barcode":0,"fault":0}
+{"heartbeat_ms":535000}
+{"t_ms":536000,"mission":1,"speed":0.350,"line":-1.000,"distance":184.465,"hump_m":0.000,"obstacle_cm":156.9,"barcode":0,"fault":0}
+{"heartbeat_ms":536000}
+{"t_ms":537000,"mission":1,"speed":0.350,"line":0.000,"distance":184.814,"hump_m":0.000,"obstacle_cm":156.9,"barcode":0,"fault":0}
+{"heartbeat_ms":537000}
+{"t_ms":538000,"mission":1,"speed":0.350,"line":1.000,"distance":185.165,"hump_m":0.000,"obstacle_cm":157.0,"barcode":0,"fault":0}
+{"heartbeat_ms":538000}
+{"t_ms":539000,"mission":1,"speed":0.350,"line":0.000,"distance":185.515,"hump_m":0.000,"obstacle_cm":156.9,"barcode":0,"fault":0}
+{"heartbeat_ms":539000}
+{"t_ms":540000,"mission":1,"speed":0.350,"line":-1.000,"distance":185.865,"hump_m":0.000,"obstacle_cm":156.9,"barcode":0,"fault":0}
+{"heartbeat_ms":540000}
+{"t_ms":541000,"mission":1,"speed":0.350,"line":0.000,"distance":186.215,"hump_m":0.000,"obstacle_cm":156.9,"barcode":0,"fault":0}
+{"heartbeat_ms":541000}
+{"t_ms":542000,"mission":1,"speed":0.350,"line":1.000,"distance":186.565,"hump_m":0.000,"obstacle_cm":156.9,"barcode":0,"fault":0}
+{"heartbeat_ms":542000}
+{"t_ms":543000,"mission":1,"speed":0.350,"line":0.000,"distance":186.915,"hump_m":0.000,"obstacle_cm":156.5,"barcode":0,"fault":0}
+{"heartbeat_ms":543000}
+{"t_ms":544000,"mission":1,"speed":0.350,"line":-1.000,"distance":187.265,"hump_m":0.000,"obstacle_cm":156.9,"barcode":0,"fault":0}
+{"heartbeat_ms":544000}
+{"t_ms":545000,"mission":1,"speed":0.350,"line":0.000,"distance":187.616,"hump_m":0.000,"obstacle_cm":156.5,"barcode":0,"fault":0}
+{"heartbeat_ms":545000}
+{"t_ms":546000,"mission":1,"speed":0.350,"line":1.000,"distance":187.966,"hump_m":0.000,"obstacle_cm":156.9,"barcode":0,"fault":0}
+{"heartbeat_ms":546000}
+{"t_ms":547000,"mission":1,"speed":0.350,"line":0.000,"distance":188.316,"hump_m":0.000,"obstacle_cm":156.4,"barcode":0,"fault":0}
+{"heartbeat_ms":547000}
+{"t_ms":548000,"mission":1,"speed":0.350,"line":-1.000,"distance":188.666,"hump_m":0.000,"obstacle_cm":156.9,"barcode":0,"fault":0}
+{"heartbeat_ms":548000}
+{"t_ms":549000,"mission":1,"speed":0.350,"line":0.000,"distance":189.016,"hump_m":0.000,"obstacle_cm":156.9,"barcode":0,"fault":0}
+{"heartbeat_ms":549000}
+{"t_ms":550000,"mission":1,"speed":0.350,"line":1.000,"distance":189.366,"hump_m":0.000,"obstacle_cm":156.8,"barcode":0,"fault":0}
+{"heartbeat_ms":550000}
+{"t_ms":551000,"mission":1,"speed":0.350,"line":0.000,"distance":189.716,"hump_m":0.000,"obstacle_cm":156.8,"barcode":0,"fault":0}
+{"heartbeat_ms":551000}
+{"t_ms":552000,"mission":1,"speed":0.350,"line":-1.000,"distance":190.066,"hump_m":0.000,"obstacle_cm":156.4,"barcode":0,"fault":0}
+{"heartbeat_ms":552000}
+{"t_ms":553000,"mission":1,"speed":0.350,"line":0.000,"distance":190.417,"hump_m":0.000,"obstacle_cm":156.5,"barcode":0,"fault":0}
+{"heartbeat_ms":553000}
+{"t_ms":554000,"mission":1,"speed":0.350,"line":1.000,"distance":190.767,"hump_m":0.000,"obstacle_cm":156.8,"barcode":0,"fault":0}
+{"heartbeat_ms":554000}
+{"t_ms":555000,"mission":1,"speed":0.350,"line":0.000,"distance":191.117,"hump_m":0.000,"obstacle_cm":156.8,"barcode":0,"fault":0}
+{"heartbeat_ms":555000}
+{"t_ms":556000,"mission":1,"speed":0.350,"line":-1.000,"distance":191.467,"hump_m":0.000,"obstacle_cm":156.4,"barcode":0,"fault":0}
+{"heartbeat_ms":556000}
+{"t_ms":557000,"mission":1,"speed":0.350,"line":0.000,"distance":191.817,"hump_m":0.000,"obstacle_cm":156.9,"barcode":0,"fault":0}
+{"heartbeat_ms":557000}
+{"t_ms":558000,"mission":1,"speed":0.350,"line":1.000,"distance":192.167,"hump_m":0.000,"obstacle_cm":156.9,"barcode":0,"fault":0}
+{"heartbeat_ms":558000}
+{"t_ms":559000,"mission":1,"speed":0.350,"line":0.000,"distance":192.517,"hump_m":0.000,"obstacle_cm":156.4,"barcode":0,"fault":0}
+{"heartbeat_ms":559000}
+{"t_ms":560000,"mission":1,"speed":0.350,"line":-1.000,"distance":192.867,"hump_m":0.000,"obstacle_cm":156.8,"barcode":0,"fault":0}
+{"heartbeat_ms":560000}
+{"t_ms":561000,"mission":1,"speed":0.350,"line":0.000,"distance":193.218,"hump_m":0.000,"obstacle_cm":156.9,"barcode":0,"fault":0}
+{"heartbeat_ms":561000}
+{"t_ms":562000,"mission":1,"speed":0.350,"line":1.000,"distance":193.568,"hump_m":0.000,"obstacle_cm":156.9,"barcode":0,"fault":0}
+{"heartbeat_ms":562000}
+{"t_ms":563000,"mission":1,"speed":0.350,"line":0.000,"distance":193.918,"hump_m":0.000,"obstacle_cm":156.5,"barcode":0,"fault":0}
+{"heartbeat_ms":563000}
+{"t_ms":564000,"mission":1,"speed":0.350,"line":-1.000,"distance":194.268,"hump_m":0.000,"obstacle_cm":156.9,"barcode":0,"fault":0}
+{"heartbeat_ms":564000}
+{"t_ms":565000,"mission":1,"speed":0.350,"line":0.000,"distance":194.618,"hump_m":0.000,"obstacle_cm":156.5,"barcode":0,"fault":0}
+{"heartbeat_ms":565000}
+{"t_ms":566000,"mission":1,"speed":0.350,"line":1.000,"distance":194.968,"hump_m":0.000,"obstacle_cm":156.9,"barcode":0,"fault":0}
+{"heartbeat_ms":566000}
+{"t_ms":567000,"mission":1,"speed":0.350,"line":0.000,"distance":195.318,"hump_m":0.000,"obstacle_cm":156.9,"barcode":0,"fault":0}
+{"heartbeat_ms":567000}
+{"t_ms":568000,"mission":1,"speed":0.350,"line":-1.000,"distance":195.668,"hump_m":0.000,"obstacle_cm":156.9,"barcode":0,"fault":0}
+{"heartbeat_ms":568000}
+{"t_ms":569000,"mission":1,"speed":0.350,"line":0.000,"distance":196.019,"hump_m":0.000,"obstacle_cm":156.9,"barcode":0,"fault":0}
+{"heartbeat_ms":569000}
+{"t_ms":570000,"mission":1,"speed":0.350,"line":1.000,"distance":196.369,"hump_m":0.000,"obstacle_cm":156.9,"barcode":0,"fault":0}
+{"heartbeat_ms":570000}
+{"t_ms":571000,"mission":1,"speed":0.350,"line":0.000,"distance":196.719,"hump_m":0.000,"obstacle_cm":156.9,"barcode":0,"fault":0}
+{"heartbeat_ms":571000}
+{"t_ms":572000,"mission":1,"speed":0.350,"line":-1.000,"distance":197.069,"hump_m":0.000,"obstacle_cm":156.5,"barcode":0,"fault":0}
+{"heartbeat_ms":572000}
+{"t_ms":573000,"mission":1,"speed":0.350,"line":0.000,"distance":197.419,"hump_m":0.000,"obstacle_cm":156.9,"barcode":0,"fault":0}
+{"heartbeat_ms":573000}
+{"t_ms":574000,"mission":1,"speed":0.350,"line":1.000,"distance":197.769,"hump_m":0.000,"obstacle_cm":156.9,"barcode":0,"fault":0}
+{"heartbeat_ms":574000}
+{"t_ms":575000,"mission":1,"speed":0.350,"line":0.000,"distance":198.119,"hump_m":0.000,"obstacle_cm":156.5,"barcode":0,"fault":0}
+{"heartbeat_ms":575000}
+{"t_ms":576000,"mission":1,"speed":0.350,"line":-1.000,"distance":198.469,"hump_m":0.000,"obstacle_cm":156.5,"barcode":0,"fault":0}
+{"heartbeat_ms":576000}
+{"t_ms":577000,"mission":1,"speed":0.350,"line":0.000,"distance":198.820,"hump_m":0.000,"obstacle_cm":156.9,"barcode":0,"fault":0}
+{"heartbeat_ms":577000}
+{"t_ms":578000,"mission":1,"speed":0.350,"line":1.000,"distance":199.170,"hump_m":0.000,"obstacle_cm":157.0,"barcode":0,"fault":0}
+{"heartbeat_ms":578000}
+{"t_ms":579000,"mission":1,"speed":0.350,"line":0.000,"distance":199.520,"hump_m":0.000,"obstacle_cm":156.5,"barcode":0,"fault":0}
+{"heartbeat_ms":579000}
+{"t_ms":580000,"mission":1,"speed":0.350,"line":-1.000,"distance":199.870,"hump_m":0.000,"obstacle_cm":156.6,"barcode":0,"fault":0}
+{"heartbeat_ms":580000}
+{"t_ms":581000,"mission":1,"speed":0.350,"line":0.000,"distance":200.220,"hump_m":0.000,"obstacle_cm":156.4,"barcode":0,"fault":0}
+{"heartbeat_ms":581000}
+{"t_ms":582000,"mission":1,"speed":0.350,"line":1.000,"distance":200.570,"hump_m":0.000,"obstacle_cm":156.8,"barcode":0,"fault":0}
+{"heartbeat_ms":582000}
+{"t_ms":583000,"mission":1,"speed":0.350,"line":0.000,"distance":200.920,"hump_m":0.000,"obstacle_cm":156.4,"barcode":0,"fault":0}
+{"heartbeat_ms":583000}
+{"t_ms":584000,"mission":1,"speed":0.350,"line":-1.000,"distance":201.271,"hump_m":0.000,"obstacle_cm":156.8,"barcode":0,"fault":0}
+{"heartbeat_ms":584000}
+{"t_ms":585000,"mission":1,"speed":0.350,"line":0.000,"distance":201.621,"hump_m":0.000,"obstacle_cm":156.8,"barcode":0,"fault":0}
+{"heartbeat_ms":585000}
+{"t_ms":586000,"mission":1,"speed":0.350,"line":1.000,"distance":201.971,"hump_m":0.000,"obstacle_cm":156.4,"barcode":0,"fault":0}
+{"heartbeat_ms":586000}
+{"t_ms":587000,"mission":1,"speed":0.350,"line":0.000,"distance":202.321,"hump_m":0.000,"obstacle_cm":156.4,"barcode":0,"fault":0}
+{"heartbeat_ms":587000}
+{"t_ms":588000,"mission":1,"speed":0.350,"line":-1.000,"distance":202.671,"hump_m":0.000,"obstacle_cm":156.4,"barcode":0,"fault":0}
+{"heartbeat_ms":588000}
+{"t_ms":589000,"mission":1,"speed":0.350,"line":0.000,"distance":203.021,"hump_m":0.000,"obstacle_cm":156.5,"barcode":0,"fault":0}
+{"heartbeat_ms":589000}
+{"t_ms":590000,"mission":1,"speed":0.350,"line":1.000,"distance":203.371,"hump_m":0.000,"obstacle_cm":156.8,"barcode":0,"fault":0}
+{"heartbeat_ms":590000}
+{"t_ms":591000,"mission":1,"speed":0.350,"line":0.000,"distance":203.721,"hump_m":0.000,"obstacle_cm":156.8,"barcode":0,"fault":0}
+{"heartbeat_ms":591000}
+{"t_ms":592000,"mission":1,"speed":0.350,"line":-1.000,"distance":204.071,"hump_m":0.000,"obstacle_cm":156.8,"barcode":0,"fault":0}
+{"heartbeat_ms":592000}
+{"t_ms":593000,"mission":1,"speed":0.350,"line":0.000,"distance":204.422,"hump_m":0.000,"obstacle_cm":156.8,"barcode":0,"fault":0}
+{"heartbeat_ms":593000}
+{"t_ms":594000,"mission":1,"speed":0.350,"line":1.000,"distance":204.772,"hump_m":0.000,"obstacle_cm":156.3,"barcode":0,"fault":0}
+{"heartbeat_ms":594000}
+{"t_ms":595000,"mission":1,"speed":0.350,"line":0.000,"distance":205.122,"hump_m":0.000,"obstacle_cm":156.8,"barcode":0,"fault":0}
+{"heartbeat_ms":595000}
+{"t_ms":596000,"mission":1,"speed":0.350,"line":-1.000,"distance":205.472,"hump_m":0.000,"obstacle_cm":156.4,"barcode":0,"fault":0}
+{"heartbeat_ms":596000}
+{"t_ms":597000,"mission":1,"speed":0.350,"line":0.000,"distance":205.822,"hump_m":0.000,"obstacle_cm":156.4,"barcode":0,"fault":0}
+{"heartbeat_ms":597000}
+{"t_ms":598000,"mission":1,"speed":0.350,"line":1.000,"distance":206.172,"hump_m":0.000,"obstacle_cm":156.8,"barcode":0,"fault":0}
+{"heartbeat_ms":598000}
+{"t_ms":599000,"mission":1,"speed":0.350,"line":0.000,"distance":206.522,"hump_m":0.000,"obstacle_cm":156.8,"barcode":0,"fault":0}
+{"heartbeat_ms":599000}
+{"t_ms":600000,"mission":1,"speed":0.350,"line":-1.000,"distance":206.873,"hump_m":0.000,"obstacle_cm":156.8,"barcode":0,"fault":0}
+{"heartbeat_ms":600000}
+{"t_ms":601000,"mission":1,"speed":0.350,"line":0.000,"distance":207.222,"hump_m":0.000,"obstacle_cm":156.8,"barcode":0,"fault":0}
+{"heartbeat_ms":601000}
+{"t_ms":602000,"mission":1,"speed":0.350,"line":1.000,"distance":207.573,"hump_m":0.000,"obstacle_cm":156.8,"barcode":0,"fault":0}
+{"heartbeat_ms":602000}
+{"t_ms":603000,"mission":1,"speed":0.350,"line":0.000,"distance":207.923,"hump_m":0.000,"obstacle_cm":156.8,"barcode":0,"fault":0}
+{"heartbeat_ms":603000}
+{"t_ms":604000,"mission":1,"speed":0.350,"line":-1.000,"distance":208.273,"hump_m":0.000,"obstacle_cm":156.8,"barcode":0,"fault":0}
+{"heartbeat_ms":604000}
+{"t_ms":605000,"mission":1,"speed":0.350,"line":0.000,"distance":208.623,"hump_m":0.000,"obstacle_cm":156.4,"barcode":0,"fault":0}
+{"heartbeat_ms":605000}
+{"t_ms":606000,"mission":1,"speed":0.350,"line":1.000,"distance":208.973,"hump_m":0.000,"obstacle_cm":156.4,"barcode":0,"fault":0}
+{"heartbeat_ms":606000}
+{"t_ms":607000,"mission":1,"speed":0.350,"line":0.000,"distance":209.323,"hump_m":0.000,"obstacle_cm":156.9,"barcode":0,"fault":0}
+{"heartbeat_ms":607000}
+{"t_ms":608000,"mission":1,"speed":0.350,"line":-1.000,"distance":209.673,"hump_m":0.000,"obstacle_cm":156.9,"barcode":0,"fault":0}
+{"heartbeat_ms":608000}
+{"t_ms":609000,"mission":1,"speed":0.350,"line":0.000,"distance":210.023,"hump_m":0.000,"obstacle_cm":156.5,"barcode":0,"fault":0}
+{"heartbeat_ms":609000}
+{"t_ms":610000,"mission":1,"speed":0.350,"line":1.000,"distance":210.374,"hump_m":0.000,"obstacle_cm":156.9,"barcode":0,"fault":0}
+{"heartbeat_ms":610000}
+{"t_ms":611000,"mission":1,"speed":0.350,"line":0.000,"distance":210.724,"hump_m":0.000,"obstacle_cm":156.5,"barcode":0,"fault":0}
+{"heartbeat_ms":611000}
+{"t_ms":612000,"mission":1,"speed":0.350,"line":-1.000,"distance":211.074,"hump_m":0.000,"obstacle_cm":156.6,"barcode":0,"fault":0}
+{"heartbeat_ms":612000}
+{"t_ms":613000,"mission":1,"speed":0.350,"line":0.000,"distance":211.424,"hump_m":0.000,"obstacle_cm":157.0,"barcode":0,"fault":0}
+{"heartbeat_ms":613000}
+{"t_ms":614000,"mission":1,"speed":0.350,"line":1.000,"distance":211.774,"hump_m":0.000,"obstacle_cm":156.9,"barcode":0,"fault":0}
+{"heartbeat_ms":614000}
+{"t_ms":615000,"mission":1,"speed":0.350,"line":0.000,"distance":212.124,"hump_m":0.000,"obstacle_cm":156.5,"barcode":0,"fault":0}
+{"heartbeat_ms":615000}
+{"t_ms":616000,"mission":1,"speed":0.350,"line":-1.000,"distance":212.474,"hump_m":0.000,"obstacle_cm":156.5,"barcode":0,"fault":0}
+{"heartbeat_ms":616000}
+{"t_ms":617000,"mission":1,"speed":0.350,"line":0.000,"distance":212.825,"hump_m":0.000,"obstacle_cm":156.4,"barcode":0,"fault":0}
+{"heartbeat_ms":617000}
+{"t_ms":618000,"mission":1,"speed":0.350,"line":1.000,"distance":213.175,"hump_m":0.000,"obstacle_cm":156.7,"barcode":0,"fault":0}
+{"heartbeat_ms":618000}
+{"t_ms":619000,"mission":1,"speed":0.350,"line":0.000,"distance":213.525,"hump_m":0.000,"obstacle_cm":156.7,"barcode":0,"fault":0}
+{"heartbeat_ms":619000}
+{"t_ms":620000,"mission":1,"speed":0.350,"line":-1.000,"distance":213.875,"hump_m":0.000,"obstacle_cm":156.7,"barcode":0,"fault":0}
+{"heartbeat_ms":620000}
+{"t_ms":621000,"mission":1,"speed":0.350,"line":0.000,"distance":214.225,"hump_m":0.000,"obstacle_cm":156.3,"barcode":0,"fault":0}
+{"heartbeat_ms":621000}
+{"t_ms":622000,"mission":1,"speed":0.350,"line":1.000,"distance":214.575,"hump_m":0.000,"obstacle_cm":156.7,"barcode":0,"fault":0}
+{"heartbeat_ms":622000}
+{"t_ms":623000,"mission":1,"speed":0.350,"line":0.000,"distance":214.925,"hump_m":0.000,"obstacle_cm":156.3,"barcode":0,"fault":0}
+{"heartbeat_ms":623000}
+{"t_ms":624000,"mission":1,"speed":0.350,"line":-1.000,"distance":215.275,"hump_m":0.000,"obstacle_cm":156.7,"barcode":0,"fault":0}
+{"heartbeat_ms":624000}
+{"t_ms":625000,"mission":1,"speed":0.350,"line":0.000,"distance":215.625,"hump_m":0.000,"obstacle_cm":156.3,"barcode":0,"fault":0}
+{"heartbeat_ms":625000}
+{"t_ms":626000,"mission":1,"speed":0.350,"line":1.000,"distance":215.976,"hump_m":0.000,"obstacle_cm":156.7,"barcode":0,"fault":0}
+{"heartbeat_ms":626000}
+{"t_ms":627000,"mission":1,"speed":0.350,"line":0.000,"distance":216.326,"hump_m":0.000,"obstacle_cm":156.3,"barcode":0,"fault":0}
+{"heartbeat_ms":627000}
+{"t_ms":628000,"mission":1,"speed":0.350,"line":-1.000,"distance":216.676,"hump_m":0.000,"obstacle_cm":156.4,"barcode":0,"fault":0}
+{"heartbeat_ms":628000}
+{"t_ms":629000,"mission":1,"speed":0.350,"line":0.000,"distance":217.026,"hump_m":0.000,"obstacle_cm":156.4,"barcode":0,"fault":0}
+{"heartbeat_ms":629000}
+{"t_ms":630000,"mission":1,"speed":0.350,"line":1.000,"distance":217.376,"hump_m":0.000,"obstacle_cm":156.7,"barcode":0,"fault":0}
+{"heartbeat_ms":630000}
+{"t_ms":631000,"mission":1,"speed":0.350,"line":0.000,"distance":217.726,"hump_m":0.000,"obstacle_cm":156.7,"barcode":0,"fault":0}
+{"heartbeat_ms":631000}
+{"t_ms":632000,"mission":1,"speed":0.350,"line":-1.000,"distance":218.076,"hump_m":0.000,"obstacle_cm":156.7,"barcode":0,"fault":0}
+{"heartbeat_ms":632000}
+{"t_ms":633000,"mission":1,"speed":0.350,"line":0.000,"distance":218.427,"hump_m":0.000,"obstacle_cm":156.3,"barcode":0,"fault":0}
+{"heartbeat_ms":633000}
+{"t_ms":634000,"mission":1,"speed":0.350,"line":1.000,"distance":218.777,"hump_m":0.000,"obstacle_cm":156.7,"barcode":0,"fault":0}
+{"heartbeat_ms":634000}
+{"t_ms":635000,"mission":1,"speed":0.350,"line":0.000,"distance":219.127,"hump_m":0.000,"obstacle_cm":156.7,"barcode":0,"fault":0}
+{"heartbeat_ms":635000}
+{"t_ms":636000,"mission":1,"speed":0.350,"line":-1.000,"distance":219.477,"hump_m":0.000,"obstacle_cm":156.3,"barcode":0,"fault":0}
+{"heartbeat_ms":636000}
+{"t_ms":637000,"mission":1,"speed":0.350,"line":0.000,"distance":219.827,"hump_m":0.000,"obstacle_cm":156.3,"barcode":0,"fault":0}
+{"heartbeat_ms":637000}
+{"t_ms":638000,"mission":1,"speed":0.350,"line":1.000,"distance":220.177,"hump_m":0.000,"obstacle_cm":156.8,"barcode":0,"fault":0}
+{"heartbeat_ms":638000}
+{"t_ms":639000,"mission":1,"speed":0.350,"line":0.000,"distance":220.527,"hump_m":0.000,"obstacle_cm":156.7,"barcode":0,"fault":0}
+{"heartbeat_ms":639000}
+{"t_ms":640000,"mission":1,"speed":0.350,"line":-1.000,"distance":220.877,"hump_m":0.000,"obstacle_cm":156.4,"barcode":0,"fault":0}
+{"heartbeat_ms":640000}
+{"t_ms":641000,"mission":1,"speed":0.350,"line":0.000,"distance":221.228,"hump_m":0.000,"obstacle_cm":156.4,"barcode":0,"fault":0}
+{"heartbeat_ms":641000}
+{"t_ms":642000,"mission":1,"speed":0.350,"line":1.000,"distance":221.578,"hump_m":0.000,"obstacle_cm":156.4,"barcode":0,"fault":0}
+{"heartbeat_ms":642000}
+{"t_ms":643000,"mission":1,"speed":0.350,"line":0.000,"distance":221.928,"hump_m":0.000,"obstacle_cm":156.4,"barcode":0,"fault":0}
+{"heartbeat_ms":643000}
+{"t_ms":644000,"mission":1,"speed":0.350,"line":-1.000,"distance":222.278,"hump_m":0.000,"obstacle_cm":156.4,"barcode":0,"fault":0}
+{"heartbeat_ms":644000}
+{"t_ms":645000,"mission":1,"speed":0.350,"line":0.000,"distance":222.628,"hump_m":0.000,"obstacle_cm":156.7,"barcode":0,"fault":0}
+{"heartbeat_ms":645000}
+{"t_ms":646000,"mission":1,"speed":0.350,"line":1.000,"distance":222.978,"hump_m":0.000,"obstacle_cm":156.4,"barcode":0,"fault":0}
+{"heartbeat_ms":646000}
+{"t_ms":647000,"mission":1,"speed":0.350,"line":0.000,"distance":223.328,"hump_m":0.000,"obstacle_cm":156.8,"barcode":0,"fault":0}
+{"heartbeat_ms":647000}
+{"t_ms":648000,"mission":1,"speed":0.350,"line":-1.000,"distance":223.678,"hump_m":0.000,"obstacle_cm":156.8,"barcode":0,"fault":0}
+{"heartbeat_ms":648000}
+{"t_ms":649000,"mission":1,"speed":0.350,"line":0.000,"distance":224.029,"hump_m":0.000,"obstacle_cm":156.7,"barcode":0,"fault":0}
+{"heartbeat_ms":649000}
+{"t_ms":650000,"mission":1,"speed":0.350,"line":1.000,"distance":224.379,"hump_m":0.000,"obstacle_cm":156.3,"barcode":0,"fault":0}
+{"heartbeat_ms":650000}
+{"t_ms":651000,"mission":1,"speed":0.350,"line":0.000,"distance":224.729,"hump_m":0.000,"obstacle_cm":156.7,"barcode":0,"fault":0}
+{"heartbeat_ms":651000}
+{"t_ms":652000,"mission":1,"speed":0.350,"line":-1.000,"distance":225.079,"hump_m":0.000,"obstacle_cm":156.4,"barcode":0,"fault":0}
+{"heartbeat_ms":652000}
+{"t_ms":653000,"mission":1,"speed":0.350,"line":0.000,"distance":225.429,"hump_m":0.000,"obstacle_cm":156.4,"barcode":0,"fault":0}
+{"heartbeat_ms":653000}
+{"t_ms":654000,"mission":1,"speed":0.350,"line":1.000,"distance":225.779,"hump_m":0.000,"obstacle_cm":156.7,"barcode":0,"fault":0}
+{"heartbeat_ms":654000}
+{"t_ms":655000,"mission":1,"speed":0.350,"line":0.000,"distance":226.129,"hump_m":0.000,"obstacle_cm":156.3,"barcode":0,"fault":0}
+{"heartbeat_ms":655000}
+{"t_ms":656000,"mission":1,"speed":0.350,"line":-1.000,"distance":226.479,"hump_m":0.000,"obstacle_cm":156.7,"barcode":0,"fault":0}
+{"heartbeat_ms":656000}
+{"t_ms":657000,"mission":1,"speed":0.350,"line":0.000,"distance":226.830,"hump_m":0.000,"obstacle_cm":156.3,"barcode":0,"fault":0}
+{"heartbeat_ms":657000}
+{"t_ms":658000,"mission":1,"speed":0.350,"line":1.000,"distance":227.180,"hump_m":0.000,"obstacle_cm":156.7,"barcode":0,"fault":0}
+{"heartbeat_ms":658000}
+{"t_ms":659000,"mission":1,"speed":0.350,"line":0.000,"distance":227.530,"hump_m":0.000,"obstacle_cm":156.7,"barcode":0,"fault":0}
+{"heartbeat_ms":659000}
+{"t_ms":660000,"mission":1,"speed":0.350,"line":-1.000,"distance":227.880,"hump_m":0.000,"obstacle_cm":156.7,"barcode":0,"fault":0}
+{"heartbeat_ms":660000}
+{"t_ms":661000,"mission":1,"speed":0.350,"line":0.000,"distance":228.230,"hump_m":0.000,"obstacle_cm":156.7,"barcode":0,"fault":0}
+{"heartbeat_ms":661000}
+{"t_ms":662000,"mission":1,"speed":0.350,"line":1.000,"distance":228.580,"hump_m":0.000,"obstacle_cm":156.7,"barcode":0,"fault":0}
+{"heartbeat_ms":662000}
+{"t_ms":663000,"mission":1,"speed":0.350,"line":0.000,"distance":228.930,"hump_m":0.000,"obstacle_cm":156.8,"barcode":0,"fault":0}
+{"heartbeat_ms":663000}
+{"t_ms":664000,"mission":1,"speed":0.350,"line":-1.000,"distance":229.280,"hump_m":0.000,"obstacle_cm":156.5,"barcode":0,"fault":0}
+{"heartbeat_ms":664000}
+{"t_ms":665000,"mission":1,"speed":0.350,"line":0.000,"distance":229.631,"hump_m":0.000,"obstacle_cm":156.5,"barcode":0,"fault":0}
+{"heartbeat_ms":665000}
+{"t_ms":666000,"mission":1,"speed":0.350,"line":1.000,"distance":229.981,"hump_m":0.000,"obstacle_cm":156.9,"barcode":0,"fault":0}
+{"heartbeat_ms":666000}
+{"t_ms":667000,"mission":1,"speed":0.350,"line":0.000,"distance":230.331,"hump_m":0.000,"obstacle_cm":156.9,"barcode":0,"fault":0}
+{"heartbeat_ms":667000}
+{"t_ms":668000,"mission":1,"speed":0.350,"line":-1.000,"distance":230.681,"hump_m":0.000,"obstacle_cm":157.0,"barcode":0,"fault":0}
+{"heartbeat_ms":668000}
+{"t_ms":669000,"mission":1,"speed":0.350,"line":0.000,"distance":231.031,"hump_m":0.000,"obstacle_cm":156.5,"barcode":0,"fault":0}
+{"heartbeat_ms":669000}
+{"t_ms":670000,"mission":1,"speed":0.350,"line":1.000,"distance":231.381,"hump_m":0.000,"obstacle_cm":156.5,"barcode":0,"fault":0}
+{"heartbeat_ms":670000}
+{"t_ms":671000,"mission":1,"speed":0.350,"line":0.000,"distance":231.731,"hump_m":0.000,"obstacle_cm":156.9,"barcode":0,"fault":0}
+{"heartbeat_ms":671000}
+{"t_ms":672000,"mission":1,"speed":0.350,"line":-1.000,"distance":232.081,"hump_m":0.000,"obstacle_cm":156.9,"barcode":0,"fault":0}
+{"heartbeat_ms":672000}
+{"t_ms":673000,"mission":1,"speed":0.350,"line":0.000,"distance":232.431,"hump_m":0.000,"obstacle_cm":156.5,"barcode":0,"fault":0}
+{"heartbeat_ms":673000}
+{"t_ms":674000,"mission":1,"speed":0.350,"line":1.000,"distance":232.782,"hump_m":0.000,"obstacle_cm":156.5,"barcode":0,"fault":0}
+{"heartbeat_ms":674000}
+{"t_ms":675000,"mission":1,"speed":0.350,"line":0.000,"distance":233.132,"hump_m":0.000,"obstacle_cm":156.5,"barcode":0,"fault":0}
+{"heartbeat_ms":675000}
+{"t_ms":676000,"mission":1,"speed":0.350,"line":-1.000,"distance":233.482,"hump_m":0.000,"obstacle_cm":156.5,"barcode":0,"fault":0}
+{"heartbeat_ms":676000}
+{"t_ms":677000,"mission":1,"speed":0.350,"line":0.000,"distance":233.832,"hump_m":0.000,"obstacle_cm":156.5,"barcode":0,"fault":0}
+{"heartbeat_ms":677000}
+{"t_ms":678000,"mission":1,"speed":0.350,"line":1.000,"distance":234.182,"hump_m":0.000,"obstacle_cm":156.5,"barcode":0,"fault":0}
+{"heartbeat_ms":678000}
+{"t_ms":679000,"mission":1,"speed":0.350,"line":0.000,"distance":234.532,"hump_m":0.000,"obstacle_cm":156.5,"barcode":0,"fault":0}
+{"heartbeat_ms":679000}
+{"t_ms":680000,"mission":1,"speed":0.350,"line":-1.000,"distance":234.882,"hump_m":0.000,"obstacle_cm":156.9,"barcode":0,"fault":0}
+{"heartbeat_ms":680000}
+{"t_ms":681000,"mission":1,"speed":0.350,"line":0.000,"distance":235.233,"hump_m":0.000,"obstacle_cm":156.5,"barcode":0,"fault":0}
+{"heartbeat_ms":681000}
+{"t_ms":682000,"mission":1,"speed":0.350,"line":1.000,"distance":235.583,"hump_m":0.000,"obstacle_cm":156.5,"barcode":0,"fault":0}
+{"heartbeat_ms":682000}
+{"t_ms":683000,"mission":1,"speed":0.350,"line":0.000,"distance":235.933,"hump_m":0.000,"obstacle_cm":156.5,"barcode":0,"fault":0}
+{"heartbeat_ms":683000}
+{"t_ms":684000,"mission":1,"speed":0.350,"line":-1.000,"distance":236.283,"hump_m":0.000,"obstacle_cm":156.9,"barcode":0,"fault":0}
+{"heartbeat_ms":684000}
+{"t_ms":685000,"mission":1,"speed":0.350,"line":0.000,"distance":236.633,"hump_m":0.000,"obstacle_cm":156.9,"barcode":0,"fault":0}
+{"heartbeat_ms":685000}
+{"t_ms":686000,"mission":1,"speed":0.350,"line":1.000,"distance":236.983,"hump_m":0.000,"obstacle_cm":156.5,"barcode":0,"fault":0}
+{"heartbeat_ms":686000}
+{"t_ms":687000,"mission":1,"speed":0.350,"line":0.000,"distance":237.333,"hump_m":0.000,"obstacle_cm":156.5,"barcode":0,"fault":0}
+{"heartbeat_ms":687000}
+{"t_ms":688000,"mission":1,"speed":0.350,"line":-1.000,"distance":237.683,"hump_m":0.000,"obstacle_cm":156.5,"barcode":0,"fault":0}
+{"heartbeat_ms":688000}
+{"t_ms":689000,"mission":1,"speed":0.350,"line":0.000,"distance":238.034,"hump_m":0.000,"obstacle_cm":156.6,"barcode":0,"fault":0}
+{"heartbeat_ms":689000}
+{"t_ms":690000,"mission":1,"speed":0.350,"line":1.000,"distance":238.384,"hump_m":0.000,"obstacle_cm":156.9,"barcode":0,"fault":0}
+{"heartbeat_ms":690000}
+{"t_ms":691000,"mission":1,"speed":0.350,"line":0.000,"distance":238.734,"hump_m":0.000,"obstacle_cm":156.5,"barcode":0,"fault":0}
+{"heartbeat_ms":691000}

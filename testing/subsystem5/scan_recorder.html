@@ -1,0 +1,317 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Obstacle Scanner</title>
+<!-- Served live by scan_recorder.ps1; see that file for how to run it. -->
+<style>
+  :root {
+    --bg: #f4f5f7; --panel: #fff; --text: #171b24; --muted: #667085;
+    --line: #dde1e7; --grid: #e4e7ec; --hit: #d92d20; --clear: #98a2b3;
+    --warn: #b54708; --ok: #067647; --limit: #f79009;
+  }
+  @media (prefers-color-scheme: dark) {
+    :root {
+      --bg: #101319; --panel: #1a1e26; --text: #f2f4f7; --muted: #98a2b3;
+      --line: #2e343f; --grid: #272c35; --hit: #f97066; --clear: #667085;
+      --warn: #fdb022; --ok: #47cd89; --limit: #fdb022;
+    }
+  }
+  * { box-sizing: border-box; }
+  body { margin: 0; background: var(--bg); color: var(--text);
+         font: 16px/1.4 system-ui, "Segoe UI", sans-serif; }
+  header { display: flex; flex-wrap: wrap; gap: 8px 16px; align-items: center;
+           padding: 14px 20px; background: var(--panel);
+           border-bottom: 1px solid var(--line); }
+  h1 { font-size: 20px; margin: 0 auto 0 0; }
+  #link { font-weight: 600; }
+  #state { font-weight: 600; color: var(--muted); }
+  #servoNote { color: var(--muted); }
+  button { font: inherit; font-weight: 600; padding: 6px 14px; cursor: pointer;
+           color: var(--text); background: var(--bg);
+           border: 1px solid var(--line); border-radius: 6px; }
+  button:disabled { cursor: default; opacity: 0.6; }
+  main { display: grid; grid-template-columns: minmax(0, 1fr) 340px; gap: 16px;
+         padding: 16px 20px; max-width: 1280px; margin: 0 auto; }
+  @media (max-width: 860px) { main { grid-template-columns: 1fr; } }
+  .card { background: var(--panel); border: 1px solid var(--line);
+          border-radius: 10px; padding: 16px; }
+  .label { font-size: 13px; color: var(--muted); margin-bottom: 4px; }
+  #decision { font-size: 32px; font-weight: 700; line-height: 1.15; }
+  #why { color: var(--muted); margin-top: 4px; }
+  #stop { font-size: 22px; font-weight: 700; }
+  #live { font-size: 44px; font-weight: 700; line-height: 1;
+          font-variant-numeric: tabular-nums; }
+  canvas { width: 100%; height: auto; display: block; }
+  .side { display: flex; flex-direction: column; gap: 16px; }
+  dl { display: grid; grid-template-columns: auto 1fr; gap: 6px 12px; margin: 0; }
+  dt { color: var(--muted); }
+  dd { margin: 0; text-align: right; font-weight: 600;
+       font-variant-numeric: tabular-nums; }
+  .wide { grid-column: 1 / -1; }
+  table { width: 100%; border-collapse: collapse; }
+  th, td { text-align: left; padding: 6px 8px; border-top: 1px solid var(--line);
+           font-variant-numeric: tabular-nums; }
+  th { border-top: 0; color: var(--muted); font-size: 13px; font-weight: 500; }
+  #events { max-height: 260px; overflow-y: auto; }
+  .time { width: 90px; white-space: nowrap; color: var(--muted); }
+  .stop { color: var(--hit); font-weight: 600; }
+  .fault { color: var(--warn); font-weight: 600; }
+</style>
+</head>
+<body>
+<header>
+  <h1>Obstacle Scanner</h1>
+  <span id="state">–</span>
+  <span id="servoNote"></span>
+  <button id="servoTest" type="button">Test servo</button>
+  <span id="link">Waiting for Pico…</span>
+</header>
+<main>
+  <section class="card">
+    <div class="label">Top-down view of the latest scan (car at the bottom, facing up)</div>
+    <canvas id="view" width="800" height="560"></canvas>
+  </section>
+  <div class="side">
+    <section class="card">
+      <div class="label">Decision</div>
+      <div id="decision">No obstacle yet</div>
+      <div id="why"></div>
+    </section>
+    <section class="card">
+      <div class="label">Straight ahead now</div>
+      <div id="live">–</div>
+    </section>
+    <section class="card">
+      <div class="label">Last emergency stop</div>
+      <div id="stop">None yet</div>
+    </section>
+    <section class="card">
+      <div class="label">Obstacle profile</div>
+      <dl>
+        <dt>Closest point</dt><dd id="pClosest">–</dd>
+        <dt>Location</dt><dd id="pCentre">–</dd>
+        <dt>Width</dt><dd id="pWidth">–</dd>
+        <dt>Space on left</dt><dd id="pLeft">–</dd>
+        <dt>Space on right</dt><dd id="pRight">–</dd>
+      </dl>
+    </section>
+  </div>
+  <section class="card wide">
+    <div class="label">Events</div>
+    <div id="events">
+      <table><thead><tr><th class="time">Time</th><th>What happened</th></tr></thead>
+      <tbody id="rows"></tbody></table>
+    </div>
+  </section>
+</main>
+<script>
+const LIMIT_CM = 30, MAX_VIEW_CM = 80, CAR_WIDTH_CM = 15;
+const MISSIONS = ['Idle', 'Following the line', 'Avoiding an obstacle', 'Stopped: fault'];
+const FAULTS = { 1: 'external fault', 2: 'IMU fault', 3: 'could not find the line',
+                 4: 'boxed in', 6: 'motion command failed' };
+const DECISIONS = {
+  CONTINUE: ['Continue', 'Not in the car\'s path'],
+  STOP: ['Stop', 'In the car\'s path'],
+  TURN_LEFT: ['Go around: left', 'In the path, with room on the left'],
+  TURN_RIGHT: ['Go around: right', 'In the path, with room on the right'],
+  REVERSE_RETRY: ['Reverse and retry', 'Too close, or both sides blocked']
+};
+const PROFILE_RE = /S5: obstacle (-?\d+)\.\.(-?\d+) deg, centre (-?\d+) deg \/ (-?\d+) cm, closest (-?\d+) cm at (-?\d+) deg, width (-?\d+) cm, clear L (-?\d+) R (-?\d+) cm(?:, action (\w+))?/;
+const POINTS_RE = /S5: points((?:\s+\d+:-?\d+)*)/;
+const STOP_RE = /S5: STOP obstacle in path at (-?\d+) cm, (-?\d+) deg/;
+
+const el = id => document.getElementById(id);
+const canvas = el('view'), ctx = canvas.getContext('2d');
+let profile = null, points = [], lastData = 0, lastMission = null, lastFault = 0;
+let servoTimer = null;
+el('servoTest').onclick = startServoTest;
+
+function css(name) {
+  return getComputedStyle(document.documentElement).getPropertyValue(name).trim();
+}
+function side(deg) {
+  return deg === 0 ? 'straight ahead' : `${Math.abs(deg)}° ${deg < 0 ? 'left' : 'right'}`;
+}
+function space(cm) {
+  return cm <= LIMIT_CM ? 'blocked' : (cm >= 400 ? 'clear' : `${cm} cm`);
+}
+function addEvent(text, cls) {
+  const row = el('rows').insertRow(0);
+  row.insertCell().textContent = new Date().toLocaleTimeString();
+  row.cells[0].className = 'time';
+  const cell = row.insertCell();
+  cell.textContent = text;
+  if (cls) cell.className = cls;
+  while (el('rows').rows.length > 100) el('rows').deleteRow(-1);
+}
+
+function handleLine(line) {
+  lastData = Date.now();
+  let m;
+
+  if (line.startsWith('S5: servo test')) {
+    handleServoTest(line);
+  } else if ((m = STOP_RE.exec(line))) {
+    const text = `Obstacle in path at ${m[1]} cm, ${side(Number(m[2]))}`;
+    el('stop').textContent = text;
+    addEvent(`STOP: ${text}`, 'stop');
+  } else if ((m = PROFILE_RE.exec(line))) {
+    const n = m.slice(1, 10).map(Number);
+    profile = { left: n[0], right: n[1], centre: n[2], offset: n[3], closest: n[4],
+                closestAt: n[5], width: n[6], clearL: n[7], clearR: n[8], action: m[10] };
+    points = [];
+    showProfile();
+  } else if ((m = POINTS_RE.exec(line))) {
+    points = m[1].trim().split(/\s+/).filter(Boolean).map(s => s.split(':').map(Number));
+    draw();
+  } else if (line.startsWith('{')) {
+    handleTelemetry(line);
+  }
+}
+
+function servoNote(text) {
+  el('servoNote').textContent = text;
+}
+
+/* A scan can take 2 s before the firmware starts the test. */
+function startServoTest() {
+  el('servoTest').disabled = true;
+  servoNote('Asking the Pico…');
+  servoTimer = setTimeout(() => {
+    servoNote('No reply: flash the latest bench firmware');
+    el('servoTest').disabled = false;
+  }, 5000);
+  fetch('/servo-test', { method: 'POST' }).then(r => {
+    if (!r.ok) throw new Error();
+  }).catch(() => {
+    clearTimeout(servoTimer);
+    servoNote('Pico not connected');
+    el('servoTest').disabled = false;
+  });
+}
+
+function handleServoTest(line) {
+  clearTimeout(servoTimer);
+  if (line.includes('start')) {
+    el('servoTest').disabled = true;
+    servoNote('Watch the sensor: it should swing left and right twice');
+    addEvent('Servo test started');
+  } else if (line.includes('done')) {
+    servoNote('Finished. Did the sensor physically move?');
+    el('servoTest').disabled = false;
+    addEvent('Servo test finished');
+  } else {
+    const m = /at (-?\d+) deg, reads (-?\d+) cm/.exec(line);
+    if (m) addEvent(`Servo test: ${side(Number(m[1]))}, reads ${m[2]} cm`);
+  }
+}
+
+function handleTelemetry(line) {
+  let t;
+  try { t = JSON.parse(line); } catch (e) { return; }
+  if (t.mission === undefined) return;
+
+  el('live').textContent = t.obstacle_cm >= 400 ? 'Clear' : `${Math.round(t.obstacle_cm)} cm`;
+  el('live').style.color = t.obstacle_cm <= LIMIT_CM ? css('--hit') : '';
+  const fault = FAULTS[t.fault] || `fault ${t.fault}`;
+  el('state').textContent = t.fault ? `${MISSIONS[3]} (${fault})` : MISSIONS[t.mission];
+  el('state').style.color = t.fault ? css('--warn') : '';
+
+  if (t.mission !== lastMission) {
+    if (lastMission !== null && !t.fault) addEvent(`Car: ${MISSIONS[t.mission]}`);
+    lastMission = t.mission;
+  }
+  if (t.fault && t.fault !== lastFault) addEvent(`Stopped: ${fault}`, 'fault');
+  lastFault = t.fault;
+}
+
+function showProfile() {
+  const p = profile, d = DECISIONS[p.action];
+  el('decision').textContent = d ? d[0] : 'Scan complete';
+  el('why').textContent = d ? d[1] : '';
+  el('pClosest').textContent = `${p.closest} cm, ${side(p.closestAt)}`;
+  el('pCentre').textContent = side(p.centre);
+  el('pWidth').textContent = `${p.width} cm`;
+  el('pLeft').textContent = space(p.clearL);
+  el('pRight').textContent = space(p.clearR);
+  addEvent(`Scan: ${p.closest} cm away, ${side(p.centre)}, ${p.width} cm wide` +
+           (d ? ` → ${d[0]}` : ''));
+  draw();
+}
+
+function draw() {
+  const W = canvas.width, H = canvas.height, ox = W / 2, oy = H - 60;
+  const scale = Math.min((oy - 24) / MAX_VIEW_CM, (W / 2 - 40) / (MAX_VIEW_CM * Math.SQRT1_2));
+  const xy = (deg, cm) => {
+    const r = deg * Math.PI / 180;
+    return [ox + cm * Math.sin(r) * scale, oy - cm * Math.cos(r) * scale];
+  };
+  const a0 = -Math.PI * 0.75, a1 = -Math.PI * 0.25;
+
+  ctx.fillStyle = css('--panel');
+  ctx.fillRect(0, 0, W, H);
+  ctx.font = '15px system-ui, sans-serif';
+  ctx.lineWidth = 1;
+
+  for (let r = 20; r <= MAX_VIEW_CM; r += 20) {
+    ctx.strokeStyle = css('--grid');
+    ctx.beginPath(); ctx.arc(ox, oy, r * scale, a0, a1); ctx.stroke();
+    const [tx, ty] = xy(45, r);
+    ctx.fillStyle = css('--muted');
+    ctx.fillText(`${r} cm`, tx + 6, ty + 4);
+  }
+  [-45, 0, 45].forEach(d => {
+    const [x, y] = xy(d, MAX_VIEW_CM);
+    ctx.strokeStyle = css('--grid');
+    ctx.beginPath(); ctx.moveTo(ox, oy); ctx.lineTo(x, y); ctx.stroke();
+  });
+
+  ctx.strokeStyle = css('--limit');
+  ctx.setLineDash([7, 6]);
+  ctx.beginPath(); ctx.arc(ox, oy, LIMIT_CM * scale, a0, a1); ctx.stroke();
+  ctx.setLineDash([]);
+
+  ctx.fillStyle = css('--text');
+  ctx.fillRect(ox - CAR_WIDTH_CM * scale / 2, oy, CAR_WIDTH_CM * scale, 44);
+
+  points.forEach(([angle, dist]) => {
+    const hit = dist <= LIMIT_CM;
+    const [x, y] = xy(angle - 90, Math.min(dist, MAX_VIEW_CM));
+    ctx.globalAlpha = 0.3;
+    ctx.strokeStyle = hit ? css('--hit') : css('--clear');
+    ctx.beginPath(); ctx.moveTo(ox, oy); ctx.lineTo(x, y); ctx.stroke();
+    ctx.globalAlpha = 1;
+    ctx.fillStyle = hit ? css('--hit') : css('--clear');
+    ctx.beginPath(); ctx.arc(x, y, hit ? 6 : 4, 0, Math.PI * 2); ctx.fill();
+  });
+
+  if (profile) {
+    const [lx, ly] = xy(profile.left, profile.closest);
+    const [rx, ry] = xy(profile.right, profile.closest);
+    ctx.strokeStyle = css('--hit');
+    ctx.lineWidth = 8; ctx.lineCap = 'round';
+    ctx.beginPath(); ctx.moveTo(lx, ly); ctx.lineTo(rx, ry); ctx.stroke();
+    ctx.lineWidth = 1; ctx.lineCap = 'butt';
+  } else {
+    ctx.fillStyle = css('--muted');
+    ctx.textAlign = 'center';
+    ctx.fillText('Put something within 30 cm', ox, oy - 45 * scale);
+    ctx.textAlign = 'left';
+  }
+}
+
+if (typeof EventSource !== 'undefined' && location.protocol.startsWith('http')) {
+  new EventSource('/events').onmessage = e => handleLine(e.data);
+}
+setInterval(() => {
+  const live = Date.now() - lastData < 3000;
+  el('link').textContent = live ? '● Live' : 'No data from Pico';
+  el('link').style.color = live ? css('--ok') : css('--warn');
+}, 500);
+matchMedia('(prefers-color-scheme: dark)').addEventListener('change', draw);
+draw();
+</script>
+</body>
+</html>

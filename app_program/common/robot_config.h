@@ -63,11 +63,11 @@
 #define ULTRASONIC_MIN_PING_INTERVAL_MS (66U)
 #define ULTRASONIC_ECHO_QUEUE_LENGTH    (4U)
 #define ULTRASONIC_SERVO_SETTLE_MS      (50U)
-#define ULTRASONIC_COARSE_LEFT_DEG      (45U)
+#define ULTRASONIC_COARSE_LEFT_DEG      (60U)   /* 30 deg left of centre: cabling limit */
 #define ULTRASONIC_COARSE_CENTER_DEG    (90U)
-#define ULTRASONIC_COARSE_RIGHT_DEG     (135U)
+#define ULTRASONIC_COARSE_RIGHT_DEG     (120U)  /* 30 deg right of centre: cabling limit */
 #define ULTRASONIC_FINE_STEP_DEG        (5U)
-#define ULTRASONIC_FINE_MARGIN_DEG      (20U)
+#define ULTRASONIC_FINE_MARGIN_DEG      (15U)   /* up to the next coarse angle */
 #define ULTRASONIC_BEAM_WIDTH_DEG       (15U)
 
 /* ---- Buddy 4: MPU6050 IMU on I2C0 through the kernel "iica" driver ---- */
@@ -154,6 +154,17 @@
 #endif
 #if (!ROBOT_SIMULATION) && (!S3_BARCODE_HW)
 #error "SIM=0 needs the real barcode sensor (S3_BARCODE_HW = 1)"
+#endif
+
+/* 1 = use the REAL ultrasonic sensor and scan servo even in a SIM=1
+ * build, to bench-test the scanner: motors, IMU and the line stay
+ * simulated, so the wheels never turn.
+ * Default: real scanner only in SIM=0 builds. */
+#ifndef S5_ULTRASONIC_HW
+#define S5_ULTRASONIC_HW                (1)
+#endif
+#if (!ROBOT_SIMULATION) && (!S5_ULTRASONIC_HW)
+#error "SIM=0 needs the real ultrasonic scanner (S5_ULTRASONIC_HW = 1)"
 #endif
 
 /* ---- Spare constants kept from the original configuration ---- */
