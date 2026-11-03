@@ -3,9 +3,20 @@
  * @brief Line tracking task (FR7, NFR6), every 10 ms.
  *
  * Each cycle averages the ~10 IR samples the 1 kHz interrupt took since
- * the last cycle (~20 at the original 20 ms cadence), normalises them
- * with the boot calibration, computes a continuous line error, detects
- * junctions and posts SYSTEM_EVENT_LINE.
+ * the last cycle, normalises them with the boot calibration, estimates
+ * the line position, detects junctions and posts SYSTEM_EVENT_LINE.
+ *
+ * Two sensors, left (L) and middle (M), each sit over one EDGE of the
+ * ~18 mm line.  An IR spot only gives an in-between reading while it
+ * straddles an edge, so placing the sensors on the edges makes the
+ * error continuous around the centre:
+ *
+ *     state     L      M      error = M - L
+ *     centred   ~0.5   ~0.5   0
+ *     drifted   up     down   towards -1 (line to the left)
+ *     drifted   down   up     towards +1 (line to the right)
+ *     lost      ~0     ~0     +-1 towards the side last seen
+ *     junction  ~1     ~1     both black: a crossing line
  *
  * Routing (route.c): a decoded barcode is stored as the pending waypoint
  * and reported once; the car keeps following the line.  At the next
@@ -46,11 +57,10 @@ typedef struct
     ir_calibration_t cal_left;
     ir_calibration_t cal_center;
     float            last_error;
-    uint32_t         junction_since_ms;
-    bool             b_junction_reported;
+    line_junction_t  junction;
     uint16_t         held_left;
     uint16_t         held_center;
-    bool             b_held_right_black;
+    uint32_t         last_debug_ms;
     uint32_t         next_sim_barcode_ms;
     uint32_t         sim_code_index;
     uint32_t         sim_junction_ms;
@@ -90,19 +100,28 @@ line_normalise (uint16_t raw, ir_calibration_t const * p_cal)
 }
 
 /*!
- * @brief Line error: left only = -1, centre only = +1, both = 0,
- *        continuous in between.  When the line is lost, saturate toward
- *        the side it was last seen so the robot turns back.
+ * @brief Line position from the two edge sensors.
+ *
+ * @param[in]  left          Left sensor, 0 = white .. 1 = black.
+ * @param[in]  center        Middle sensor, same scale.
+ * @param[in]  last_error    Error of the last cycle the line was seen.
+ * @param[out] p_b_detected  false when both sensors read white.
+ *
+ * @return -1 (line to the left) .. +1 (line to the right).  When the line
+ *         is lost, full scale towards the side it was last seen, so the
+ *         car turns back to it.
  */
 float
-line_compute_error (float left, float center, bool b_detected,
-                    float last_error)
+line_compute_error (float left, float center, float last_error,
+                    bool * p_b_detected)
 {
     float error = 0.0f;
 
-    if (b_detected)
+    *p_b_detected = (left >= LINE_LOST_LEVEL) || (center >= LINE_LOST_LEVEL);
+
+    if (*p_b_detected)
     {
-        error = center - left;
+        error = LINE_ERROR_SIGN * (center - left);
     }
     else if (last_error > LINE_LOST_DEADBAND)
     {
@@ -118,6 +137,47 @@ line_compute_error (float left, float center, bool b_detected,
     }
 
     return (error);
+}
+
+/*!
+ * @brief Junction: both sensors black for LINE_JUNCTION_MIN_CYCLES
+ *        consecutive cycles.  On a straight line that cannot happen (the
+ *        sensors sit on the two edges); only a crossing line covers both.
+ *        Reported once per crossing; re-armed once either sensor is back
+ *        below LINE_JUNCTION_RELEASE.
+ *
+ * @return true on the cycle the junction is first confirmed.
+ */
+bool
+line_junction_update (line_junction_t * p_junction, float left, float center)
+{
+    bool b_new = false;
+
+    if ((left >= LINE_JUNCTION_LEVEL) && (center >= LINE_JUNCTION_LEVEL))
+    {
+        if (p_junction->black_cycles < LINE_JUNCTION_MIN_CYCLES)
+        {
+            p_junction->black_cycles++;
+        }
+
+        if ((!p_junction->b_reported) &&
+            (p_junction->black_cycles >= LINE_JUNCTION_MIN_CYCLES))
+        {
+            p_junction->b_reported = true;
+            b_new = true;
+        }
+    }
+    else
+    {
+        p_junction->black_cycles = 0U;
+
+        if ((left < LINE_JUNCTION_RELEASE) || (center < LINE_JUNCTION_RELEASE))
+        {
+            p_junction->b_reported = false;
+        }
+    }
+
+    return (b_new);
 }
 
 static void
@@ -142,7 +202,7 @@ line_calibration_apply (ir_calibration_t * p_cal, uint16_t min_counts,
 /* Hardware: calibration and per-cycle averaging                       */
 /* ------------------------------------------------------------------ */
 
-#if !ROBOT_SIMULATION
+#if S3_LINE_HW
 /*!
  * @brief Sweep the sensors across line and floor for 3 s.  Min/max are
  *        taken over ~10-sample averages so one noisy sample cannot set a
@@ -177,10 +237,24 @@ line_calibrate (line_ctx_t * p_ctx)
         }
     }
 
+    tm_printf((UB *) "S3: line calibration: sweep done\n");
     line_calibration_apply(&p_ctx->cal_left, left_min, left_max);
     line_calibration_apply(&p_ctx->cal_center, center_min, center_max);
 }
-#endif /* !ROBOT_SIMULATION */
+
+/*!
+ * @brief Report one sensor's calibration on the console.
+ */
+static void
+line_calibration_report (char const * p_name, ir_calibration_t const * p_cal)
+{
+    tm_printf((UB *) "S3: line sensor %s: white %u, black %u counts%s\n",
+              p_name, (unsigned int) p_cal->white,
+              (unsigned int) p_cal->black,
+              p_cal->b_calibrated ? ""
+              : "  ** DEFAULTS: sweep across line and floor at boot **");
+}
+#endif /* S3_LINE_HW */
 
 #if ROBOT_SIMULATION
 /*
@@ -189,13 +263,14 @@ line_calibrate (line_ctx_t * p_ctx)
  * exercises the whole route path; SIM=0 firmware contains no mapping.
  */
 static char const g_sim_route[]  = "A:L,B:R,C:S,D:U";
-#if !S3_BARCODE_HW
+#if (!S3_BARCODE_HW) && (!S3_LINE_HW)
 static char const g_sim_codes[LINE_SIM_CODE_COUNT][2] =
 {
     "A", "B", "C", "D", "E"     /* "E" is unmapped -> default action */
 };
 #endif
 
+#if !S3_LINE_HW
 /*!
  * @brief Simulation: the line drifts between the sensors; every 10 s a
  *        barcode is injected (alternately read backwards), and 3 s later
@@ -203,7 +278,7 @@ static char const g_sim_codes[LINE_SIM_CODE_COUNT][2] =
  */
 static void
 line_simulate (line_ctx_t * p_ctx, uint32_t now_ms, uint16_t * p_left,
-               uint16_t * p_center, bool * p_right_black)
+               uint16_t * p_center)
 {
     float const    span  = (float) (IR_DEFAULT_BLACK_COUNTS -
                                     IR_DEFAULT_WHITE_COUNTS);
@@ -224,7 +299,6 @@ line_simulate (line_ctx_t * p_ctx, uint32_t now_ms, uint16_t * p_left,
                                  ((1.0f - drift) * span));
     *p_center      = (uint16_t) ((float) IR_DEFAULT_WHITE_COUNTS +
                                  (drift * span));
-    *p_right_black = false;
 
 #if !S3_BARCODE_HW
     if ((int32_t) (now_ms - p_ctx->next_sim_barcode_ms) >= 0)
@@ -255,7 +329,6 @@ line_simulate (line_ctx_t * p_ctx, uint32_t now_ms, uint16_t * p_left,
     {
         *p_left        = IR_DEFAULT_BLACK_COUNTS;
         *p_center      = IR_DEFAULT_BLACK_COUNTS;
-        *p_right_black = true;
 
         if ((now_ms - p_ctx->sim_junction_ms) >= LINE_SIM_JUNCTION_MS)
         {
@@ -263,6 +336,7 @@ line_simulate (line_ctx_t * p_ctx, uint32_t now_ms, uint16_t * p_left,
         }
     }
 }
+#endif /* !S3_LINE_HW */
 #endif /* ROBOT_SIMULATION */
 
 /*!
@@ -270,10 +344,10 @@ line_simulate (line_ctx_t * p_ctx, uint32_t now_ms, uint16_t * p_left,
  */
 static void
 line_read (line_ctx_t * p_ctx, uint32_t now_ms, uint16_t * p_left,
-           uint16_t * p_center, bool * p_right_black)
+           uint16_t * p_center)
 {
-#if ROBOT_SIMULATION
-    line_simulate(p_ctx, now_ms, p_left, p_center, p_right_black);
+#if !S3_LINE_HW
+    line_simulate(p_ctx, now_ms, p_left, p_center);
 #else
     ir_window_t window;
 
@@ -284,47 +358,51 @@ line_read (line_ctx_t * p_ctx, uint32_t now_ms, uint16_t * p_left,
     {
         p_ctx->held_left   = (uint16_t) (window.left_sum / window.count);
         p_ctx->held_center = (uint16_t) (window.center_sum / window.count);
-        p_ctx->b_held_right_black =
-            ((2U * window.right_black_count) > window.count);
     }
 
-    *p_left        = p_ctx->held_left;
-    *p_center      = p_ctx->held_center;
-    *p_right_black = p_ctx->b_held_right_black;
+    *p_left   = p_ctx->held_left;
+    *p_center = p_ctx->held_center;
 #endif
 }
 
+#if S3_LINE_DEBUG
 /*!
- * @brief Junction: all three sensors black for JUNCTION_MIN_MS (rejects
- *        single barcode bars).  Reported once per crossing.
+ * @brief Live view for the hand check: raw counts, normalised % and the
+ *        error, every LINE_DEBUG_PERIOD_MS.
  */
-static bool
-line_junction (line_ctx_t * p_ctx, bool b_all_black, uint32_t now_ms)
+static void
+line_debug (line_ctx_t * p_ctx, uint32_t now_ms, uint16_t raw_left,
+            uint16_t raw_center, float left, float center, float error,
+            bool b_detected)
 {
-    bool b_junction = false;
+    char const * p_state = "on line";
 
-    if (b_all_black)
+    if ((now_ms - p_ctx->last_debug_ms) >= LINE_DEBUG_PERIOD_MS)
     {
-        if (0U == p_ctx->junction_since_ms)
+        p_ctx->last_debug_ms = now_ms;
+
+        if (!b_detected)
         {
-            p_ctx->junction_since_ms = now_ms;
+            p_state = "LOST (both white)";
+        }
+        else if ((left >= LINE_JUNCTION_LEVEL) &&
+                 (center >= LINE_JUNCTION_LEVEL))
+        {
+            p_state = "JUNCTION? (both black)";
+        }
+        else
+        {
+            /* On the line. */
         }
 
-        if ((!p_ctx->b_junction_reported) &&
-            ((now_ms - p_ctx->junction_since_ms) >= JUNCTION_MIN_MS))
-        {
-            b_junction = true;
-            p_ctx->b_junction_reported = true;
-        }
+        tm_printf((UB *) "S3 line: L %4u (%3d%%)  M %4u (%3d%%)  "
+                  "error %4d%%  %s\n",
+                  (unsigned int) raw_left, (int) (left * 100.0f),
+                  (unsigned int) raw_center, (int) (center * 100.0f),
+                  (int) (error * 100.0f), p_state);
     }
-    else
-    {
-        p_ctx->junction_since_ms   = 0U;
-        p_ctx->b_junction_reported = false;
-    }
-
-    return (b_junction);
 }
+#endif /* S3_LINE_DEBUG */
 
 /*!
  * @brief Post this cycle's SYSTEM_EVENT_LINE.
@@ -351,7 +429,7 @@ line_publish (line_ctx_t * p_ctx, float error, bool b_detected,
     {
         route_store_waypoint(&result, now_ms);
 
-#if ROBOT_SIMULATION && S3_BARCODE_HW
+#if ROBOT_SIMULATION && S3_BARCODE_HW && !S3_LINE_HW
         /* Real barcode, simulated track: fake the junction 3 s later. */
         p_ctx->sim_junction_ms      = now_ms + LINE_SIM_JUNCTION_AT_MS;
         p_ctx->b_sim_junction_armed = true;
@@ -397,12 +475,10 @@ line_task (INT stacd, void * p_exinf)
     uint32_t          now_ms;
     uint16_t          raw_left;
     uint16_t          raw_center;
-    bool              b_right_black;
     float             left;
     float             center;
     float             error;
-    bool              b_left_on;
-    bool              b_center_on;
+    bool              b_detected;
 
     (void) stacd;
     (void) p_exinf;
@@ -419,9 +495,13 @@ line_task (INT stacd, void * p_exinf)
     mqtt_utk_route_rx(g_sim_route, (uint32_t) (sizeof(g_sim_route) - 1U));
 #endif
 
-#if !ROBOT_SIMULATION
+#if S3_LINE_HW
     app_check(ir_sampler_start(), "ir_sampler_start");
+    tm_printf((UB *) "S3: line calibration: sweep the car sideways across"
+              " the line for 3 s\n");
     line_calibrate(&ctx);
+    line_calibration_report("left", &ctx.cal_left);
+    line_calibration_report("middle", &ctx.cal_center);
 #endif
 
     /* Discard wake-ups queued during calibration. */
@@ -434,24 +514,25 @@ line_task (INT stacd, void * p_exinf)
         route_poll_config();            /* MQTT route table updates */
 
         now_ms = board_millis();
-        line_read(&ctx, now_ms, &raw_left, &raw_center, &b_right_black);
+        line_read(&ctx, now_ms, &raw_left, &raw_center);
 
-        left        = line_normalise(raw_left, &ctx.cal_left);
-        center      = line_normalise(raw_center, &ctx.cal_center);
-        b_left_on   = (left >= IR_ON_LINE_THRESHOLD);
-        b_center_on = (center >= IR_ON_LINE_THRESHOLD);
+        left   = line_normalise(raw_left, &ctx.cal_left);
+        center = line_normalise(raw_center, &ctx.cal_center);
+        error  = line_compute_error(left, center, ctx.last_error,
+                                    &b_detected);
 
-        error = line_compute_error(left, center, (b_left_on || b_center_on),
-                                   ctx.last_error);
-
-        if (b_left_on || b_center_on)
+        if (b_detected)
         {
             ctx.last_error = error;
         }
 
-        line_publish(&ctx, error, (b_left_on || b_center_on),
-                     line_junction(&ctx, (b_left_on && b_center_on &&
-                                          b_right_black), now_ms),
+#if S3_LINE_DEBUG
+        line_debug(&ctx, now_ms, raw_left, raw_center, left, center, error,
+                   b_detected);
+#endif
+
+        line_publish(&ctx, error, b_detected,
+                     line_junction_update(&ctx.junction, left, center),
                      now_ms);
     }
 }

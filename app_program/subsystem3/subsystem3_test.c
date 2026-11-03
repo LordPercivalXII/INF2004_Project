@@ -226,11 +226,47 @@ subsystem3_test (void)
                    "speed varying 50% during the scan, R-to-L \"R\"");
     }
 
-    TEST_CHECK("S3-U05",
-               ((line_compute_error(1.0f, 0.0f, true, 0.0f) < -0.99f) &&
-                (line_compute_error(0.0f, 1.0f, true, 0.0f) > 0.99f) &&
-                (line_compute_error(0.0f, 0.0f, false, 0.3f) > 0.99f)),
-               "line error sign and lost-line saturation");
+    {
+        bool  b_det = false;
+        float err;
+
+        err = line_compute_error(0.5f, 0.5f, 0.0f, &b_det);
+        TEST_CHECK("S3-U05", (b_det && (err > -0.01f) && (err < 0.01f)),
+                   "both edge sensors grey: centred, error 0");
+
+        TEST_CHECK("S3-U17",
+                   (((LINE_ERROR_SIGN *
+                      line_compute_error(0.9f, 0.1f, 0.0f, &b_det)) <
+                     -0.79f) && b_det &&
+                    ((LINE_ERROR_SIGN *
+                      line_compute_error(0.1f, 0.9f, 0.0f, &b_det)) >
+                     0.79f) && b_det &&
+                    (line_compute_error(0.05f, 0.05f, 0.3f, &b_det) > 0.99f) &&
+                    (!b_det) &&
+                    (line_compute_error(0.05f, 0.05f, -0.3f, &b_det) <
+                     -0.99f)),
+                   "drift left/right, lost line steers to last side");
+    }
+
+    {
+        line_junction_t junction = {0U, false};
+        bool            b_first;
+        bool            b_second;
+        bool            b_again;
+        bool            b_rearmed;
+
+        b_first   = line_junction_update(&junction, 0.95f, 0.9f);
+        b_second  = line_junction_update(&junction, 0.95f, 0.9f);
+        b_again   = line_junction_update(&junction, 0.95f, 0.9f);
+        (void) line_junction_update(&junction, 0.5f, 0.2f);   /* past it */
+        (void) line_junction_update(&junction, 0.9f, 0.9f);
+        b_rearmed = line_junction_update(&junction, 0.9f, 0.9f);
+
+        TEST_CHECK("S3-U18",
+                   ((!b_first) && b_second && (!b_again) && b_rearmed &&
+                    (!line_junction_update(&junction, 0.5f, 0.5f))),
+                   "junction after 2 black cycles, once per crossing");
+    }
 
     s3_test_routes(&test_pass, &test_fail);
 

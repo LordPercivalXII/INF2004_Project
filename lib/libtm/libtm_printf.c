@@ -38,35 +38,27 @@
 #include <tk/smp.h>
 
 /*
- * tm_vsprintf() emits one logical call as several tm_putchar()/tm_snd_dat()
- * fragments.  The USB ring lock makes each fragment safe, but without this
- * outer lock two processors can still splice fragments from different calls
- * into one corrupted line.  Static zero initialization is the unlocked
- * representation of T_SPLOCK and is available before the startup banner.
+ * The console lock is shared with tm_putstring/tm_putchar so formatted
+ * diagnostics and complete telemetry lines cannot splice across processors.
  *
  * The interrupt-preserving form also prevents a normal handler on the same
  * processor from deadlocking against a task it interrupted.  Consequently a
  * tm_printf call is a diagnostic operation, not a hard-real-time operation:
  * local interrupts remain masked until that complete call has been emitted.
  */
-LOCAL T_SPLOCK tm_printf_smp_lock;
-EXPORT volatile UW tm_printf_smp_contentions;
 EXPORT volatile UW tm_printf_smp_calls[TK_MAX_CORE];
 
 LOCAL void tm_printf_lock(UINT *intsts)
 {
 	INT prc = tk_get_prc();
 
-	if(ISpinTryLock(&tm_printf_smp_lock, intsts) != E_OK) {
-		(void)atomic_inc((UW *)&tm_printf_smp_contentions);
-		(void)ISpinLock(&tm_printf_smp_lock, intsts);
-	}
+	tm_console_lock(intsts);
 	if(prc >= 1 && prc <= TK_MAX_CORE) tm_printf_smp_calls[prc - 1]++;
 }
 
 LOCAL void tm_printf_unlock(UINT intsts)
 {
-	(void)ISpinUnlock(&tm_printf_smp_lock, intsts);
+	tm_console_unlock(intsts);
 }
 #endif
 

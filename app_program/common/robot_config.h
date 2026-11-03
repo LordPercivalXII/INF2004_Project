@@ -70,20 +70,22 @@
 #define ULTRASONIC_FINE_MARGIN_DEG      (15U)   /* up to the next coarse angle */
 #define ULTRASONIC_BEAM_WIDTH_DEG       (15U)
 
-/* ---- Buddy 4: MPU6050 IMU on I2C0 through the kernel "iica" driver ---- */
+/* ---- Buddy 4: LSM303DLHC on I2C0 through kernel "iica" ---- */
 #define IMU_I2C_DEVICE_NAME             "iica"
-#define IMU_I2C_ADDRESS                 (0x68U)
+#define IMU_ACCEL_ADDRESS               (0x19U)
+#define IMU_MAG_ADDRESS                 (0x1EU)
 #define IMU_SAMPLE_RATE_HZ              (100U)
 #define IMU_GRAVITY_M_S2                (9.80665f)
-#define IMU_ACCEL_COUNTS_PER_G          (8192.0f)   /* +-4 g (AFS_SEL=1)    */
-#define IMU_GYRO_COUNTS_PER_DPS         (65.5f)     /* +-1000 dps (FS_SEL=1) */
 #define IMU_SHOCK_THRESHOLD_G           (3.0f)      /* FR10                 */
-#define IMU_HUMP_THRESHOLD_G            (0.25f)     /* FR11                 */
+#define IMU_HUMP_THRESHOLD_G            (0.08f)     /* world vertical       */
 #define IMU_FILTER_WINDOW_SIZE          (5U)        /* moving average taps  */
 
 /* ---- Buddy 2: motors and encoders ---- */
 #define MOTOR_ENCODER_TICKS_PER_REV     (630.0f)
 #define MOTOR_WHEEL_DIAMETER_M          (0.066f)
+/* 100 us still permits 3.29 m/s with the geometry above, well above the
+ * 0.70 m/s drive limit. Suppress faster duplicate electrical edges. */
+#define MOTOR_ENCODER_MIN_EDGE_US       (100U)
 #define MOTOR_TRACK_WIDTH_M             (0.110f)  /* Measured wheel-center spacing, approx. */
 /* 1 = motors off and raw encoder ticks printed (build TEST=1 SIM=0). */
 #ifndef S2_ENCODER_CALIBRATION
@@ -130,8 +132,40 @@
 #define IR_MIN_CONTRAST_COUNTS          (400U)
 #define IR_DEFAULT_WHITE_COUNTS         (600U)
 #define IR_DEFAULT_BLACK_COUNTS         (3000U)
-#define IR_ON_LINE_THRESHOLD            (0.5f)
-#define JUNCTION_MIN_MS                 (150U)
+
+/* Line position with TWO analog sensors, left (GP26) and middle (GP27),
+ * each sitting over one EDGE of the ~18 mm line (sensors ~18-20 mm
+ * apart).  Normalised readings (0 = white, 1 = black):
+ *   centred  both grey (~0.5)  error 0, continuous for a few mm
+ *   drifted  one up, one down  error -1..+1 (middle - left)
+ *   lost     both white        steer towards the side last seen
+ *   junction both black        a crossing line covers both sensors
+ * The right sensor (GP28) is for barcodes only. */
+#define LINE_LOST_LEVEL                 (0.15f)  /* both below: lost      */
+#define LINE_JUNCTION_LEVEL             (0.80f)  /* both above: junction  */
+#define LINE_JUNCTION_RELEASE           (0.65f)  /* re-arm when one below:
+                                                    > 0.5 so a centred car
+                                                    (L + M ~ 1) re-arms */
+#define LINE_JUNCTION_MIN_CYCLES        (2U)     /* x 10 ms: an 18 mm
+                                                    crossing at 0.6 m/s
+                                                    gives ~3 cycles     */
+#define LINE_ERROR_SIGN                 (1.0f)   /* -1.0f if the car steers
+                                                    away from the line  */
+
+/* 1 = read the REAL line sensors (ADC, boot calibration) even in a
+ * SIM=1 build, to check polarity and steering sign by hand while the
+ * motors stay simulated.  Default: real sensors only in SIM=0 builds. */
+#ifndef S3_LINE_HW
+#define S3_LINE_HW                      (!ROBOT_SIMULATION)
+#endif
+/* 1 = print L, M (raw and %), error and state every 200 ms. */
+#ifndef S3_LINE_DEBUG
+#define S3_LINE_DEBUG                   (0)
+#endif
+#define LINE_DEBUG_PERIOD_MS            (200U)
+#if (!ROBOT_SIMULATION) && (!S3_LINE_HW)
+#error "SIM=0 needs the real line sensors (S3_LINE_HW = 1)"
+#endif
 
 /* ---- Buddy 3: Code 39 barcode (FR8, FR9, NFR5) ---- */
 #define IR_BARCODE_BLACK_LEVEL          (1U)     /* verify on hardware    */

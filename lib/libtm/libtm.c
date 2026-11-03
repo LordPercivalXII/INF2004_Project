@@ -21,6 +21,45 @@
 #if USE_TMONITOR
 #include "libtm.h"
 
+#if TK_SUPPORT_SMP && TM_CONSOLE_USB_CDC
+#include <tk/smp.h>
+
+LOCAL T_SPLOCK tm_output_lock;
+LOCAL UINT tm_output_depth[TK_MAX_CORE];
+EXPORT volatile UW tm_printf_smp_contentions;
+
+/* printf emits through putchar/putstring; nested calls on the same core
+   must share the outer lock without claiming it a second time. */
+EXPORT void tm_console_lock(UINT *intsts)
+{
+	UINT saved;
+	UINT ignored;
+	INT core;
+
+	DI(saved);
+	core = tk_get_prc() - 1;
+	if(tm_output_depth[core] == 0) {
+		if(ISpinTryLock(&tm_output_lock, &ignored) != E_OK) {
+			(void)atomic_inc((UW *)&tm_printf_smp_contentions);
+			(void)ISpinLock(&tm_output_lock, &ignored);
+		}
+	}
+	tm_output_depth[core]++;
+	*intsts = saved;
+}
+
+EXPORT void tm_console_unlock(UINT intsts)
+{
+	INT core = tk_get_prc() - 1;
+
+	if(--tm_output_depth[core] == 0) {
+		(void)ISpinUnlock(&tm_output_lock, intsts);
+	} else {
+		EI(intsts);
+	}
+}
+#endif
+
 /*
  * libtm_init() - libtm Initialize
  * supported only on wait != 0 (polling not supported)
@@ -84,14 +123,22 @@ EXPORT INT tm_putchar( INT c )
 {
 	static const char CR = CHR_CR;
 	UB buf = (UB)c;
-	INT imask;
+	UINT imask;
 
+#if TK_SUPPORT_SMP && TM_CONSOLE_USB_CDC
+	tm_console_lock(&imask);
+#else
 	DI(imask);
+#endif
 	if (buf == CHR_LF) {
 		tm_snd_dat((const UB*)&CR, 1);
 	}
 	tm_snd_dat(&buf, 1);
+#if TK_SUPPORT_SMP && TM_CONSOLE_USB_CDC
+	tm_console_unlock(imask);
+#else
 	EI(imask);
+#endif
 
 	return 0;
 }
@@ -103,13 +150,21 @@ EXPORT INT tm_putchar( INT c )
 EXPORT INT tm_putstring( const UB *buff )
 {
 	const UB* p = buff;
-	INT imask;
+	UINT imask;
 
+#if TK_SUPPORT_SMP && TM_CONSOLE_USB_CDC
+	tm_console_lock(&imask);
+#else
 	DI(imask);
+#endif
 	while ( *p != (UB)'\0' ) {
 		tm_putchar(*p++);
 	}
+#if TK_SUPPORT_SMP && TM_CONSOLE_USB_CDC
+	tm_console_unlock(imask);
+#else
 	EI(imask);
+#endif
 
 	return 0;
 }

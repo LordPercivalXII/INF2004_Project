@@ -30,6 +30,7 @@
 #define	I2C_STS_STOP		0x0003
 #define	I2C_STS_SEND		0x0004
 #define	I2C_STS_RECV		0x0005
+#define I2C_STS_WAIT_STOP	0x0006
 #define	I2C_STS_TOP		0x8000
 
 /*

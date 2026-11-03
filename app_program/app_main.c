@@ -24,7 +24,7 @@
  *   subsystem1/  Buddy 1: telemetry (JSON lines on the console)
  *   subsystem2/  Buddy 2: motors, wheel encoders, speed PID
  *   subsystem3/  Buddy 3: IR line tracking + Code 39 barcodes
- *   subsystem4/  Buddy 4: MPU6050 IMU (shock, hump, motion state)
+ *   subsystem4/  Buddy 4: LSM303DLHC (shock, approximate hump/turn, tilt)
  *   subsystem5/  Buddy 5: ultrasonic obstacle scanner on a servo
  *   common/      shared types, configuration and board drivers
  */
