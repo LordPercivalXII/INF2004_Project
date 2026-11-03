@@ -11,7 +11,7 @@
       <header>
         <div>
           <p class="eyebrow">INF2004 · CSC19</p>
-          <h1>Robot Control & Telemetry</h1>
+          <h1>Robot Control &amp; Telemetry</h1>
         </div>
         <span id="connection" class="status">Connecting…</span>
       </header>
@@ -32,6 +32,25 @@
           <small>Mission</small><strong id="mission">--</strong
           ><span id="timestamp">No data</span>
         </article>
+      </section>
+      <section class="panel mission-panel">
+        <h2>Robot mission control</h2>
+        <p>
+          Send a mission command to the robot. The mission display above changes
+          only when telemetry confirms the state.
+        </p>
+        <div class="mission-buttons">
+          <button id="start-robot" class="start-button" type="button" disabled>
+            ▶ Start robot
+          </button>
+          <button id="stop-robot" class="stop-button" type="button" disabled>
+            ■ Stop robot
+          </button>
+        </div>
+        <p class="hint">
+          Commands are not retained. STOP is a software request, not an
+          emergency stop. Secure the robot before testing.
+        </p>
       </section>
       <div class="columns">
         <section class="panel">

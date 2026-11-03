@@ -10,7 +10,7 @@ const slider = $("speed-slider");
 slider.addEventListener("input", () => {
   $("speed-value").textContent = Number(slider.value).toFixed(2);
 });
-async function post(path, body) {
+async function post(path, body = {}) {
   try {
     const response = await fetch(path, {
       method: "POST",
@@ -36,6 +36,14 @@ $("send-speed").addEventListener("click", () => {
   if (!brokerConnected) return feedback("MQTT broker is disconnected.");
   post("/api/speed", { speed: Number(slider.value) });
 });
+$("start-robot").addEventListener("click", () => {
+  if (!brokerConnected) return feedback("MQTT broker is disconnected.");
+  post("/api/start");
+});
+$("stop-robot").addEventListener("click", () => {
+  if (!brokerConnected) return feedback("MQTT broker is disconnected.");
+  post("/api/stop");
+});
 async function poll() {
   try {
     const response = await fetch("/api/status", { cache: "no-store" });
@@ -52,6 +60,8 @@ async function poll() {
     $("connection").className =
       `status ${brokerConnected ? "online" : "offline"}`;
     $("send-speed").disabled = !brokerConnected;
+    $("start-robot").disabled = !brokerConnected;
+    $("stop-robot").disabled = !brokerConnected;
     $("route-form").querySelector("button").disabled = !brokerConnected;
     const t = data.latest;
     if (!t) return;
@@ -86,6 +96,8 @@ async function poll() {
     $("connection").textContent = "Server unavailable";
     $("connection").className = "status offline";
     $("send-speed").disabled = true;
+    $("start-robot").disabled = true;
+    $("stop-robot").disabled = true;
     $("route-form").querySelector("button").disabled = true;
   }
 }

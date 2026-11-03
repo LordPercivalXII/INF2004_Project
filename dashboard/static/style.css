@@ -201,6 +201,37 @@ input[type=range] {
     color: #64d7ad
 }
 
+.mission-panel {
+    margin-top: 16px
+}
+
+.mission-buttons {
+    display: grid;
+    grid-template-columns: 1fr 1fr;
+    gap: 14px;
+    margin-top: 18px
+}
+
+.start-button {
+    background: #64d7ad;
+    color: #092018;
+    font-size: 16px
+}
+
+.stop-button {
+    background: #e76f70;
+    color: #240c0c;
+    font-size: 16px
+}
+
+.start-button:not(:disabled):hover {
+    background: #8be8c3
+}
+
+.stop-button:not(:disabled):hover {
+    background: #f38e8f
+}
+
 @media(max-width:850px) {
     .metrics {
         grid-template-columns: repeat(2, 1fr)
@@ -231,5 +262,9 @@ input[type=range] {
 
     .shell {
         padding: 20px 14px
+    }
+
+    .mission-buttons {
+        grid-template-columns: 1fr
     }
 }
