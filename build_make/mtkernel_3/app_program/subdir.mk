@@ -3,7 +3,8 @@
 ################################################################################
 
 # app_program/*.c plus one level of subfolders (one per subsystem)
-TEMP_SRCS = $(wildcard ../app_program/*.c) $(wildcard ../app_program/*/*.c)
+TEMP_SRCS = $(filter-out ../app_program/subsystem1/test_telemetry_codec.c, \
+            $(wildcard ../app_program/*.c) $(wildcard ../app_program/*/*.c))
 TEMP_OBJS = $(TEMP_SRCS:.c=.o)
 TEMP_DEPS = $(TEMP_SRCS:.c=.d)
 
