@@ -31,6 +31,8 @@ typedef enum
 ER       board_init(void);
 void     board_release_reset(uint32_t mask);
 
+/* Both clocks use the same 1 MHz hardware timer, not kernel tick accounting.
+ * millis wraps at 2^32 ms; micros wraps independently at 2^32 us. */
 uint32_t board_millis(void);
 uint32_t board_micros(void);
 void     board_delay_us(uint32_t delay_us);

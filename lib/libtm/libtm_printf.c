@@ -303,7 +303,23 @@ LOCAL	void	out_cons( UB *str, INT len,  OutPar *par )
 #if	TM_OUTBUF_SZ == 0
 	/* Direct output to console */
 	par->len += len;
+#if TK_SUPPORT_SMP && TM_CONSOLE_USB_CDC
+	/* tm_printf holds the complete-call console lock in this configuration. */
+	while (len > 0) {
+		UB *start = str;
+		while (len > 0 && *str != CHR_LF) {
+			str++;
+			len--;
+		}
+		if (str != start) tm_snd_dat(start, str - start);
+		if (len > 0) {
+			tm_putchar(*str++);
+			len--;
+		}
+	}
+#else
 	while (--len >= 0) tm_putchar(*str++);
+#endif
 #else
 	/* Buffered output to console */
 	if (str == NULL) {	/* Flush */

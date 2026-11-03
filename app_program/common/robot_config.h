@@ -79,6 +79,11 @@
 #define IMU_SHOCK_THRESHOLD_G           (3.0f)      /* FR10                 */
 #define IMU_HUMP_THRESHOLD_G            (0.08f)     /* world vertical       */
 #define IMU_FILTER_WINDOW_SIZE          (5U)        /* moving average taps  */
+/* Temporary terrain commissioning trace, up to 50 Hz while moving.
+ * Printed by telemetry_task, never by the sensor/motion event producers. */
+#ifndef IMU_HEIGHT_TRACE_ENABLED
+#define IMU_HEIGHT_TRACE_ENABLED        (1)
+#endif
 
 /* ---- Buddy 2: motors and encoders ---- */
 #define MOTOR_ENCODER_TICKS_PER_REV     (630.0f)

@@ -28,6 +28,8 @@
 #define IMU_HUMP_PRE_SAMPLES         (10U)
 #define IMU_CLASSIFY_HOLD_MS         (80U)
 #define IMU_IMPACT_HOLD_MS           (100U)
+#define IMU_NORMAL_INTERVAL_MAX_MS   (30U)
+#define IMU_RECOVERABLE_INTERVAL_MS  (100U)
 
 typedef struct
 {

@@ -2,9 +2,19 @@
  * @brief Buddy 4 odometry-assisted ramp/hump height estimator.
  */
 #include "imu_height.h"
+#include "imu_processing.h"
 #include "../common/rmath.h"
 
-#define HEIGHT_MAX_GAP_MS        (100U)
+#define HEIGHT_MAX_MOTION_MS     (100U)
+#define HEIGHT_MAX_GAP_MS        (250U)
+#define HEIGHT_MAX_GAP_PATH_M    (0.020f)
+#define HEIGHT_MAX_BRIDGED_M     (0.060f)
+#define HEIGHT_MAX_GAP_PITCH_DEG (6.0f)
+#define HEIGHT_GAP_MIN_G         (0.65f)
+#define HEIGHT_GAP_MAX_G         (1.35f)
+#define HEIGHT_START_MAX_MS      (250U)
+#define HEIGHT_START_MAX_PATH_M  (0.020f)
+#define HEIGHT_START_MAX_FALL_M  (0.0005f)
 #define HEIGHT_FLAT_SAMPLES      (10U)
 #define HEIGHT_LEVEL_DEG         (1.0f)
 #define HEIGHT_MIN_PEAK_M        (0.005f)
@@ -21,10 +31,15 @@ imu_height_invalidate (imu_height_t * p_height, imu_height_rejection_t reason)
     p_height->last_rejection = reason;
     if (p_height->b_active)
     {
+        p_height->b_interrupted_available = true;
+        p_height->interrupted_rise_m = p_height->rise_m;
+        p_height->interrupted_peak_m = p_height->peak_m;
+        p_height->interrupted_reason = reason;
         p_height->rejected_count++;
         p_height->b_rejected = true;
     }
     p_height->b_active = false;
+    p_height->b_start_pending = false;
     p_height->b_complete = false;
     p_height->b_ready = false;
     p_height->b_valid = false;
@@ -49,6 +64,11 @@ imu_height_imu_rejection (imu_event_t const * p_imu)
     if (!p_imu->b_calibrated) return HEIGHT_REJECT_CALIBRATION;
     if (p_imu->b_saturated) return HEIGHT_REJECT_SATURATION;
     if (p_imu->b_shock_detected) return HEIGHT_REJECT_SHOCK;
+    if (p_imu->b_timing_gap &&
+        ((p_imu->sample_interval_ms < 5U) ||
+         (p_imu->sample_interval_ms > IMU_RECOVERABLE_INTERVAL_MS)))
+        return HEIGHT_REJECT_SAMPLE_TIMING;
+    if (p_imu->b_timing_gap) return HEIGHT_REJECT_TILT;
     if (!p_imu->b_tilt_valid) return HEIGHT_REJECT_TILT;
     return HEIGHT_REJECT_NONE;
 }
@@ -84,8 +104,22 @@ imu_height_rejection_name (imu_height_rejection_t reason)
         case HEIGHT_REJECT_GAP_BUDGET: return "tilt_gap_travel_budget";
         case HEIGHT_REJECT_GAP_BUFFER: return "tilt_gap_buffer";
         case HEIGHT_REJECT_GAP_ACCELERATION: return "tilt_gap_acceleration";
+        case HEIGHT_REJECT_DISTANCE_SPEED: return "distance_speed_mismatch";
+        case HEIGHT_REJECT_SAMPLE_TIMING: return "imu_sample_interval";
         default: return "invalid_reason";
     }
+}
+
+static void
+imu_height_begin_gap (imu_height_t * p_height)
+{
+    p_height->b_gap = true;
+    p_height->b_valid = false;
+    p_height->b_complete = false;
+    p_height->gap_anchor_ms = p_height->last_ms;
+    p_height->gap_slope = p_height->last_slope;
+    p_height->gap_segments = 0U;
+    p_height->gap_path_m = 0.0f;
 }
 
 void
@@ -104,8 +138,8 @@ imu_height_observe_imu (imu_height_t * p_height,
         float const ay = p_imu->acceleration_y_g;
         float const az = p_imu->acceleration_z_g;
         float const norm_squared = ax * ax + ay * ay + az * az;
-        if (!(norm_squared >= 0.85f * 0.85f &&
-              norm_squared <= 1.15f * 1.15f))
+        if (!(norm_squared >= HEIGHT_GAP_MIN_G * HEIGHT_GAP_MIN_G &&
+              norm_squared <= HEIGHT_GAP_MAX_G * HEIGHT_GAP_MAX_G))
         {
             imu_height_invalidate(p_height, HEIGHT_REJECT_GAP_ACCELERATION);
             return;
@@ -118,17 +152,13 @@ imu_height_observe_imu (imu_height_t * p_height,
             imu_height_invalidate(p_height, reason);
             return;
         }
-        p_height->b_gap = true;
-        p_height->gap_anchor_ms = p_height->last_ms;
-        p_height->gap_slope = p_height->last_slope;
-        p_height->gap_segments = 0U;
-        p_height->gap_path_m = 0.0f;
+        imu_height_begin_gap(p_height);
     }
     if (p_height->b_gap)
     {
         p_height->b_valid = false;
         p_height->b_complete = false;
-        if (((imu_ms - p_height->gap_anchor_ms) > 100U) &&
+        if (((imu_ms - p_height->gap_anchor_ms) > HEIGHT_MAX_GAP_MS) &&
             ((p_height->gap_anchor_ms - imu_ms) > 60U))
         {
             imu_height_invalidate(p_height, HEIGHT_REJECT_GAP_TIMEOUT);
@@ -138,19 +168,56 @@ imu_height_observe_imu (imu_height_t * p_height,
 
 static void
 imu_height_integrate (imu_height_t * p_height, float ds, float slope,
-                       bool b_level)
+                       bool b_level, bool b_measured, uint32_t sample_ms)
 {
     float const dz = ds * (slope + p_height->last_slope) * 0.5f;
     p_height->last_dz = dz;
     p_height->last_slope = slope;
     if (!p_height->b_active)
     {
-        if ((!b_level) && (dz < -0.00001f))
+        if (!p_height->b_start_pending && !b_level && (dz < 0.0f))
         {
-            imu_height_invalidate(p_height, HEIGHT_REJECT_DOWNHILL_START);
+            p_height->b_start_pending = true;
+            p_height->start_ms = sample_ms;
+            p_height->start_path_m = p_height->path_m;
+        }
+        if (p_height->b_start_pending)
+        {
+            /* Keep the original datum and every signed increment: ignoring
+               the initial fall would turn recovery from a dip into a hump. */
+            p_height->rise_m += dz;
+            p_height->path_m += rmath_absf(ds);
+            if (p_height->rise_m < -HEIGHT_START_MAX_FALL_M)
+            {
+                imu_height_invalidate(p_height, HEIGHT_REJECT_DOWNHILL_START);
+                return;
+            }
+            if (p_height->path_m > 10.0f)
+            {
+                imu_height_invalidate(p_height, HEIGHT_REJECT_PATH);
+                return;
+            }
+            if (b_level && b_measured)
+            {
+                /* Level travel ends the negative-pitch excursion, not its
+                   signed debt. A later ascent must still regain that fall. */
+                p_height->start_ms = sample_ms;
+                p_height->start_path_m = p_height->path_m;
+            }
+            else if (((p_height->path_m - p_height->start_path_m) >
+                      HEIGHT_START_MAX_PATH_M) ||
+                     ((sample_ms - p_height->start_ms) > HEIGHT_START_MAX_MS))
+            {
+                imu_height_invalidate(p_height, HEIGHT_REJECT_DOWNHILL_START);
+                return;
+            }
+            if (b_level || (p_height->rise_m <= 0.0f)) return;
+            p_height->b_start_pending = false;
+            p_height->b_active = true;
+            p_height->peak_m = p_height->rise_m;
             return;
         }
-        if (b_level || (dz <= 0.00001f))
+        if (b_level || (dz <= 0.0f))
         {
             return;
         }
@@ -188,11 +255,19 @@ imu_height_update (imu_height_t * p_height, motion_event_t const * p_motion,
     float slope;
     float ds;
     bool b_level;
+    bool b_endpoint_valid = p_imu->b_tilt_valid && !p_imu->b_timing_gap;
     bool const b_had_distance = p_height->b_have_distance;
     imu_height_rejection_t reason = imu_height_imu_rejection(p_imu);
 
     p_height->b_complete = false;
     p_height->b_rejected = false;
+    if (((HEIGHT_REJECT_NONE == reason) || (HEIGHT_REJECT_TILT == reason)) &&
+        (age > IMU_RECOVERABLE_INTERVAL_MS) &&
+        ((imu_ms - motion_ms) > 60U))
+    {
+        imu_height_invalidate(p_height, HEIGHT_REJECT_IMU_AGE);
+        return;
+    }
     imu_height_observe_imu(p_height, p_imu, imu_ms);
     if ((b_had_distance && !p_height->b_have_distance) ||
         ((HEIGHT_REJECT_TILT == reason) && !p_height->b_gap)) return;
@@ -205,8 +280,24 @@ imu_height_update (imu_height_t * p_height, motion_event_t const * p_motion,
     if (HEIGHT_REJECT_NONE == reason)
     {
         if ((age > 60U) && ((imu_ms - motion_ms) > 60U))
-            reason = HEIGHT_REJECT_IMU_AGE;
-        else if (!(pitch >= -35.0f && pitch <= 35.0f))
+        {
+            if ((age <= IMU_RECOVERABLE_INTERVAL_MS) &&
+                p_height->b_ready && p_height->b_have_distance)
+            {
+                if (!p_height->b_gap) imu_height_begin_gap(p_height);
+                b_endpoint_valid = false;
+                imu_height_observe_imu(p_height, p_imu, motion_ms);
+                if (!p_height->b_have_distance) return;
+            }
+            else
+            {
+                reason = HEIGHT_REJECT_IMU_AGE;
+            }
+        }
+    }
+    if (HEIGHT_REJECT_NONE == reason)
+    {
+        if (!(pitch >= -35.0f && pitch <= 35.0f))
             reason = HEIGHT_REJECT_PITCH;
         else if (!(p_imu->tilt_roll_deg >= -10.0f &&
                    p_imu->tilt_roll_deg <= 10.0f))
@@ -238,7 +329,7 @@ imu_height_update (imu_height_t * p_height, motion_event_t const * p_motion,
     ds = distance - p_height->last_distance_m;
     p_height->last_distance_m = distance;
     p_height->last_ms = motion_ms;
-    if ((interval == 0U) || (interval > HEIGHT_MAX_GAP_MS))
+    if ((interval == 0U) || (interval > HEIGHT_MAX_MOTION_MS))
     {
         imu_height_invalidate(p_height, HEIGHT_REJECT_INTERVAL);
         return;
@@ -248,18 +339,27 @@ imu_height_update (imu_height_t * p_height, motion_event_t const * p_motion,
         imu_height_invalidate(p_height, HEIGHT_REJECT_DISTANCE_JUMP);
         return;
     }
+    if (rmath_absf(ds - (left + right) * 0.5f *
+                   ((float) interval / 1000.0f)) >
+        (0.001f + (rmath_absf(left) + rmath_absf(right)) * 0.001f))
+    {
+        /* Permit encoder/float quantization and 2 ms timestamp rounding,
+           but never fuse a large displacement with an unrelated speed. */
+        imu_height_invalidate(p_height, HEIGHT_REJECT_DISTANCE_SPEED);
+        return;
+    }
     if (p_height->b_gap)
     {
         uint32_t const duration = motion_ms - p_height->gap_anchor_ms;
         uint32_t idx;
-        if (duration > 100U)
+        if (duration > HEIGHT_MAX_GAP_MS)
             reason = HEIGHT_REJECT_GAP_TIMEOUT;
         else if (p_height->gap_segments >= IMU_HEIGHT_GAP_SEGMENTS)
             reason = HEIGHT_REJECT_GAP_BUFFER;
-        else if (p_height->gap_path_m + rmath_absf(ds) > 0.01f)
+        else if (p_height->gap_path_m + rmath_absf(ds) > HEIGHT_MAX_GAP_PATH_M)
             reason = HEIGHT_REJECT_GAP_DISTANCE;
         else if (p_height->bridged_path_m + p_height->gap_path_m +
-                 rmath_absf(ds) > 0.03f)
+                 rmath_absf(ds) > HEIGHT_MAX_BRIDGED_M)
             reason = HEIGHT_REJECT_GAP_BUDGET;
         if (HEIGHT_REJECT_NONE != reason)
         {
@@ -269,11 +369,11 @@ imu_height_update (imu_height_t * p_height, motion_event_t const * p_motion,
         p_height->gap_ds[p_height->gap_segments] = ds;
         p_height->gap_ms[p_height->gap_segments++] = duration;
         p_height->gap_path_m += rmath_absf(ds);
-        if (!p_imu->b_tilt_valid)
+        if (!b_endpoint_valid)
         {
             return;
         }
-        if (rmath_absf(pitch - p_height->gap_pitch) > 3.0f)
+        if (rmath_absf(pitch - p_height->gap_pitch) > HEIGHT_MAX_GAP_PITCH_DEG)
         {
             imu_height_invalidate(p_height, HEIGHT_REJECT_GAP_PITCH);
             return;
@@ -289,7 +389,8 @@ imu_height_update (imu_height_t * p_height, motion_event_t const * p_motion,
                 rmath_absf(interpolated) <=
                 rmath_sinf(HEIGHT_LEVEL_DEG * RMATH_DEG_TO_RAD);
             imu_height_integrate(p_height, p_height->gap_ds[idx],
-                                  interpolated, b_interpolated_level);
+                                  interpolated, b_interpolated_level, false,
+                                  p_height->gap_anchor_ms + p_height->gap_ms[idx]);
             p_height->level_path_m = 0.0f;
             if (!p_height->b_ready) return;
         }
@@ -311,7 +412,7 @@ imu_height_update (imu_height_t * p_height, motion_event_t const * p_motion,
         return;
     }
     p_height->b_valid = true;
-    imu_height_integrate(p_height, ds, slope, b_level);
+    imu_height_integrate(p_height, ds, slope, b_level, true, motion_ms);
     if (p_height->b_valid && p_height->b_active &&
         p_height->b_descended && (p_height->level_path_m >= 0.03f))
     {
@@ -354,6 +455,10 @@ imu_height_apply (imu_height_t const * p_height, imu_event_t * p_imu)
     p_imu->b_height_uses_odometry = true;
     p_imu->b_height_gap_pending = p_height->b_gap;
     p_imu->height_gap_count = p_height->gap_count;
+    p_imu->b_height_interrupted_available = p_height->b_interrupted_available;
+    p_imu->interrupted_rise_m = p_height->interrupted_rise_m;
+    p_imu->interrupted_peak_m = p_height->interrupted_peak_m;
+    p_imu->height_interrupted_reason = (uint32_t) p_height->interrupted_reason;
     p_imu->b_height_approximate = true;
     if ((MOTION_CLIMBING == p_imu->motion_state) ||
         (MOTION_DESCENDING == p_imu->motion_state))
@@ -365,11 +470,11 @@ imu_height_apply (imu_height_t const * p_height, imu_event_t * p_imu)
          rmath_sinf(HEIGHT_LEVEL_DEG * RMATH_DEG_TO_RAD)) &&
         (MOTION_IMPACT != p_imu->motion_state))
     {
-        if (p_height->last_dz < -0.00001f)
+        if (p_height->last_dz < 0.0f)
         {
             p_imu->motion_state = MOTION_DESCENDING;
         }
-        else if (p_height->last_dz > 0.00001f)
+        else if (p_height->last_dz > 0.0f)
         {
             p_imu->motion_state = MOTION_CLIMBING;
         }

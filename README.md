@@ -8,6 +8,113 @@
 
 The template guide below still applies.
 
+## Ramp-height measurement
+
+The LSM303DLHC supplies pitch; signed wheel travel supplies distance. Start
+stationary on level ground and wait for `imu_calibrated:1` and
+`height_tracking_valid:1` before moving slowly and straight over the hump.
+
+Brief invalid-tilt intervals preserve the crossing while height is frozen and
+marked invalid. Recovery requires valid tilt within **250 ms**, no more than
+**20 mm** absolute wheel travel, and at most **6 degrees** endpoint pitch change.
+Acceleration magnitude during the gap must remain within **0.65–1.35 g**.
+Interpolated travel is limited to **60 mm per crossing/baseline**. Invalid pitch
+is never integrated; interpolated travel cannot satisfy the level runout.
+These are software approximation limits, not guaranteed sensor accuracy.
+
+A tiny initial downhill increment no longer immediately loses the baseline:
+confirmation permits at most **0.5 mm net fall**, with **20 mm / 250 ms** per
+unconfirmed out-of-level excursion. Fresh valid level samples renew that
+excursion window, so a small dip followed by flat travel or a level pause does
+not discard the ground reference. Signed height debt and total path are never
+zeroed by this renewal: a later ascent must regain the initial fall before
+becoming active. Interpolated level samples cannot renew the window, and the
+overall 10 m path limit still applies.
+Small encoder increments on a slope accumulate without a per-sample vertical
+distance deadband, so slow pushing does not silently lose ascent or descent.
+Sustained downhill starts, impacts, clipping, sensor failures, excessive roll,
+stale data and implausible wheel movement still reject the measurement.
+Acceleration-limit rejections print the failing acceleration components.
+
+Only a completed ascent/descent with consistent return height and 3 cm of valid
+level runout updates `hump_valid` and `hump_count`. Interrupted peaks remain
+separate diagnostic records with `interrupted_height_valid:0`; they are not
+accepted ramp heights. This accelerometer-only tilt sensor cannot guarantee
+accurate height during arbitrary acceleration, wheel slip or chassis rocking.
+
+### Diagnosing an incomplete ramp crossing
+
+`IMU_HEIGHT_TRACE_ENABLED=1` enables separate `height_trace` JSON records at
+each motion sample (up to 50 Hz), during wheel movement/tracking and for
+500 ms afterward. Normal one-second snapshots and heartbeats are unchanged.
+The low-priority telemetry task prints the records; acquisition does not wait
+for USB output. Trace queue loss is counted in `dropped` and reported explicitly;
+motion-event queue loss is reported separately by subsystem 2.
+
+Each record contains motion and IMU timestamps, motion interval, corrected
+acceleration in g, pitch/roll, both signed encoder totals and speeds, cumulative
+distance, interval travel in mm, live rise/peak in mm, and quality/gap flags.
+`null` means a nonfinite or out-of-range diagnostic value, not zero.
+This trace is for commissioning, not a more accurate height estimator; set
+`IMU_HEIGHT_TRACE_ENABLED=0` when the extra serial output is no longer needed.
+
+For the next check, first roll the car **straight on flat ground for a measured
+20 cm**, then cross the ramp slowly and continue at least 3 cm beyond it. Keep
+both wheels in contact and do not lift or rock the body by hand. Both encoder
+totals should increase by similar amounts on the straight flat segment. With
+the configured 66 mm wheels and 630 ticks/revolution, each wheel should gain
+approximately 608 ticks over 20 cm; verify the actual hardware geometry before
+changing calibration. A very different left/right gain needs investigation of
+wheel contact, encoder A/B wiring and direction/counting; do not compensate by
+arbitrarily doubling one wheel or relaxing the return-height check.
+
+All application millisecond timestamps now use the same RP2040 hardware timer
+as wheel-speed microsecond intervals, rather than serviced kernel ticks.
+The full 64-bit timer is read coherently before conversion, so the 32-bit
+microsecond rollover does not reset millisecond time. Application millisecond
+time still wraps naturally after about 49.7 days. Kernel wake-up scheduling is
+unchanged. A genuinely delayed motion interval over 100 ms remains invalid;
+it must not be squeezed into a short interval and integrated with current tilt.
+Height fusion also checks signed travel against average wheel speed and elapsed
+time, allowing 1 mm plus 2 ms worth of speed for rounding. A failure reports
+`distance_speed_mismatch`, retaining the interrupted diagnostic peak.
+
+Successful IMU reads with an abnormal sample interval are now distinguished
+from I2C/range failures. For intervals **31–100 ms**, calibration and gravity
+are preserved, tilt is marked temporarily invalid, and the existing bounded
+gap path can recover after a normal valid endpoint. No acceleration or held
+pitch is integrated across missing samples. All existing gap distance, pitch,
+acceleration and total-travel limits still apply. Intervals below 5 ms or above
+100 ms reject height as `imu_sample_interval`, not `sensor`; real read errors,
+clipping and impacts still reject immediately. The acceleration-only reference
+integrator still aborts on timing gaps rather than double-integrating them.
+Trace records include `imu_dt_ms`, `timing_gap` and `acquisition_us`.
+Motion arriving with a 61–100 ms old IMU sample also buffers travel until a
+fresh endpoint arrives; that stale pitch cannot finalize a bridge. Older IMU
+data still rejects as `imu_age`.
+The acquisition duration includes preemption while reading, not only I2C bus
+time. Comparing it with the sample interval helps locate scheduling/read stalls;
+the cause of all long hardware stalls has not yet been established.
+
+USB service now runs at priority 19 and Wi-Fi polling at 21, below the robot's
+sensor/control tasks (10–18); telemetry remains at 20. Both services stay pinned
+to core 0 for interrupt ownership, but no longer outrank motion or IMU sampling.
+USB wake requests are coalesced before each event-processing pass, and unused
+input is drained only up to the byte count present at the start of that pass.
+Console strings are appended in spans rather than taking nested locks for every
+character; complete-call SMP serialization and CRLF conversion are preserved.
+These changes remove service-priority starvation paths without increasing any
+height-recovery limit. Elimination of the observed 182 ms stall still requires
+a hardware crossing test; the serial log alone cannot prove its exact source.
+
+On SMP USB builds, a separate `timing_diag` JSON line reports cumulative maximum
+kernel-lock hold/wait times, per-core console-lock hold/wait times (microseconds),
+and USB-ring dropped bytes once per heartbeat. These are boot-to-date maxima,
+including startup, not the duration of a particular IMU delay; compare before
+and after a failed crossing. The console measurement includes only outermost
+lock ownership, so nested output does not overwrite its start time. This
+diagnostic does not change height acceptance or validate the physical result.
+
 ---
 
 

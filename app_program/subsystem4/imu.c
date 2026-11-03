@@ -78,10 +78,13 @@ imu_task (INT stacd, void * p_exinf)
     uint32_t now_ms;
     uint32_t previous_sample_ms = 0U;
     uint32_t last_ready_ms = board_millis();
+    uint32_t acquisition_start_us;
+    uint32_t acquisition_us;
     lsm303_read_result_t read_result;
     bool b_initialized;
     bool b_valid;
     bool b_error_reported = false;
+    bool b_timing_reported = false;
     bool b_queue_error = false;
     bool b_was_calibrated = false;
 
@@ -123,7 +126,9 @@ imu_task (INT stacd, void * p_exinf)
             (void) tk_can_wup(TSK_SELF);
         }
 #endif
+        acquisition_start_us = board_micros();
         read_result = imu_sample(b_initialized, &sample, sequence);
+        acquisition_us = board_micros() - acquisition_start_us;
         sequence++;
         now_ms = board_millis();
         if ((LSM303_READ_WAIT == read_result) &&
@@ -138,6 +143,7 @@ imu_task (INT stacd, void * p_exinf)
             last_ready_ms = now_ms;
         }
         imu_processor_update(&processor, &sample, b_valid, now_ms);
+        processor.output.acquisition_us = acquisition_us;
         if (!b_valid)
         {
             b_initialized = false;
@@ -153,6 +159,22 @@ imu_task (INT stacd, void * p_exinf)
         else if (processor.output.b_sensor_valid)
         {
             b_error_reported = false;
+        }
+        if (processor.output.b_sensor_valid && processor.output.b_timing_gap)
+        {
+            if (!b_timing_reported)
+            {
+                tm_printf((UB *) "S4: IMU timing gap interval_ms=%u "
+                          "read_ok=1 acquisition_us=%u recovery_limit_ms=%u\n",
+                          (unsigned int) processor.output.sample_interval_ms,
+                          (unsigned int) acquisition_us,
+                          (unsigned int) IMU_RECOVERABLE_INTERVAL_MS);
+                b_timing_reported = true;
+            }
+        }
+        else
+        {
+            b_timing_reported = false;
         }
         if ((now_ms - last_status_ms) >= IMU_CALIBRATION_WARN_MS)
         {

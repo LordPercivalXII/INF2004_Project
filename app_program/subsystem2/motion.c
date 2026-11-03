@@ -163,6 +163,8 @@ motion_post (int32_t left_now, int32_t right_now, float left_speed,
              uint32_t sample_ms)
 {
     system_event_t event = {0};
+    static uint32_t dropped;
+    static uint32_t last_report_ms;
 
     event.type                        = SYSTEM_EVENT_MOTION;
     event.timestamp_ms                = sample_ms;
@@ -173,7 +175,16 @@ motion_post (int32_t left_now, int32_t right_now, float left_speed,
     event.data.motion.distance_m      = distance_m;
     event.data.motion.turn_complete   = (0U != completed_turn_id);
     event.data.motion.turn_id         = completed_turn_id;
-    (void) controller_post_event(&event);
+    if (!controller_post_event(&event))
+    {
+        dropped++;
+        if ((1U == dropped) || ((sample_ms - last_report_ms) >= 1000U))
+        {
+            tm_printf((UB *) "S2: motion event queue full dropped_total=%u\n",
+                      (unsigned int) dropped);
+            last_report_ms = sample_ms;
+        }
+    }
 }
 
 static float

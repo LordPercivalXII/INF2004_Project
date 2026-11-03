@@ -13,6 +13,14 @@
 #include "../common/robot_config.h"
 #include "../common/drv_board.h"
 #include "../controller/controller.h"
+#include "../subsystem4/imu_height.h"
+
+#if TK_SUPPORT_SMP && TM_CONSOLE_USB_CDC
+#include "../../kernel/knlinc/smp_lock.h"
+extern volatile UW tm_console_max_wait_us[TK_MAX_CORE];
+extern volatile UW tm_console_max_hold_us[TK_MAX_CORE];
+extern volatile UW tm_usb_dropped;
+#endif
 
 #define TELEMETRY_LINE_MAX      (896U)
 #define TELEMETRY_FIXED_LIMIT   (1000000.0f)
@@ -97,6 +105,82 @@ telemetry_format_fixed (char * p_text, float value, uint32_t decimals)
  * @brief Print one telemetry snapshot as a JSON line.
  */
 static void
+telemetry_trace_fixed (char * p_text, float value)
+{
+    if ((value >= -TELEMETRY_FIXED_LIMIT) &&
+        (value <= TELEMETRY_FIXED_LIMIT))
+    {
+        telemetry_format_fixed(p_text, value, 3U);
+    }
+    else
+    {
+        p_text[0] = 'n';
+        p_text[1] = 'u';
+        p_text[2] = 'l';
+        p_text[3] = 'l';
+        p_text[4] = '\0';
+    }
+}
+
+static void
+telemetry_print_height_trace (telemetry_message_t const * p_msg)
+{
+    char line[640];
+    char pitch[S1_FIXED_TEXT_MAX];
+    char roll[S1_FIXED_TEXT_MAX];
+    char ax[S1_FIXED_TEXT_MAX];
+    char ay[S1_FIXED_TEXT_MAX];
+    char az[S1_FIXED_TEXT_MAX];
+    char ds[S1_FIXED_TEXT_MAX];
+    char rise[S1_FIXED_TEXT_MAX];
+    char peak[S1_FIXED_TEXT_MAX];
+    char distance[S1_FIXED_TEXT_MAX];
+    char left[S1_FIXED_TEXT_MAX];
+    char right[S1_FIXED_TEXT_MAX];
+
+    telemetry_trace_fixed(pitch, p_msg->imu.tilt_pitch_deg);
+    telemetry_trace_fixed(roll, p_msg->imu.tilt_roll_deg);
+    telemetry_trace_fixed(ax, p_msg->imu.acceleration_x_g);
+    telemetry_trace_fixed(ay, p_msg->imu.acceleration_y_g);
+    telemetry_trace_fixed(az, p_msg->imu.acceleration_z_g);
+    telemetry_trace_fixed(ds, p_msg->motion_delta_m * 1000.0f);
+    telemetry_trace_fixed(rise, p_msg->imu.terrain_rise_m * 1000.0f);
+    telemetry_trace_fixed(peak, p_msg->imu.terrain_peak_m * 1000.0f);
+    telemetry_trace_fixed(distance, p_msg->motion.distance_m);
+    telemetry_trace_fixed(left, p_msg->motion.left_speed_m_s);
+    telemetry_trace_fixed(right, p_msg->motion.right_speed_m_s);
+    (void) tm_sprintf((UB *) line,
+                      (UB *) "{\"height_trace\":1,\"seq\":%u,\"dropped\":%u,"
+                      "\"t_ms\":%u,\"imu_ms\":%u,\"dt_ms\":%u,"
+                      "\"pitch_deg\":%s,\"roll_deg\":%s,"
+                      "\"ax_g\":%s,\"ay_g\":%s,\"az_g\":%s,"
+                      "\"left_ticks\":%d,\"right_ticks\":%d,"
+                      "\"left_m_s\":%s,\"right_m_s\":%s,"
+                      "\"distance_m\":%s,\"ds_mm\":%s,"
+                      "\"rise_mm\":%s,\"peak_mm\":%s,"
+                      "\"tilt_valid\":%u,\"tracking_valid\":%u,"
+                      "\"active\":%u,\"gap\":%u,\"imu_dt_ms\":%u,"
+                      "\"timing_gap\":%u,\"acquisition_us\":%u}\n",
+                      (unsigned int) p_msg->trace_sequence,
+                      (unsigned int) p_msg->trace_dropped,
+                      (unsigned int) p_msg->timestamp_ms,
+                      (unsigned int) p_msg->imu_ms,
+                      (unsigned int) p_msg->motion_interval_ms,
+                      pitch, roll, ax, ay, az,
+                      (int) p_msg->motion.left_ticks,
+                      (int) p_msg->motion.right_ticks,
+                      left, right, distance, ds, rise, peak,
+                      (unsigned int) p_msg->imu.b_tilt_valid,
+                      (unsigned int) p_msg->imu.b_height_tracking_valid,
+                      (unsigned int) p_msg->imu.b_hump_active,
+                      (unsigned int) p_msg->imu.b_height_gap_pending,
+                      (unsigned int) p_msg->imu.sample_interval_ms,
+                      (unsigned int) p_msg->imu.b_timing_gap,
+                      (unsigned int) p_msg->imu.acquisition_us);
+    (void) tm_putstring((UB *) line);
+}
+
+static void
 telemetry_print (telemetry_message_t const * p_msg)
 {
     char line[TELEMETRY_LINE_MAX];
@@ -174,6 +258,22 @@ telemetry_print (telemetry_message_t const * p_msg)
                       (unsigned int) p_msg->imu.b_height_gap_pending,
                       (unsigned int) p_msg->imu.height_gap_count);
     (void) tm_putstring((UB *) line);
+    if (p_msg->imu.b_height_interrupted_available)
+    {
+        telemetry_format_fixed(rise, p_msg->imu.interrupted_rise_m, 3U);
+        telemetry_format_fixed(peak, p_msg->imu.interrupted_peak_m, 3U);
+        (void) tm_sprintf((UB *) line,
+                          (UB *) "{\"height_interrupted\":1,\"t_ms\":%u,"
+                          "\"interrupted_height_valid\":0,"
+                          "\"interrupted_rise_m\":%s,"
+                          "\"interrupted_peak_m\":%s,"
+                          "\"interrupted_reason\":\"%s\"}\n",
+                          (unsigned int) p_msg->timestamp_ms, rise, peak,
+                          imu_height_rejection_name(
+                              (imu_height_rejection_t)
+                              p_msg->imu.height_interrupted_reason));
+        (void) tm_putstring((UB *) line);
+    }
 }
 
 /*!
@@ -196,7 +296,14 @@ telemetry_task (INT stacd, void * p_exinf)
         if (tk_rcv_mbf(gh_telemetry_mbf, &message,
                        (TMO) S1_RECEIVE_TIMEOUT_MS) > 0)
         {
-            telemetry_print(&message);
+            if (message.b_height_trace)
+            {
+                telemetry_print_height_trace(&message);
+            }
+            else
+            {
+                telemetry_print(&message);
+            }
         }
 
         now_ms = board_millis();
@@ -206,6 +313,26 @@ telemetry_task (INT stacd, void * p_exinf)
             (void) tm_sprintf((UB *) line, (UB *) "{\"heartbeat_ms\":%u}\n",
                               (unsigned int) now_ms);
             (void) tm_putstring((UB *) line);
+#if TK_SUPPORT_SMP && TM_CONSOLE_USB_CDC
+            {
+                KNL_LOCK_DIAG locks;
+
+                knl_kernel_lock_audit(&locks);
+                tm_printf((UB *) "{\"timing_diag\":1,\"t_ms\":%u,"
+                          "\"kernel_hold_us\":%u,\"kernel_wait_us\":%u,"
+                          "\"console_hold0_us\":%u,\"console_hold1_us\":%u,"
+                          "\"console_wait0_us\":%u,\"console_wait1_us\":%u,"
+                          "\"usb_dropped_bytes\":%u}\n",
+                          (unsigned int) now_ms,
+                          (unsigned int) locks.max_hold_us,
+                          (unsigned int) locks.max_wait_us,
+                          (unsigned int) tm_console_max_hold_us[0],
+                          (unsigned int) tm_console_max_hold_us[1],
+                          (unsigned int) tm_console_max_wait_us[0],
+                          (unsigned int) tm_console_max_wait_us[1],
+                          (unsigned int) tm_usb_dropped);
+            }
+#endif
             last_heartbeat_ms = now_ms;
         }
     }

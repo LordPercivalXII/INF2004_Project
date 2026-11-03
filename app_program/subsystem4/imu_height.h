@@ -12,9 +12,16 @@
  * within 1 deg for ten motion updates (so a 1 cm / 19.5 cm slope is not
  * mistaken for level ground). A completed hump needs 3 cm of level
  * runout after descending. Tilt-only gaps may be interpolated after recovery:
- * at most 100 ms between motion anchors, 10 mm travel, and 3 deg change in
- * endpoint pitch. At most 30 mm of interpolated travel is allowed per datum.
- * Gap samples must have acceleration magnitude within 0.85..1.15 g.
+ * at most 250 ms between motion anchors, 20 mm travel, and 6 deg change in
+ * endpoint pitch. At most 60 mm of interpolated travel is allowed per datum.
+ * Gap samples must have acceleration magnitude within 0.65..1.35 g; their
+ * invalid pitch is never integrated. Ordinary motion intervals remain at
+ * most 100 ms, and sensor/impact/geometry checks are not relaxed.
+ * An initial negative excursion is confirmed over at most 250 ms / 20 mm.
+ * A fresh measured level sample renews that window without zeroing signed
+ * height or total path; interpolated level cannot renew it. Net fall remains
+ * limited to 0.5 mm, total path to 10 m. All travel retains the original datum;
+ * a sustained descent still rejects instead of becoming a hump on recovery.
  * These bounds limit approximation, not physical accuracy: acceleration-only
  * tilt cannot bound unobserved rotation. Other failures discard the estimate
  * and require a new level baseline (which may be at a different elevation).
@@ -26,6 +33,9 @@
  * millimetre hardware accuracy is implied by this consistency gate.
  * last_rejection records the failed gate, including baseline loss before
  * an active crossing. It is retained until another rejection or init.
+ * interrupted_* retains the most recently rejected active crossing until
+ * init or a later active rejection, independently of live/completed height.
+ * It is diagnostic data only, never a valid height measurement.
  */
 #ifndef IMU_HEIGHT_H
 #define IMU_HEIGHT_H
@@ -59,22 +69,26 @@ typedef enum
     HEIGHT_REJECT_GAP_PITCH,
     HEIGHT_REJECT_GAP_BUDGET,
     HEIGHT_REJECT_GAP_BUFFER,
-    HEIGHT_REJECT_GAP_ACCELERATION
+    HEIGHT_REJECT_GAP_ACCELERATION,
+    HEIGHT_REJECT_DISTANCE_SPEED,
+    HEIGHT_REJECT_SAMPLE_TIMING
 } imu_height_rejection_t;
 
-#define IMU_HEIGHT_GAP_SEGMENTS (12U)
+#define IMU_HEIGHT_GAP_SEGMENTS (16U)
 
 typedef struct
 {
     bool b_have_distance;
     bool b_ready;
     bool b_active;
+    bool b_start_pending;
     bool b_descended;
     bool b_valid;
     bool b_peak_valid;
     bool b_rejected;
     bool b_complete;
     uint32_t last_ms;
+    uint32_t start_ms;
     uint32_t flat_samples;
     uint32_t count;
     uint32_t rejected_count;
@@ -85,6 +99,7 @@ typedef struct
     float peak_m;
     float last_peak_m;
     float path_m;
+    float start_path_m;
     float level_path_m;
     imu_height_rejection_t last_rejection;
     bool b_gap;
@@ -97,6 +112,10 @@ typedef struct
     float bridged_path_m;
     float gap_ds[IMU_HEIGHT_GAP_SEGMENTS];
     uint32_t gap_ms[IMU_HEIGHT_GAP_SEGMENTS];
+    bool b_interrupted_available;
+    float interrupted_rise_m;
+    float interrupted_peak_m;
+    imu_height_rejection_t interrupted_reason;
 } imu_height_t;
 
 void imu_height_init(imu_height_t * p_height);

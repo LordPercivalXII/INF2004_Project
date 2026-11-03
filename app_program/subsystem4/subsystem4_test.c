@@ -332,9 +332,11 @@ subsystem4_test (void)
     s4_feed(&sample, 20U);
     g_ms += 200U;
     imu_processor_update(&g_processor, &sample, true, g_ms);
-    TEST_CHECK("S4-U33", (!g_processor.output.b_sensor_valid &&
+    TEST_CHECK("S4-U33", (g_processor.output.b_sensor_valid &&
+                          g_processor.output.b_timing_gap &&
+                          !g_processor.output.b_tilt_valid &&
                           g_processor.output.b_hump_rejected),
-               "missed sampling deadline aborts integration");
+               "missed sampling deadline aborts reference integration without claiming sensor failure");
     s4_calibrate();
     sample = s4_flat();
     sample.acceleration[2] = 1.2f;
@@ -448,7 +450,7 @@ subsystem4_test (void)
     s4_height_baseline();
     s4_height_feed(-10.0f, 0.005f, 20U);
     g_height_imu.b_tilt_valid = false;
-    s4_height_feed(-10.0f, 0.0f, 6U);
+    s4_height_feed(-10.0f, 0.0f, 13U);
     TEST_CHECK("S4-H12", (!g_height.b_valid && !g_height.b_active &&
                           g_height.rejected_count == 1U &&
                           g_height.last_rejection == HEIGHT_REJECT_GAP_TIMEOUT),
@@ -468,7 +470,7 @@ subsystem4_test (void)
                "missing odometry interval rejects rather than integrating a gap");
     s4_height_baseline();
     imu_height_update(&g_height, &g_height_motion, &g_height_imu,
-                      g_height_ms - 61U, g_height_ms + 20U);
+                      g_height_ms - 101U, g_height_ms + 20U);
     TEST_CHECK("S4-H16", (!g_height.b_valid &&
                           g_height.last_rejection == HEIGHT_REJECT_IMU_AGE),
                "stale tilt is not fused with wheel travel");
@@ -670,7 +672,7 @@ subsystem4_test (void)
                           g_height.last_rejection == HEIGHT_REJECT_DISTANCE_JUMP),
                "distance jump identified independently of wheel speed gate");
     s4_height_baseline();
-    s4_height_feed(10.0f, 0.005f, 1U);
+    s4_height_feed(10.0f, 0.005f, 2U);
     TEST_CHECK("S4-H42",
                g_height.last_rejection == HEIGHT_REJECT_DOWNHILL_START,
                "downhill-start datum loss has a distinct reason");
@@ -744,45 +746,48 @@ subsystem4_test (void)
     s4_height_baseline();
     s4_height_feed(-3.0f, 0.001f, 1U);
     g_height_imu.b_tilt_valid = false;
-    s4_height_feed(-3.0f, 0.001f, 4U);
+    g_height_ms += 10U;
+    imu_height_update(&g_height, &g_height_motion, &g_height_imu,
+                      g_height_ms, g_height_ms);
+    s4_height_feed(-3.0f, 0.001f, 11U);
     g_height_imu.b_tilt_valid = true;
     s4_height_feed(-3.0f, 0.001f, 1U);
     TEST_CHECK("S4-G04", (g_height.b_valid && g_height.gap_count == 1U),
-               "100 ms bracket is accepted at duration limit");
+               "250 ms bracket is accepted at duration limit");
     g_height_imu.b_tilt_valid = false;
-    imu_height_observe_imu(&g_height, &g_height_imu, g_height_ms + 101U);
+    imu_height_observe_imu(&g_height, &g_height_imu, g_height_ms + 251U);
     TEST_CHECK("S4-G05", (!g_height.b_valid && !g_height.b_gap &&
                           g_height.rejected_count == 1U &&
                           g_height.last_rejection == HEIGHT_REJECT_GAP_TIMEOUT),
-               "101 ms gap rejects immediately on IMU path even without new wheel event");
+               "251 ms gap rejects immediately on IMU path even without new wheel event");
     s4_height_baseline();
     s4_height_feed(-3.0f, 0.001f, 1U);
     g_height_imu.b_tilt_valid = false;
-    s4_height_feed(-3.0f, 0.006f, 2U);
+    s4_height_feed(-3.0f, 0.011f, 2U);
     TEST_CHECK("S4-G06", (!g_height.b_valid &&
                           g_height.last_rejection == HEIGHT_REJECT_GAP_DISTANCE),
-               "gap with more than 10 mm wheel travel is rejected");
+               "gap with more than 20 mm wheel travel is rejected");
     s4_height_baseline();
     s4_height_feed(-3.0f, 0.001f, 1U);
     g_height_imu.b_tilt_valid = false;
     s4_height_feed(-3.0f, 0.001f, 1U);
     g_height_imu.b_tilt_valid = true;
-    s4_height_feed(-6.01f, 0.001f, 1U);
+    s4_height_feed(-9.01f, 0.001f, 1U);
     TEST_CHECK("S4-G07", (!g_height.b_valid &&
                           g_height.last_rejection == HEIGHT_REJECT_GAP_PITCH),
-               "endpoint pitch change over 3 degrees cannot be bridged");
+               "endpoint pitch change over 6 degrees cannot be bridged");
     s4_height_baseline();
     s4_height_feed(-3.0f, 0.001f, 1U);
-    for (idx = 0U; idx < 4U; idx++)
+    for (idx = 0U; idx < 8U; idx++)
     {
         g_height_imu.b_tilt_valid = false;
         s4_height_feed(-3.0f, 0.004f, 1U);
         g_height_imu.b_tilt_valid = true;
         s4_height_feed(-3.0f, 0.004f, 1U);
     }
-    TEST_CHECK("S4-G08", (!g_height.b_valid && g_height.gap_count == 3U &&
+    TEST_CHECK("S4-G08", (!g_height.b_valid && g_height.gap_count == 7U &&
                           g_height.last_rejection == HEIGHT_REJECT_GAP_BUDGET),
-               "repeated small gaps cannot exceed 30 mm interpolated-travel budget");
+               "repeated small gaps cannot exceed 60 mm interpolated-travel budget");
     s4_height_baseline();
     s4_height_feed(-3.0f, 0.001f, 1U);
     g_height_imu.b_tilt_valid = false;
@@ -943,20 +948,20 @@ subsystem4_test (void)
     g_height_imu.b_tilt_valid = false;
     s4_height_feed(0.0f, 0.0f, 1U);
     imu_height_update(&g_height, &g_height_motion, &g_height_imu,
-                      g_height_ms - 61U, g_height_ms + 20U);
+                      g_height_ms - 101U, g_height_ms + 20U);
     TEST_CHECK("S4-G23", (!g_height.b_gap &&
                           g_height.last_rejection == HEIGHT_REJECT_IMU_AGE),
                "stale IMU data is not accepted as a bridgeable tilt gap");
     s4_height_baseline();
     g_height_imu.b_tilt_valid = false;
-    g_height_imu.acceleration_z_g = 1.151f;
+    g_height_imu.acceleration_z_g = 1.351f;
     s4_height_feed(0.0f, 0.0f, 1U);
     TEST_CHECK("S4-G24", (!g_height.b_gap &&
                           g_height.last_rejection == HEIGHT_REJECT_GAP_ACCELERATION),
                "large acceleration cannot be masked by a short tilt gap");
     s4_height_baseline();
     g_height_imu.b_tilt_valid = false;
-    g_height_imu.acceleration_z_g = 0.849f;
+    g_height_imu.acceleration_z_g = 0.649f;
     s4_height_feed(0.0f, 0.0f, 1U);
     TEST_CHECK("S4-G25", (!g_height.b_gap &&
                           g_height.last_rejection == HEIGHT_REJECT_GAP_ACCELERATION),
@@ -981,11 +986,493 @@ subsystem4_test (void)
                "unexpectedly fast motion events cannot overflow gap storage");
     s4_height_baseline();
     g_height_imu.b_tilt_valid = false;
-    s4_height_feed(0.0f, 0.006f, 1U);
-    s4_height_feed(0.0f, -0.006f, 1U);
+    s4_height_feed(0.0f, 0.011f, 1U);
+    s4_height_feed(0.0f, -0.011f, 1U);
     TEST_CHECK("S4-G28", (!g_height.b_gap &&
                           g_height.last_rejection == HEIGHT_REJECT_GAP_DISTANCE),
                "gap travel limit counts absolute distance even when reversing");
+    s4_height_baseline();
+    s4_height_feed(-3.0f, 0.002f, 100U);
+    {
+        float const rise = g_height.rise_m;
+        float const peak = g_height.peak_m;
+        g_height_imu.tilt_roll_deg = 11.0f;
+        s4_height_feed(-3.0f, 0.002f, 1U);
+        TEST_CHECK("S4-R01", (g_height.b_interrupted_available &&
+                              g_height.interrupted_rise_m == rise &&
+                              g_height.interrupted_peak_m == peak &&
+                              g_height.interrupted_reason == HEIGHT_REJECT_ROLL &&
+                              !g_height.b_active && !g_height.b_valid &&
+                              g_height.count == 0U),
+                   "rejected active crossing retained separately as invalid diagnostic");
+        TEST_CHECK("S4-R02",
+                   (g_height_imu.b_height_interrupted_available &&
+                    g_height_imu.interrupted_peak_m == peak &&
+                    g_height_imu.height_interrupted_reason == HEIGHT_REJECT_ROLL &&
+                    !g_height_imu.b_hump_height_valid &&
+                    !g_height_imu.b_height_tracking_valid),
+                   "event reporting preserves interrupted peak without marking height valid");
+        imu_height_invalidate(&g_height, HEIGHT_REJECT_SENSOR);
+        TEST_CHECK("S4-R03", (g_height.rejected_count == 1U &&
+                              g_height.interrupted_peak_m == peak &&
+                              g_height.interrupted_reason == HEIGHT_REJECT_ROLL &&
+                              g_height.last_rejection == HEIGHT_REJECT_SENSOR),
+                   "later idle failures do not overwrite retained crossing or its cause");
+        g_height_imu.tilt_roll_deg = 0.0f;
+        s4_height_feed(0.0f, 0.0f, 12U);
+        s4_height_feed(-2.94f, 0.00195f, 100U);
+        s4_height_feed(2.94f, 0.00195f, 100U);
+        s4_height_feed(0.0f, 0.00195f, 30U);
+        TEST_CHECK("S4-R04", (g_height.count == 1U && g_height.b_peak_valid &&
+                              g_height.interrupted_peak_m == peak &&
+                              g_height.interrupted_reason == HEIGHT_REJECT_ROLL),
+                   "new completed measurement stays separate from retained rejected crossing");
+        s4_height_feed(-3.0f, 0.002f, 20U);
+        float const second_peak = g_height.peak_m;
+        float const completed_peak = g_height.last_peak_m;
+        imu_height_invalidate(&g_height, HEIGHT_REJECT_SHOCK);
+        TEST_CHECK("S4-R05",
+                   (g_height.interrupted_peak_m == second_peak &&
+                    g_height.interrupted_reason == HEIGHT_REJECT_SHOCK &&
+                    g_height.last_peak_m == completed_peak &&
+                    g_height.b_peak_valid && g_height.count == 1U &&
+                    g_height.rejected_count == 2U),
+                   "next rejected crossing replaces diagnostic only, never completed result");
+    }
+    imu_height_init(&g_height);
+    imu_height_apply(&g_height, &g_height_imu);
+    TEST_CHECK("S4-R06", (!g_height.b_interrupted_available &&
+                          !g_height_imu.b_height_interrupted_available &&
+                          g_height.interrupted_peak_m == 0.0f),
+               "explicit init clears retained interrupted crossing");
+    s4_height_baseline();
+    s4_height_feed(-3.0f, 0.001f, 10U);
+    {
+        float const rise = g_height.rise_m;
+        g_height_imu.b_tilt_valid = false;
+        g_height_imu.acceleration_z_g = 1.25f;
+        s4_height_feed(-30.0f, 0.001f, 8U);
+        TEST_CHECK("S4-N01", (g_height.b_active && g_height.b_gap &&
+                              !g_height.b_valid && g_height.rise_m == rise &&
+                              g_height.rejected_count == 0U),
+                   "160 ms 1.25 g disturbance preserves active crossing with height frozen");
+        g_height_imu.b_tilt_valid = true;
+        g_height_imu.acceleration_z_g = 1.0f;
+        s4_height_feed(-3.0f, 0.001f, 1U);
+        TEST_CHECK("S4-N02", (g_height.b_valid && g_height.gap_count == 1U &&
+                              rmath_absf(g_height.rise_m - rise -
+                              0.009f * rmath_sinf(3.0f * RMATH_DEG_TO_RAD)) <
+                              0.000001f),
+                   "recovery accounts for every buffered wheel segment after moderate acceleration");
+    }
+    s4_height_baseline();
+    g_height_imu.b_tilt_valid = false;
+    g_height_imu.acceleration_z_g = 0.65f;
+    s4_height_feed(0.0f, 0.001f, 1U);
+    TEST_CHECK("S4-N03", (g_height.b_gap && g_height.b_ready),
+               "650 mg acceleration boundary accepted only as a pending gap");
+    g_height_imu.acceleration_z_g = 1.35f;
+    s4_height_feed(0.0f, 0.001f, 1U);
+    TEST_CHECK("S4-N04", (g_height.b_gap && g_height.b_ready &&
+                          g_height.count == 0U),
+               "1350 mg boundary does not complete or silently validate gap");
+    s4_height_baseline();
+    g_height_imu.b_tilt_valid = false;
+    s4_height_feed(0.0f, 0.010f, 1U);
+    g_height_imu.b_tilt_valid = true;
+    s4_height_feed(0.0f, 0.010f, 1U);
+    TEST_CHECK("S4-N05", (g_height.b_valid && g_height.gap_count == 1U),
+               "20 mm bracket accepted at travel boundary");
+    s4_height_baseline();
+    s4_height_feed(-3.0f, 0.001f, 1U);
+    g_height_imu.b_tilt_valid = false;
+    s4_height_feed(-3.0f, 0.001f, 1U);
+    g_height_imu.b_tilt_valid = true;
+    s4_height_feed(3.0f, 0.001f, 1U);
+    TEST_CHECK("S4-N06", (g_height.b_valid && g_height.gap_count == 1U &&
+                          g_height.count == 0U),
+               "6 degree crest transition can recover without claiming completion");
+    s4_height_baseline();
+    s4_height_feed(-3.0f, 0.001f, 1U);
+    g_height_imu.b_tilt_valid = false;
+    s4_height_feed(-3.0f, 0.0f, 12U);
+    g_height_imu.b_tilt_valid = true;
+    s4_height_feed(-3.0f, 0.0f, 1U);
+    TEST_CHECK("S4-N07", (!g_height.b_valid && !g_height.b_active &&
+                          g_height.last_rejection == HEIGHT_REJECT_GAP_TIMEOUT),
+               "260 ms gap rejected even if its final tilt is valid");
+    s4_height_baseline();
+    s4_height_feed(2.0f, 0.001f, 1U);
+    {
+        float const fall = g_height.rise_m;
+        TEST_CHECK("S4-N08", (g_height.b_start_pending && g_height.b_ready &&
+                              !g_height.b_active && fall < 0.0f),
+                   "tiny initial downhill increment retains original ground datum");
+        s4_height_feed(-2.94f, 0.001f, 2U);
+        TEST_CHECK("S4-N09", (g_height.b_active && !g_height.b_start_pending &&
+                              rmath_absf(g_height.rise_m -
+                              (fall + 0.0005f *
+                               (rmath_sinf(2.94f * RMATH_DEG_TO_RAD) -
+                                rmath_sinf(2.0f * RMATH_DEG_TO_RAD)) +
+                               0.001f * rmath_sinf(2.94f * RMATH_DEG_TO_RAD))) <
+                              0.000001f),
+                   "start recovery includes initial negative travel instead of zeroing the dip");
+    }
+    s4_height_baseline();
+    s4_height_feed(2.0f, 0.001f, 1U);
+    s4_height_feed(2.0f, 0.0f, 13U);
+    TEST_CHECK("S4-N10", (!g_height.b_ready &&
+                          g_height.last_rejection == HEIGHT_REJECT_DOWNHILL_START),
+               "unconfirmed start expires after 250 ms even when wheels stop");
+    s4_height_baseline();
+    s4_height_feed(10.0f, 0.005f, 2U);
+    s4_height_feed(-10.0f, 0.005f, 2U);
+    TEST_CHECK("S4-N11", (!g_height.b_ready && !g_height.b_active &&
+                          g_height.count == 0U),
+               "over 0.5 mm initial fall rejects before dip recovery can start a hump");
+    s4_height_baseline();
+    s4_height_feed(1.01f, 0.004f, 6U);
+    TEST_CHECK("S4-N12", (!g_height.b_ready &&
+                          g_height.last_rejection == HEIGHT_REJECT_DOWNHILL_START),
+               "initial downhill confirmation is bounded by 20 mm absolute travel");
+    s4_height_baseline();
+    g_height_ms = 0xFFFFFFF0U;
+    g_height.last_ms = g_height_ms;
+    s4_height_feed(2.0f, 0.001f, 1U);
+    s4_height_feed(-2.94f, 0.001f, 2U);
+    TEST_CHECK("S4-N13", (g_height.b_active && g_height.b_valid),
+               "bounded start confirmation handles timer wrap");
+    s4_height_baseline();
+    s4_height_feed(2.0f, 0.001f, 1U);
+    s4_height_feed(-2.94f, 0.001f, 2U);
+    s4_height_feed(-2.94f, 0.00195f, 100U);
+    g_height_imu.b_tilt_valid = false;
+    g_height_imu.acceleration_z_g = 1.25f;
+    s4_height_feed(-30.0f, 0.001f, 8U);
+    g_height_imu.b_tilt_valid = true;
+    g_height_imu.acceleration_z_g = 1.0f;
+    s4_height_feed(2.94f, 0.001f, 1U);
+    s4_height_feed(2.94f, 0.00195f, 100U);
+    s4_height_feed(0.0f, 0.00195f, 30U);
+    TEST_CHECK("S4-N14", (g_height.count == 1U &&
+                          g_height.rejected_count == 0U &&
+                          g_height.gap_count == 1U &&
+                          rmath_absf(g_height.last_peak_m - 0.010f) < 0.001f),
+               "ideal 1 cm crossing completes with initial transient and 180 ms accelerated crest gap");
+    s4_height_baseline();
+    s4_calibrate();
+    g_processor.b_odometry_height = true;
+    for (idx = 0U; idx < 500U; idx++)
+    {
+        uint32_t step;
+        float const angle = (idx < 100U) ? 2.94f
+                            : ((idx < 200U) ? -2.94f : 0.0f);
+        float const scale = (idx >= 100U && idx < 106U) ? 1.25f : 1.0f;
+        sample = s4_flat();
+        sample.acceleration[0] = scale * rmath_sinf(angle * RMATH_DEG_TO_RAD);
+        sample.acceleration[2] = scale * rmath_cosf(angle * RMATH_DEG_TO_RAD);
+        for (step = 1U; step <= 2U; step++)
+        {
+            s4_feed(&sample, 1U);
+            g_height_imu = g_processor.output;
+            imu_height_observe_imu(&g_height, &g_height_imu,
+                                   g_height_ms + step * 10U);
+        }
+        s4_height_feed(g_processor.output.tilt_pitch_deg, 0.00195f, 1U);
+    }
+    TEST_CHECK("S4-N15", (g_height.count == 1U &&
+                          g_height.rejected_count == 0U &&
+                          g_height.gap_count > 0U &&
+                          rmath_absf(g_height.last_peak_m - 0.010f) < 0.002f),
+               "actual tilt filter completes ideal 1 cm hump through 120 ms 1.25 g crest disturbance");
+    s4_height_baseline();
+    s4_height_feed(-2.94f, 0.0001f, 2000U);
+    TEST_CHECK("S4-N16", (g_height.b_active &&
+                          g_height_imu.motion_state == MOTION_CLIMBING &&
+                          rmath_absf(g_height.peak_m - 0.01026f) < 0.0002f),
+               "slow encoder increments below 10 micrometres vertical rise are accumulated");
+    s4_height_feed(2.94f, 0.0001f, 2000U);
+    TEST_CHECK("S4-N17", (g_height_imu.motion_state == MOTION_DESCENDING),
+               "slow downhill wheel increments remain classified as descending");
+    s4_height_feed(0.0f, 0.0001f, 400U);
+    TEST_CHECK("S4-N18", (g_height.count == 1U &&
+                          g_height.rejected_count == 0U),
+               "slow ideal shallow crossing completes without a per-sample rise deadband");
+    s4_height_baseline();
+    s4_height_feed(2.94f, 0.0001f, 2000U);
+    s4_height_feed(-2.94f, 0.0001f, 2000U);
+    TEST_CHECK("S4-N19", (!g_height.b_ready && !g_height.b_active &&
+                          g_height.count == 0U &&
+                          g_height.last_rejection == HEIGHT_REJECT_DOWNHILL_START),
+               "slow downhill dip cannot lose negative increments and become a false hump");
+    s4_height_baseline();
+    s4_height_feed(1.3f, 0.002f, 3U);
+    s4_height_feed(0.0f, 0.002f, 30U);
+    {
+        float const debt = g_height.rise_m;
+        TEST_CHECK("S4-N20", (g_height.b_ready && g_height.b_start_pending &&
+                              !g_height.b_active && debt < -0.0001f &&
+                              g_height.path_m > 0.020f),
+                   "tiny dip then 600 ms flat travel preserves datum beyond old start deadline");
+        s4_height_feed(0.0f, 0.0f, 100U);
+        TEST_CHECK("S4-N21", (g_height.b_valid &&
+                              g_height.rise_m == debt &&
+                              g_height.b_start_pending),
+                   "level pause preserves negative height debt without timeout");
+        s4_height_feed(-2.94f, 0.001f, 1U);
+        TEST_CHECK("S4-N22", (!g_height.b_active &&
+                              g_height.rise_m < 0.0f),
+                   "first upward increment cannot erase the retained negative debt");
+        s4_height_feed(-2.94f, 0.00195f, 100U);
+        s4_height_feed(2.94f, 0.00195f, 100U);
+        s4_height_feed(0.0f, 0.00195f, 30U);
+        TEST_CHECK("S4-N23", (g_height.count == 1U &&
+                              g_height.rejected_count == 0U &&
+                              rmath_absf(g_height.last_peak_m -
+                                  (0.010f + debt)) < 0.001f),
+                   "1 cm crossing completes after level pause with initial debt included");
+    }
+    s4_height_baseline();
+    s4_height_feed(1.3f, 0.002f, 3U);
+    s4_height_feed(0.0f, 0.001f, 30U);
+    s4_height_feed(-1.3f, 0.002f, 3U);
+    s4_height_feed(0.0f, 0.001f, 30U);
+    TEST_CHECK("S4-N24", (g_height.count == 0U &&
+                          g_height.peak_m < 0.0001f),
+               "dip-flat-recovery cannot invent a hump by renewing start window");
+    s4_height_baseline();
+    s4_height_feed(1.3f, 0.002f, 3U);
+    g_height_imu.b_tilt_valid = false;
+    s4_height_feed(0.0f, 0.0f, 6U);
+    g_height_imu.b_tilt_valid = true;
+    s4_height_feed(0.0f, 0.0f, 1U);
+    s4_height_feed(1.3f, 0.0f, 6U);
+    TEST_CHECK("S4-N25", (!g_height.b_ready &&
+                          g_height.last_rejection == HEIGHT_REJECT_DOWNHILL_START),
+               "interpolated level cannot renew the start confirmation deadline");
+    s4_height_baseline();
+    s4_height_feed(1.3f, 0.002f, 3U);
+    s4_height_feed(0.0f, 0.001f, 30U);
+    s4_height_feed(5.0f, 0.004f, 2U);
+    TEST_CHECK("S4-N26", (!g_height.b_ready &&
+                          g_height.last_rejection == HEIGHT_REJECT_DOWNHILL_START),
+               "renewed start window still rejects cumulative fall exceeding 0.5 mm");
+    s4_height_baseline();
+    s4_height_feed(-4.6f, 0.001f, 10U);
+    {
+        float const peak = g_height.peak_m;
+        g_height_ms += 40U;
+        g_height_motion.distance_m += 0.028962f;
+        g_height_motion.left_speed_m_s = 0.031f;
+        g_height_motion.right_speed_m_s = 0.033f;
+        imu_height_update(&g_height, &g_height_motion, &g_height_imu,
+                          g_height_ms, g_height_ms);
+        TEST_CHECK("S4-T01", (!g_height.b_valid &&
+                              g_height.last_rejection ==
+                                  HEIGHT_REJECT_DISTANCE_SPEED &&
+                              g_height.interrupted_peak_m == peak),
+                   "recorded 29 mm travel at 32 mm/s in 40 ms cannot inflate peak");
+    }
+    s4_height_baseline();
+    s4_height_feed(-4.6f, 0.001f, 10U);
+    g_height_ms += 900U;
+    g_height_motion.distance_m += 0.0288f;
+    g_height_motion.left_speed_m_s = 0.032f;
+    g_height_motion.right_speed_m_s = 0.032f;
+    imu_height_update(&g_height, &g_height_motion, &g_height_imu,
+                      g_height_ms, g_height_ms);
+    TEST_CHECK("S4-T02", (!g_height.b_valid &&
+                          g_height.last_rejection == HEIGHT_REJECT_INTERVAL),
+               "real 900 ms unsampled interval is rejected instead of compressed to 40 ms");
+    s4_height_baseline();
+    s4_height_feed(-4.6f, 0.001f, 10U);
+    g_height_ms += 40U;
+    g_height_motion.distance_m += 0.00128f;
+    g_height_motion.left_speed_m_s = 0.031f;
+    g_height_motion.right_speed_m_s = 0.033f;
+    imu_height_update(&g_height, &g_height_motion, &g_height_imu,
+                      g_height_ms, g_height_ms);
+    TEST_CHECK("S4-T03", (g_height.b_valid && g_height.b_active),
+               "consistent 1.28 mm travel at 32 mm/s in 40 ms remains supported");
+    s4_height_baseline();
+    g_height_ms += 20U;
+    g_height_motion.left_speed_m_s = 0.3f;
+    g_height_motion.right_speed_m_s = 0.3f;
+    imu_height_update(&g_height, &g_height_motion, &g_height_imu,
+                      g_height_ms, g_height_ms);
+    TEST_CHECK("S4-T04", (!g_height.b_valid &&
+                          g_height.last_rejection ==
+                              HEIGHT_REJECT_DISTANCE_SPEED),
+               "speed without matching cumulative displacement is also rejected");
+    s4_calibrate();
+    g_processor.b_odometry_height = true;
+    sample = s4_flat();
+    {
+        float const gravity = g_processor.gravity[2];
+        uint32_t const calibration = g_processor.calibration_count;
+        g_ms += 44U;
+        imu_processor_update(&g_processor, &sample, true, g_ms);
+        TEST_CHECK("S4-T05", (g_processor.output.b_sensor_valid &&
+                              g_processor.output.b_timing_gap &&
+                              !g_processor.output.b_tilt_valid &&
+                              g_processor.output.sample_interval_ms == 44U &&
+                              g_processor.output.b_calibrated &&
+                              g_processor.calibration_count == calibration &&
+                              g_processor.gravity[2] == gravity &&
+                              imu_height_imu_rejection(&g_processor.output) ==
+                                  HEIGHT_REJECT_TILT),
+                   "recorded 44 ms successful read preserves calibration and is a recoverable timing gap");
+        s4_feed(&sample, 1U);
+        TEST_CHECK("S4-T06", (g_processor.output.b_sensor_valid &&
+                              !g_processor.output.b_timing_gap &&
+                              g_processor.output.b_tilt_valid &&
+                              g_processor.output.sample_interval_ms == 10U),
+                   "next normal IMU sample recovers tilt without resetting calibration");
+    }
+    s4_height_baseline();
+    s4_calibrate();
+    g_processor.b_odometry_height = true;
+    sample = s4_flat();
+    sample.acceleration[0] = rmath_sinf(3.0f * RMATH_DEG_TO_RAD);
+    sample.acceleration[2] = rmath_cosf(3.0f * RMATH_DEG_TO_RAD);
+    s4_feed(&sample, 100U);
+    g_height_imu = g_processor.output;
+    s4_height_feed(g_height_imu.tilt_pitch_deg, 0.001f, 10U);
+    {
+        float const rise = g_height.rise_m;
+        g_ms += 44U;
+        imu_processor_update(&g_processor, &sample, true, g_ms);
+        g_height_imu = g_processor.output;
+        imu_height_observe_imu(&g_height, &g_height_imu, g_height_ms + 10U);
+        s4_height_feed(g_height_imu.tilt_pitch_deg, 0.001f, 2U);
+        TEST_CHECK("S4-T07", (g_height.b_gap && g_height.b_active &&
+                              g_height.rise_m == rise &&
+                              g_height.rejected_count == 0U),
+                   "actual processor timing gap freezes active crossing instead of sensor rejection");
+        s4_feed(&sample, 1U);
+        g_height_imu = g_processor.output;
+        s4_height_feed(g_height_imu.tilt_pitch_deg, 0.001f, 1U);
+        TEST_CHECK("S4-T08", (g_height.b_valid && !g_height.b_gap &&
+                              g_height.b_active && g_height.gap_count == 1U &&
+                              g_height.rejected_count == 0U &&
+                              rmath_absf(g_height.rise_m - rise -
+                                  0.003f * rmath_sinf(3.0f * RMATH_DEG_TO_RAD)) <
+                                  0.00001f),
+                   "timing recovery replays all wheel distance with valid endpoint tilt");
+    }
+    g_ms += 157U;
+    imu_processor_update(&g_processor, &sample, true, g_ms);
+    TEST_CHECK("S4-T09", (g_processor.output.b_sensor_valid &&
+                          g_processor.output.b_timing_gap &&
+                          g_processor.output.b_calibrated &&
+                          imu_height_imu_rejection(&g_processor.output) ==
+                              HEIGHT_REJECT_SAMPLE_TIMING),
+               "157 ms stall has explicit timing reason not fabricated sensor failure");
+    imu_height_observe_imu(&g_height, &g_processor.output, g_height_ms + 10U);
+    TEST_CHECK("S4-T10", (!g_height.b_active && !g_height.b_valid &&
+                          g_height.interrupted_reason ==
+                              HEIGHT_REJECT_SAMPLE_TIMING),
+               "unsupported long timing gap retains interrupted peak but cannot certify height");
+    s4_calibrate();
+    g_ms += 1U;
+    imu_processor_update(&g_processor, &sample, true, g_ms);
+    TEST_CHECK("S4-T11", (g_processor.output.b_sensor_valid &&
+                          g_processor.output.b_timing_gap &&
+                          imu_height_imu_rejection(&g_processor.output) ==
+                              HEIGHT_REJECT_SAMPLE_TIMING),
+               "back-to-back sample does not masquerade as normal integration");
+    s4_calibrate();
+    g_ms += 44U;
+    imu_processor_update(&g_processor, &sample, false, g_ms);
+    TEST_CHECK("S4-T12", (!g_processor.output.b_sensor_valid &&
+                          imu_height_imu_rejection(&g_processor.output) ==
+                              HEIGHT_REJECT_SENSOR),
+               "real failed read takes precedence over simultaneous timing gap");
+    s4_calibrate();
+    sample.acceleration[0] = 4.094f;
+    g_ms += 44U;
+    imu_processor_update(&g_processor, &sample, true, g_ms);
+    TEST_CHECK("S4-T13", (g_processor.output.b_saturated &&
+                          imu_height_imu_rejection(&g_processor.output) ==
+                              HEIGHT_REJECT_SATURATION),
+               "clipping cannot be hidden behind recoverable timing");
+    s4_calibrate();
+    sample = s4_flat();
+    sample.acceleration[0] = 3.2f;
+    g_ms += 44U;
+    imu_processor_update(&g_processor, &sample, true, g_ms);
+    TEST_CHECK("S4-T14", (g_processor.output.b_shock_detected &&
+                          imu_height_imu_rejection(&g_processor.output) ==
+                              HEIGHT_REJECT_SHOCK),
+               "impact remains immediate during delayed sample");
+    s4_calibrate();
+    sample = s4_flat();
+    g_ms += IMU_RECOVERABLE_INTERVAL_MS;
+    imu_processor_update(&g_processor, &sample, true, g_ms);
+    TEST_CHECK("S4-T15",
+               imu_height_imu_rejection(&g_processor.output) == HEIGHT_REJECT_TILT,
+               "100 ms delayed sensor endpoint is within timing recovery limit");
+    g_ms += IMU_RECOVERABLE_INTERVAL_MS + 1U;
+    imu_processor_update(&g_processor, &sample, true, g_ms);
+    TEST_CHECK("S4-T16",
+               imu_height_imu_rejection(&g_processor.output) ==
+                   HEIGHT_REJECT_SAMPLE_TIMING,
+               "101 ms delayed sensor endpoint exceeds timing recovery limit");
+    s4_height_baseline();
+    s4_height_feed(-2.94f, 0.00195f, 40U);
+    g_height_imu.b_timing_gap = true;
+    g_height_imu.sample_interval_ms = 44U;
+    g_height_imu.b_tilt_valid = false;
+    s4_height_feed(-2.94f, 0.00195f, 2U);
+    g_height_imu.b_timing_gap = false;
+    g_height_imu.b_tilt_valid = true;
+    s4_height_feed(-2.94f, 0.00195f, 58U);
+    s4_height_feed(2.94f, 0.00195f, 100U);
+    s4_height_feed(0.0f, 0.00195f, 30U);
+    TEST_CHECK("S4-T17", (g_height.count == 1U &&
+                          g_height.rejected_count == 0U &&
+                          g_height.gap_count == 1U &&
+                          rmath_absf(g_height.last_peak_m - 0.01f) < 0.0002f),
+               "ideal 1 cm ascent/descent completes after a recoverable timing gap");
+    s4_height_baseline();
+    s4_height_feed(-3.0f, 0.001f, 10U);
+    g_height_imu.b_timing_gap = true;
+    g_height_imu.sample_interval_ms = 44U;
+    g_height_imu.b_tilt_valid = false;
+    s4_height_feed(-3.0f, 0.0f, 13U);
+    TEST_CHECK("S4-T18", (!g_height.b_active && g_height.count == 0U &&
+                          g_height.last_rejection == HEIGHT_REJECT_GAP_TIMEOUT),
+               "repeated late samples without normal endpoint cannot indefinitely preserve valid tracking");
+    s4_calibrate();
+    sample = s4_flat();
+    sample.acceleration[0] = nonfinite.value;
+    g_ms += 44U;
+    imu_processor_update(&g_processor, &sample, true, g_ms);
+    TEST_CHECK("S4-T19", (!g_processor.output.b_sensor_valid &&
+                          imu_height_imu_rejection(&g_processor.output) ==
+                              HEIGHT_REJECT_SENSOR),
+               "nonfinite acceleration remains a hard failure during a timing gap");
+    s4_height_baseline();
+    s4_height_feed(-3.0f, 0.001f, 10U);
+    {
+        float const rise = g_height.rise_m;
+        uint32_t const old_imu_ms = g_height_ms;
+        g_height_ms += 80U;
+        g_height_motion.distance_m += 0.004f;
+        g_height_motion.left_speed_m_s = 0.05f;
+        g_height_motion.right_speed_m_s = 0.05f;
+        imu_height_update(&g_height, &g_height_motion, &g_height_imu,
+                          old_imu_ms, g_height_ms);
+        TEST_CHECK("S4-T20", (g_height.b_gap && g_height.b_active &&
+                              !g_height.b_valid && g_height.rise_m == rise),
+                   "80 ms old IMU buffers travel without using stale tilt as a recovery endpoint");
+        s4_height_feed(-3.0f, 0.001f, 1U);
+        TEST_CHECK("S4-T21", (g_height.b_valid && g_height.gap_count == 1U &&
+                              rmath_absf(g_height.rise_m - rise -
+                                  0.005f * rmath_sinf(3.0f * RMATH_DEG_TO_RAD)) <
+                                  0.000001f),
+                   "fresh endpoint recovers travel buffered while waiting for delayed sensor");
+    }
     TEST_SUMMARY("subsystem4 LSM303DLHC");
 }
 

@@ -19,6 +19,7 @@
 #include "../subsystem2/subsystem2.h"
 #include "../subsystem5/avoidance.h"
 #include "../subsystem4/imu_height.h"
+#include "../subsystem4/imu_processing.h"
 
 #define CTRL_STEER_GAIN         (0.18f)
 #define CTRL_STEER_LIMIT        (0.25f)
@@ -57,6 +58,13 @@ typedef struct
     bool                b_line_detected;
     avoid_t             avoid;
     uint32_t            last_telemetry_ms;
+    uint32_t            height_trace_sequence;
+    uint32_t            height_trace_dropped;
+    uint32_t            height_trace_last_drop_ms;
+    uint32_t            height_trace_last_move_ms;
+    uint32_t            height_trace_motion_ms;
+    bool                b_height_trace_moving;
+    bool                b_height_trace_have_motion;
 } ctrl_state_t;
 
 /* ------------------------------------------------------------------ */
@@ -350,13 +358,17 @@ static void
 ctrl_handle_imu (ctrl_state_t * p_ctrl, imu_event_t const * p_imu)
 {
     bool const b_new_shock = (p_imu->shock_count != p_ctrl->imu.shock_count);
+    bool const b_bad_timing = p_imu->b_timing_gap &&
+        ((p_imu->sample_interval_ms < 5U) ||
+         (p_imu->sample_interval_ms > IMU_RECOVERABLE_INTERVAL_MS));
     p_ctrl->imu = *p_imu;
     if (p_imu->b_sensor_valid)
     {
-        p_ctrl->b_imu_healthy = p_imu->b_calibrated && (!p_imu->b_saturated);
+        p_ctrl->b_imu_healthy = p_imu->b_calibrated &&
+            (!p_imu->b_saturated) && !b_bad_timing;
         p_ctrl->hump_m        = p_imu->estimated_hump_height_m;
 
-        if ((!p_imu->b_calibrated) &&
+        if ((!p_imu->b_calibrated || b_bad_timing) &&
             ((MISSION_FOLLOWING == p_ctrl->state) ||
              (MISSION_AVOIDING == p_ctrl->state)))
         {
@@ -401,6 +413,25 @@ ctrl_report_height_rejection (ctrl_state_t const * p_ctrl, bool b_active,
               (unsigned int) p_ctrl->imu.b_tilt_valid,
               (unsigned int) p_ctrl->imu.b_saturated,
               (unsigned int) p_ctrl->imu.b_shock_detected);
+    if (HEIGHT_REJECT_GAP_ACCELERATION == p_ctrl->height.last_rejection)
+    {
+        float const ax = p_ctrl->imu.acceleration_x_g;
+        float const ay = p_ctrl->imu.acceleration_y_g;
+        float const az = p_ctrl->imu.acceleration_z_g;
+        if ((ax >= -8.0f && ax <= 8.0f) &&
+            (ay >= -8.0f && ay <= 8.0f) &&
+            (az >= -8.0f && az <= 8.0f))
+        {
+            tm_printf((UB *) "S4: gap acceleration ax_mg=%d ay_mg=%d "
+                      "az_mg=%d allowed_norm_mg=650..1350\n",
+                      (int) (ax * 1000.0f), (int) (ay * 1000.0f),
+                      (int) (az * 1000.0f));
+        }
+        else
+        {
+            tm_printf((UB *) "S4: gap acceleration nonfinite or out of range\n");
+        }
+    }
 }
 
 static void
@@ -449,6 +480,53 @@ ctrl_handle_obstacle (ctrl_state_t * p_ctrl,
     }
 }
 
+#if IMU_HEIGHT_TRACE_ENABLED
+static void
+ctrl_publish_height_trace (ctrl_state_t * p_ctrl,
+                           system_event_t const * p_event,
+                           float ds)
+{
+    telemetry_message_t trace = {0};
+    uint32_t const now_ms = p_event->timestamp_ms;
+    uint32_t const interval_ms = p_ctrl->b_height_trace_have_motion
+        ? now_ms - p_ctrl->height_trace_motion_ms : 0U;
+    p_ctrl->height_trace_motion_ms = now_ms;
+    p_ctrl->b_height_trace_have_motion = true;
+    if ((rmath_absf(ds) > 0.000001f) || p_ctrl->height.b_active ||
+        p_ctrl->height.b_start_pending)
+    {
+        p_ctrl->height_trace_last_move_ms = now_ms;
+        p_ctrl->b_height_trace_moving = true;
+    }
+    if (!p_ctrl->b_height_trace_moving) return;
+    if ((now_ms - p_ctrl->height_trace_last_move_ms) > 500U)
+    {
+        p_ctrl->b_height_trace_moving = false;
+        return;
+    }
+    trace.b_height_trace = true;
+    trace.timestamp_ms = now_ms;
+    trace.imu_ms = p_ctrl->imu_ms;
+    trace.imu = p_ctrl->imu;
+    trace.motion = p_event->data.motion;
+    trace.motion_interval_ms = interval_ms;
+    trace.motion_delta_m = ds;
+    trace.trace_sequence = ++p_ctrl->height_trace_sequence;
+    trace.trace_dropped = p_ctrl->height_trace_dropped;
+    if (!telemetry_publish(&trace))
+    {
+        p_ctrl->height_trace_dropped++;
+        if ((1U == p_ctrl->height_trace_dropped) ||
+            ((now_ms - p_ctrl->height_trace_last_drop_ms) >= 1000U))
+        {
+            tm_printf((UB *) "S4: height trace queue full dropped_total=%u\n",
+                      (unsigned int) p_ctrl->height_trace_dropped);
+            p_ctrl->height_trace_last_drop_ms = now_ms;
+        }
+    }
+}
+#endif
+
 static void
 ctrl_handle_event (ctrl_state_t * p_ctrl, system_event_t const * p_event)
 {
@@ -466,6 +544,7 @@ ctrl_handle_event (ctrl_state_t * p_ctrl, system_event_t const * p_event)
             uint32_t const gap_count = p_ctrl->height.gap_count;
             uint32_t const interval_ms =
                 p_event->timestamp_ms - p_ctrl->height.last_ms;
+            float const ds = p_event->data.motion.distance_m - p_ctrl->distance_m;
             p_ctrl->distance_m = p_event->data.motion.distance_m;
             if (p_ctrl->b_have_imu)
             {
@@ -492,6 +571,11 @@ ctrl_handle_event (ctrl_state_t * p_ctrl, system_event_t const * p_event)
                               (int) (p_ctrl->height.last_peak_m * 1000.0f));
                 }
                 ctrl_apply_height(p_ctrl);
+#if IMU_HEIGHT_TRACE_ENABLED
+                ctrl_publish_height_trace(p_ctrl, p_event, ds);
+#else
+                (void) ds;
+#endif
             }
             if (p_ctrl->b_turn_in_progress &&
                 p_event->data.motion.turn_complete &&
@@ -637,7 +721,7 @@ ctrl_step_avoidance (ctrl_state_t * p_ctrl, uint32_t now_ms)
 static void
 ctrl_publish_telemetry (ctrl_state_t * p_ctrl, uint32_t now_ms)
 {
-    telemetry_message_t telemetry;
+    telemetry_message_t telemetry = {0};
 
     if ((now_ms - p_ctrl->last_telemetry_ms) >= ROBOT_TELEMETRY_PERIOD_MS)
     {
@@ -651,7 +735,11 @@ ctrl_publish_telemetry (ctrl_state_t * p_ctrl, uint32_t now_ms)
         telemetry.last_barcode         = p_ctrl->barcode;
         telemetry.fault_code           = p_ctrl->fault_code;
         telemetry.imu                  = p_ctrl->imu;
-        (void) telemetry_publish(&telemetry);
+        if (!telemetry_publish(&telemetry))
+        {
+            tm_printf((UB *) "S1: telemetry snapshot queue full t_ms=%u\n",
+                      (unsigned int) now_ms);
+        }
         p_ctrl->last_telemetry_ms = now_ms;
     }
 }

@@ -27,6 +27,10 @@
 LOCAL T_SPLOCK tm_output_lock;
 LOCAL UINT tm_output_depth[TK_MAX_CORE];
 EXPORT volatile UW tm_printf_smp_contentions;
+LOCAL UW tm_output_started_us[TK_MAX_CORE];
+EXPORT volatile UW tm_console_max_wait_us[TK_MAX_CORE];
+EXPORT volatile UW tm_console_max_hold_us[TK_MAX_CORE];
+IMPORT UW knl_arch_time_us(void);
 
 /* printf emits through putchar/putstring; nested calls on the same core
    must share the outer lock without claiming it a second time. */
@@ -35,14 +39,21 @@ EXPORT void tm_console_lock(UINT *intsts)
 	UINT saved;
 	UINT ignored;
 	INT core;
+	UW start;
+	UW elapsed;
 
 	DI(saved);
 	core = tk_get_prc() - 1;
 	if(tm_output_depth[core] == 0) {
+		start = knl_arch_time_us();
 		if(ISpinTryLock(&tm_output_lock, &ignored) != E_OK) {
 			(void)atomic_inc((UW *)&tm_printf_smp_contentions);
 			(void)ISpinLock(&tm_output_lock, &ignored);
 		}
+		elapsed = knl_arch_time_us() - start;
+		if(elapsed > tm_console_max_wait_us[core])
+			tm_console_max_wait_us[core] = elapsed;
+		tm_output_started_us[core] = knl_arch_time_us();
 	}
 	tm_output_depth[core]++;
 	*intsts = saved;
@@ -53,6 +64,9 @@ EXPORT void tm_console_unlock(UINT intsts)
 	INT core = tk_get_prc() - 1;
 
 	if(--tm_output_depth[core] == 0) {
+		UW elapsed = knl_arch_time_us() - tm_output_started_us[core];
+		if(elapsed > tm_console_max_hold_us[core])
+			tm_console_max_hold_us[core] = elapsed;
 		(void)ISpinUnlock(&tm_output_lock, intsts);
 	} else {
 		EI(intsts);
@@ -150,6 +164,8 @@ EXPORT INT tm_putchar( INT c )
 EXPORT INT tm_putstring( const UB *buff )
 {
 	const UB* p = buff;
+	const UB* start = buff;
+	static const UB newline[] = { CHR_CR, CHR_LF };
 	UINT imask;
 
 #if TK_SUPPORT_SMP && TM_CONSOLE_USB_CDC
@@ -158,8 +174,14 @@ EXPORT INT tm_putstring( const UB *buff )
 	DI(imask);
 #endif
 	while ( *p != (UB)'\0' ) {
-		tm_putchar(*p++);
+		if (*p == CHR_LF) {
+			if (p != start) tm_snd_dat(start, p - start);
+			tm_snd_dat(newline, sizeof(newline));
+			start = p + 1;
+		}
+		p++;
 	}
+	if (p != start) tm_snd_dat(start, p - start);
 #if TK_SUPPORT_SMP && TM_CONSOLE_USB_CDC
 	tm_console_unlock(imask);
 #else

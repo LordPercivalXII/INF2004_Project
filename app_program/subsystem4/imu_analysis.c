@@ -6,7 +6,6 @@
 
 #define IMU_CAL_ACCEL_SPAN_G     (0.04f)
 #define IMU_ATTITUDE_TAU_S       (0.15f)
-#define IMU_MAX_INTERVAL_MS      (30U)
 #define IMU_HUMP_TRIGGER_COUNT   (3U)
 #define IMU_HUMP_QUIET_COUNT     (15U)
 #define IMU_HUMP_MIN_SAMPLES     (30U)
@@ -481,6 +480,9 @@ imu_processor_update (imu_processor_t * p_processor,
     p_output->b_shock_detected = false;
     p_output->b_saturated = false;
     p_output->b_tilt_valid = false;
+    p_output->sample_interval_ms = p_processor->b_have_time ? interval_ms : 0U;
+    p_output->b_timing_gap = p_processor->b_have_time &&
+        ((interval_ms < 5U) || (interval_ms > IMU_NORMAL_INTERVAL_MAX_MS));
     for (idx = 0U; idx < 3U; idx++)
     {
         /* Comparisons also reject NaN and infinity. */
@@ -490,12 +492,7 @@ imu_processor_update (imu_processor_t * p_processor,
         p_output->b_saturated = p_output->b_saturated ||
             (rmath_absf(p_sample->acceleration[idx]) >= 4.05f);
     }
-    if (p_processor->b_have_time)
-    {
-        b_valid = b_valid && (interval_ms >= 5U) &&
-                  (interval_ms <= IMU_MAX_INTERVAL_MS);
-    }
-    else
+    if (!p_processor->b_have_time)
     {
         dt = (float) ROBOT_IMU_PERIOD_MS / 1000.0f;
     }
@@ -525,6 +522,11 @@ imu_processor_update (imu_processor_t * p_processor,
         imu_invalidate_heading(p_processor, false);
         return;
     }
+    if (!p_output->b_calibrated && p_output->b_timing_gap)
+    {
+        p_processor->calibration_count = 0U;
+        return;
+    }
     if ((!p_output->b_calibrated) && (!imu_calibrate(p_processor, p_sample)))
     {
         return;
@@ -544,6 +546,21 @@ imu_processor_update (imu_processor_t * p_processor,
         p_output->shock_count++;
     }
     p_processor->b_was_shock = p_output->b_shock_detected;
+    if (p_output->b_timing_gap)
+    {
+        /* A successful late read is not a failed sensor. Preserve calibrated
+           gravity, but do not integrate acceleration or update tilt across
+           missing samples. Height fusion owns bounded wheel-gap recovery. */
+        imu_reset_tracking(p_processor);
+        imu_filter_init(&p_processor->vertical_filter);
+        imu_filter_init(&p_processor->horizontal_filter);
+        p_output->vertical_acceleration_g = 0.0f;
+        p_output->b_hump_active = false;
+        p_output->motion_state = p_output->b_shock_detected
+            ? MOTION_IMPACT : MOTION_UNKNOWN;
+        imu_invalidate_heading(p_processor, false);
+        return;
+    }
     if ((total < 0.20f) || p_output->b_saturated)
     {
         imu_reset_tracking(p_processor);

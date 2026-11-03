@@ -113,6 +113,9 @@ typedef struct
     float           tilt_pitch_deg;
     bool            b_calibrated;
     bool            b_tilt_valid;
+    bool            b_timing_gap;
+    uint32_t        sample_interval_ms;
+    uint32_t        acquisition_us;
     bool            b_hump_active;
     bool            b_hump_complete;
     bool            b_hump_height_valid;
@@ -136,6 +139,11 @@ typedef struct
     bool            b_height_uses_odometry;
     bool            b_height_gap_pending;
     uint32_t        height_gap_count;
+    /* Last interrupted crossing, not a valid or completed measurement. */
+    bool            b_height_interrupted_available;
+    float           interrupted_rise_m;
+    float           interrupted_peak_m;
+    uint32_t        height_interrupted_reason;
 } imu_event_t;
 
 /* Scanner's decision for the controller (stage 4 of Buddy 5). */
@@ -205,6 +213,13 @@ typedef struct
     uint32_t        last_barcode;
     uint32_t        fault_code;
     imu_event_t     imu;
+    bool            b_height_trace;
+    uint32_t        trace_sequence;
+    uint32_t        trace_dropped;
+    uint32_t        imu_ms;
+    uint32_t        motion_interval_ms;
+    float           motion_delta_m;
+    motion_event_t  motion;
 } telemetry_message_t;
 
 /* System status bits (event flag owned by the controller, IF-05). */

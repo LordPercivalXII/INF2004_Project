@@ -68,16 +68,25 @@ board_release_reset (uint32_t mask)
 }
 
 /*!
- * @brief Milliseconds since the kernel started (monotonic).
+ * @brief Hardware uptime in milliseconds, independent of serviced kernel ticks.
  */
 uint32_t
 board_millis (void)
 {
-    SYSTIM  now;
+    uint32_t high_before;
+    uint32_t low;
+    uint32_t high_after;
 
-    (void) tk_get_otm(&now);
+    /* A high-low-high read avoids a torn 64-bit time at low-word rollover.
+       Dividing the full timer, not TIMERAWL alone, avoids a 71-minute reset. */
+    do
+    {
+        high_before = (uint32_t) in_w(TIMER_TIMERAWH);
+        low = (uint32_t) in_w(TIMER_TIMERAWL);
+        high_after = (uint32_t) in_w(TIMER_TIMERAWH);
+    } while (high_before != high_after);
 
-    return ((uint32_t) now.lo);
+    return ((uint32_t) ((((uint64_t) high_before << 32) | low) / 1000U));
 }
 
 /*!

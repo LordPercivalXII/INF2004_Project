@@ -31,7 +31,7 @@ IMPORT void	tm_tusb_write_char(char value);
 IMPORT void	tm_tusb_write_flush(void);
 IMPORT void	tm_tusb_discard_input(void);
 
-#define USB_TASK_PRIORITY	3
+#define USB_TASK_PRIORITY	19
 #if TK_SUPPORT_SMP
 #define USB_TASK_STACK		4096
 #else
@@ -161,6 +161,9 @@ LOCAL void usb_service_task(INT stacd, void *exinf)
 	tm_usb_link_state = 1;
 
 	for(;;) {
+		/* Interrupts queue wake-ups even while this task is running.
+		   Coalesce the old requests before servicing their queued events. */
+		(void)tk_can_wup(TSK_SELF);
 		/* Drain the whole event burst before yielding.  Returning to
 		   the scheduler between events would put a tick period into
 		   each stage of every control transfer. */
