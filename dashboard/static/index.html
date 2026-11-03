@@ -1,0 +1,102 @@
+<!doctype html>
+<html lang="en">
+  <head>
+    <meta charset="utf-8" />
+    <meta name="viewport" content="width=device-width,initial-scale=1" />
+    <title>Buddy 1 Robot Dashboard</title>
+    <link rel="stylesheet" href="/style.css" />
+  </head>
+  <body>
+    <main class="shell">
+      <header>
+        <div>
+          <p class="eyebrow">INF2004 · CSC19</p>
+          <h1>Robot Control & Telemetry</h1>
+        </div>
+        <span id="connection" class="status">Connecting…</span>
+      </header>
+      <section class="metrics">
+        <article>
+          <small>Current speed</small><strong id="current-speed">--</strong
+          ><span>m/s</span>
+        </article>
+        <article>
+          <small>Straight-ahead distance</small><strong id="distance">--</strong
+          ><span>cm</span>
+        </article>
+        <article>
+          <small>Obstacle state</small><strong id="obstacle-state">--</strong
+          ><span id="obstacle-detail">Waiting for telemetry</span>
+        </article>
+        <article>
+          <small>Mission</small><strong id="mission">--</strong
+          ><span id="timestamp">No data</span>
+        </article>
+      </section>
+      <div class="columns">
+        <section class="panel">
+          <h2>Barcode turn configuration</h2>
+          <p>
+            Choose one Code 39 character for each action. Saved mappings are
+            retained by MQTT.
+          </p>
+          <form id="route-form" class="fields">
+            <label
+              >Straight<input name="straight" maxlength="1" value="A" required
+            /></label>
+            <label
+              >Left<input name="left" maxlength="1" value="B" required
+            /></label>
+            <label
+              >Right<input name="right" maxlength="1" value="C" required
+            /></label>
+            <label
+              >U-turn<input name="uturn" maxlength="1" value="D" required
+            /></label>
+            <button type="submit">Publish route settings</button>
+          </form>
+        </section>
+        <section class="panel">
+          <h2>Speed control</h2>
+          <p>
+            Requested controller base speed. Sending a value does not start the
+            robot.
+          </p>
+          <div class="speed-display">
+            <strong id="speed-value">0.35</strong> m/s
+          </div>
+          <input
+            id="speed-slider"
+            type="range"
+            min="0.10"
+            max="0.70"
+            step="0.05"
+            value="0.35"
+          />
+          <div class="range"><span>0.10</span><span>0.70 m/s</span></div>
+          <button id="send-speed" type="button">Send speed command</button>
+          <p class="hint">
+            Commands are only enabled when the MQTT broker is connected. Test
+            with the robot secured before driving.
+          </p>
+        </section>
+      </div>
+      <section class="panel">
+        <h2>Live telemetry</h2>
+        <div class="details">
+          <div>Line error <b id="line">--</b></div>
+          <div>Distance travelled <b id="travelled">--</b></div>
+          <div>Last barcode <b id="barcode">--</b></div>
+          <div>Fault code <b id="fault">--</b></div>
+        </div>
+        <p class="hint">
+          Detailed avoidance steps require an additional firmware telemetry
+          field. "Avoiding" is the confirmed mission state, not a specific
+          maneuver.
+        </p>
+      </section>
+      <p id="feedback" role="status" aria-live="polite"></p>
+    </main>
+    <script src="/app.js"></script>
+  </body>
+</html>
