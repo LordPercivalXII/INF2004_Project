@@ -11,10 +11,14 @@
  *     TURN_LEFT/RIGHT
  *       turn 45 deg toward d, drive out, turn back to parallel, drive
  *       past, turn 45 deg back toward the line, creep until a tape-width
- *       black run is crossed, drive the wheels over the line, spin toward
+ *       black run is crossed, drive the wheels over the line, turn toward
  *       the original heading until a sensor finds the line, then follow
  *       it a short way to confirm before handing control back.
- *     If the search fails: spin on the spot looking for the line.
+ *     If the search fails: turn a full circle on the spot looking for it.
+ *
+ * Motion goes through subsystem 2: straight moves at its tested speed,
+ * rotations as its closed-loop MOTION_TURN (cancelled by a STOP when the
+ * line is found).
  *
  * All distances come from the wheel encoders; there is no absolute
  * position or heading, so the bypass assumes the line stays roughly

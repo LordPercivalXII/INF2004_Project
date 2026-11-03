@@ -25,7 +25,7 @@ See `testing/README.md` for how to run tests and record results.
 | S5-U15 | manoeuvre: stop, bypass, find line, align, verify, done | Stage 5 | auto | `subsystem5_test.c` | PASS |
 | S5-U16 | three reverses at one spot, then gives up as boxed in | Stage 4 | auto | `subsystem5_test.c` | PASS |
 | S5-U17 | driving: three close readings in a row stop the car; one bad echo does not | Stage 4 | auto | `subsystem5_test.c` | PASS |
-| S5-M07 | servo stays still until something is within 35 cm, then scans once and repeats only if still close | Stage 1 | manual | bench build, hand or box moved in from far away | `S5: STOP` near 35 cm, then a scan; no sweeping with a clear path |
+| S5-M07 | servo stays still until something is within 25 cm, then scans once and repeats only if still close | Stage 1 | manual | bench build, hand or box moved in from far away | `S5: STOP` near 25 cm, then a scan; no sweeping with a clear path |
 | S5-M01 | box on a straight: car goes round it and rejoins the line going the same way | Stage 4, 5, IF-01, IF-03 | manual | SIM=0, floor; tune the distances in `avoidance.c` | mission 1 → 2 → 1, no contact |
 | S5-M02 | box placed on the line, car at driving speed | Stage 4 | manual | SIM=0, floor, save the console output | car stops short of the box; `S5: STOP obstacle in path at x cm` is printed |
 | S5-M03 | box beside the line, outside the car's path | Stage 4 | manual | SIM=0, floor | car keeps following |

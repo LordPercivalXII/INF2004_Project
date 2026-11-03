@@ -16,7 +16,7 @@
 #define OBSTACLE_HALF_BEAM_DEG  ((float) ULTRASONIC_BEAM_WIDTH_DEG * 0.5f)
 #define OBSTACLE_PATH_HALF_CM   (10.5f) /* half the car (7.5) + 3 margin */
 #define OBSTACLE_TOO_CLOSE_CM   (12.0f) /* no room to spin */
-#define OBSTACLE_STOP_CM        (35.0f) /* car still rolls after the check */
+#define OBSTACLE_STOP_CM        (25.0f) /* car still rolls after the check */
 #define OBSTACLE_STOP_READINGS  (3U)    /* close readings in a row */
 #define OBSTACLE_ROOMY_CM       (50.0f)
 #define OBSTACLE_OFFSET_MIN_CM  (10.0f)

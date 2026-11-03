@@ -10,9 +10,13 @@
 #include "../common/robot_config.h"
 #include "../common/rmath.h"
 
-#define AVOID_LEG_SPEED_M_S         (0.18f)
-#define AVOID_SEARCH_SPEED_M_S      (0.12f)
-#define AVOID_SPIN_SPEED_M_S        (0.10f)
+/* Every straight move uses the speed subsystem 2 has tested on the floor
+ * (S2-M02), and every rotation is subsystem 2's closed-loop MOTION_TURN
+ * (S2-M03), so no step runs slow enough to stall the motors. */
+#define AVOID_LEG_SPEED_M_S         (0.20f)
+#define AVOID_SEARCH_SPEED_M_S      (0.20f)
+#define AVOID_ALIGN_DEG             (135.0f)
+#define AVOID_SWEEP_DEG             (360.0f)    /* MOTION_TURN maximum */
 #define AVOID_TURN_DEG              (45.0f)
 #define AVOID_SIN_45                (0.7071f)
 #define AVOID_REVERSE_CM            (12.0f)
@@ -33,8 +37,6 @@
 #define AVOID_SCAN_TIMEOUT_MS       (8000U)
 #define AVOID_TURN_TIMEOUT_MS       (4000U)
 #define AVOID_DRIVE_TIMEOUT_MS      (8000U)
-#define AVOID_ALIGN_TIMEOUT_MS      (2000U) /* about 135 deg at spin speed */
-#define AVOID_SWEEP_TIMEOUT_MS      (4000U) /* about 360 deg at spin speed */
 #define AVOID_CM_PER_M              (100.0f)
 
 /* The simulated line never leaves the sensors, so a black run never ends. */
@@ -68,16 +70,6 @@ avoid_drive (avoid_output_t * p_output, float left_speed, float right_speed)
     p_output->type        = AVOID_OUT_DRIVE;
     p_output->left_speed  = left_speed;
     p_output->right_speed = right_speed;
-}
-
-/*!
- * @brief Spin on the spot; direction +1 = left, as MOTION_TURN angles.
- */
-static void
-avoid_spin (avoid_output_t * p_output, float direction)
-{
-    avoid_drive(p_output, -direction * AVOID_SPIN_SPEED_M_S,
-                direction * AVOID_SPIN_SPEED_M_S);
 }
 
 static void
@@ -448,20 +440,23 @@ avoid_step (avoid_t * p_avoid, avoid_input_t const * p_input,
 
         case AVOID_PHASE_ALIGN:
         case AVOID_PHASE_SWEEP:
-            /* Spin back toward the original heading, so the car joins the
-               line going the way it was going. */
+            /* Turn back toward the original heading, so the car joins the
+               line going the way it was going.  Subsystem 2's closed-loop
+               turn limits how far; seeing the line cancels it early. */
             if (!p_avoid->b_entered)
             {
                 p_avoid->b_entered = true;
-                avoid_spin(p_output, -side);
+                avoid_turn(p_output, -side *
+                           ((AVOID_PHASE_ALIGN == p_avoid->phase)
+                            ? AVOID_ALIGN_DEG : AVOID_SWEEP_DEG));
             }
             else if (avoid_line_seen(p_avoid, p_input))
             {
+                p_output->type = AVOID_OUT_STOP;    /* cancels the turn */
                 avoid_enter(p_avoid, AVOID_PHASE_VERIFY, p_input);
             }
-            else if (age_ms >= ((AVOID_PHASE_ALIGN == p_avoid->phase)
-                                ? AVOID_ALIGN_TIMEOUT_MS
-                                : AVOID_SWEEP_TIMEOUT_MS))
+            else if (p_input->b_turn_done ||
+                     (age_ms >= AVOID_TURN_TIMEOUT_MS))
             {
                 status = avoid_start_sweep(p_avoid, p_input);
             }

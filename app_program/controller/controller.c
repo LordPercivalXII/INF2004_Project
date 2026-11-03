@@ -442,6 +442,14 @@ ctrl_step_avoidance (ctrl_state_t * p_ctrl, uint32_t now_ms)
 
         status = avoid_step(&p_ctrl->avoid, &input, &output);
 
+        if ((AVOID_OUT_STOP == output.type) ||
+            (AVOID_OUT_DRIVE == output.type))
+        {
+            /* Replaces any turn still running: it will never complete. */
+            p_ctrl->b_turn_in_progress = false;
+            p_ctrl->active_turn_id     = 0U;
+        }
+
         if (AVOID_OUT_STOP == output.type)
         {
             ctrl_stop_motion();
@@ -536,6 +544,10 @@ controller_task (INT stacd, void * p_exinf)
     (void) stacd;
     (void) p_exinf;
 
+#if (!ROBOT_SIMULATION) && (CTRL_AUTO_START_MS > 0)
+    bool                b_auto_started = false;
+#endif
+
     ctrl.state             = MISSION_IDLE;
     ctrl.base_speed        = ROBOT_BASE_SPEED;
     ctrl.b_turn_in_progress = false;
@@ -547,6 +559,10 @@ controller_task (INT stacd, void * p_exinf)
 #if ROBOT_SIMULATION
     ctrl.state = MISSION_FOLLOWING;
     ctrl_set_bits(SYSTEM_BIT_MISSION_RUN);
+#elif CTRL_AUTO_START_MS > 0
+#warning "CTRL_AUTO_START_MS is on: the car drives off by itself after power-up"
+    tm_printf((UB *) "CTRL: TEST auto-start: following the line in %u ms\n",
+              (unsigned int) CTRL_AUTO_START_MS);
 #endif
     ctrl_set_bits(SYSTEM_BIT_READY);
 
@@ -556,6 +572,18 @@ controller_task (INT stacd, void * p_exinf)
         {
             ctrl_handle_command(&ctrl, &command);
         }
+
+#if (!ROBOT_SIMULATION) && (CTRL_AUTO_START_MS > 0)
+        /* Test only: one START, as if a user had sent it. */
+        if ((!b_auto_started) && (board_millis() >= CTRL_AUTO_START_MS))
+        {
+            b_auto_started = true;
+            command.type   = CONTROL_START;
+            command.value  = 0.0f;
+            ctrl_handle_command(&ctrl, &command);
+            tm_printf((UB *) "CTRL: TEST auto-start: START sent\n");
+        }
+#endif
 
         /* Wait for one event, then drain whatever else is queued. */
         msg_size = tk_rcv_mbf(gh_event_mbf, &event,

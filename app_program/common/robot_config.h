@@ -100,6 +100,13 @@
 #define MOTOR_MAX_DUTY                  (0.70f)
 /* Smallest duty that still overcomes motor friction (0 = disabled). */
 #define MOTOR_MIN_DUTY                  (0.0f)
+/* TEST ONLY.  Milliseconds after power-up at which a SIM=0 car starts
+ * following the line by itself, as if it had received CONTROL_START;
+ * 0 = off.  Nothing else sends START yet.  Set back to 0 before
+ * committing: with it on, the car drives off whenever it is powered. */
+#ifndef CTRL_AUTO_START_MS
+#define CTRL_AUTO_START_MS              (0U)
+#endif
 /* 1 = after boot, run straight/turn bench drive and print results. */
 #ifndef S2_BENCH_DRIVE
 #define S2_BENCH_DRIVE                  (0)
@@ -161,7 +168,7 @@
  * simulated, so the wheels never turn.
  * Default: real scanner only in SIM=0 builds. */
 #ifndef S5_ULTRASONIC_HW
-#define S5_ULTRASONIC_HW                (1)
+#define S5_ULTRASONIC_HW                (!ROBOT_SIMULATION)
 #endif
 #if (!ROBOT_SIMULATION) && (!S5_ULTRASONIC_HW)
 #error "SIM=0 needs the real ultrasonic scanner (S5_ULTRASONIC_HW = 1)"

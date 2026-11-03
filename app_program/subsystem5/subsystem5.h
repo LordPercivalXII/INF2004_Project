@@ -4,7 +4,7 @@
  *        Student ID: <student ID>.  Port of src/buddy5_obstacle/.
  *
  * While driving, the sensor faces straight ahead with the servo still; 3
- * readings in a row within 35 cm post OBSTACLE_ACTION_STOP at once, because
+ * readings in a row within 25 cm post OBSTACLE_ACTION_STOP at once, because
  * a sweep takes too long at driving speed.  Once stopped: coarse scan at
  * 60/75/90/105/120 deg, then a 5 deg fine scan around any hit; builds an
  * obstacle profile (location, width, closest point, clearances), decides

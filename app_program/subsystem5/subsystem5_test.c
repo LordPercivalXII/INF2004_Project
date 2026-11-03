@@ -127,12 +127,12 @@ subsystem5_test (void)
 
     /* Two close readings, one bad echo, then three close readings. */
     step = 0U;
-    b_ok = (!obstacle_watch_update(&step, 30.0f)) &&
-           (!obstacle_watch_update(&step, 30.0f)) &&
+    b_ok = (!obstacle_watch_update(&step, 20.0f)) &&
+           (!obstacle_watch_update(&step, 20.0f)) &&
            (!obstacle_watch_update(&step, 400.0f)) &&
-           (!obstacle_watch_update(&step, 30.0f)) &&
-           (!obstacle_watch_update(&step, 30.0f)) &&
-           obstacle_watch_update(&step, 30.0f);
+           (!obstacle_watch_update(&step, 20.0f)) &&
+           (!obstacle_watch_update(&step, 20.0f)) &&
+           obstacle_watch_update(&step, 20.0f);
     TEST_CHECK("S5-U17", b_ok,
                "driving: three close readings in a row stop the car");
 
@@ -189,14 +189,16 @@ subsystem5_test (void)
     input.distance_m += 0.1f;
     (void) avoid_step(&avoid, &input, &output);     /* to ALIGN */
     (void) avoid_step(&avoid, &input, &output);
-    b_ok = b_ok && (AVOID_OUT_DRIVE == output.type) &&
-           (output.left_speed > output.right_speed);    /* spins right */
+    b_ok = b_ok && (AVOID_OUT_TURN == output.type) &&
+           (output.turn_deg < 0.0f);                /* turns right */
+    input.b_turn_done     = false;                  /* turn running */
     input.b_line_detected = true;
     for (step = 0U; step < 3U; step++)
     {
         (void) avoid_step(&avoid, &input, &output);
     }
-    b_ok = b_ok && avoid_is_following(&avoid);
+    b_ok = b_ok && avoid_is_following(&avoid) &&
+           (AVOID_OUT_STOP == output.type);         /* turn cancelled */
     input.distance_m += 0.11f;
     TEST_CHECK("S5-U15",
                (b_ok && (AVOID_DONE == avoid_step(&avoid, &input, &output))),
