@@ -2,6 +2,8 @@
  *
  * @brief Motion task: applies the latest command with a per-wheel speed
  *        PID and reports odometry to the controller every 20 ms.
+ *        Speed, PID and simulated travel use measured microsecond elapsed
+ *        time; queued wake-ups cannot produce extra zero-time samples.
  *
  *   FreeRTOS                          micro T-Kernel
  *   --------------------------------  ---------------------------------
@@ -157,12 +159,13 @@ motion_take_commands (motion_command_t * p_requested)
 
 static void
 motion_post (int32_t left_now, int32_t right_now, float left_speed,
-             float right_speed, float distance_m, uint32_t completed_turn_id)
+             float right_speed, float distance_m, uint32_t completed_turn_id,
+             uint32_t sample_ms)
 {
     system_event_t event = {0};
 
     event.type                        = SYSTEM_EVENT_MOTION;
-    event.timestamp_ms                = board_millis();
+    event.timestamp_ms                = sample_ms;
     event.data.motion.left_ticks      = left_now;
     event.data.motion.right_ticks     = right_now;
     event.data.motion.left_speed_m_s  = left_speed;
@@ -213,14 +216,16 @@ motion_turn_speed (float remaining_deg)
 void
 motion_task (INT stacd, void * p_exinf)
 {
-    float const interval_s = (float) ROBOT_MOTION_PERIOD_MS / 1000.0f;
+    float            interval_s;
     float const m_per_tick = (RMATH_PI * MOTOR_WHEEL_DIAMETER_M) /
                              MOTOR_ENCODER_TICKS_PER_REV;
     motion_command_t requested = {MOTION_STOP, 0.0f, 0.0f, 0.0f, 0U};
     motion_pid_t     left_pid;
     motion_pid_t     right_pid;
+#if ROBOT_SIMULATION
     float            left_fractional_ticks = 0.0f;
     float            right_fractional_ticks = 0.0f;
+#endif
     int32_t          prev_left  = 0;
     int32_t          prev_right = 0;
     int32_t          left_now;
@@ -238,6 +243,10 @@ motion_task (INT stacd, void * p_exinf)
     uint32_t         left_last_tick_ms;
     uint32_t         right_last_tick_ms;
     uint32_t         now_ms;
+    uint32_t         previous_sample_us;
+    uint32_t         last_encoder_report_ms = 0U;
+    uint32_t         reported_left_rejected = 0U;
+    uint32_t         reported_right_rejected = 0U;
     bool             encoder_fault_latched = false;
     bool             encoder_fault_pending = false;
 
@@ -257,12 +266,25 @@ motion_task (INT stacd, void * p_exinf)
         tm_printf((UB *) "S2: encoder interrupt registration failed\n");
     }
 #endif
+    encoder_read(&prev_left, &prev_right);
+    previous_sample_us = board_micros();
 
     for (;;)
     {
         motion_command_t incoming;
 
         (void) tk_slp_tsk(TMO_FEVR);    /* woken every 20 ms */
+
+        {
+            uint32_t const sample_us = board_micros();
+            uint32_t const elapsed_us = sample_us - previous_sample_us;
+            /* Queued cyclic wake-ups must not divide new ticks by a
+               fictitious 20 ms or run the PID repeatedly at zero elapsed time. */
+            if (elapsed_us < ROBOT_MOTION_PERIOD_MS * 1000U)
+            {
+                continue;
+            }
+        }
 
         if (motion_take_commands(&incoming))
         {
@@ -326,6 +348,11 @@ motion_task (INT stacd, void * p_exinf)
             right_target = turn_direction * turn_speed;
         }
 
+        {
+            uint32_t const sample_us = board_micros();
+            interval_s = (float) (sample_us - previous_sample_us) / 1000000.0f;
+            previous_sample_us = sample_us;
+        }
 #if ROBOT_SIMULATION
         if ((MOTION_DRIVE == requested.type) || (MOTION_TURN == requested.type))
         {
@@ -344,6 +371,23 @@ motion_task (INT stacd, void * p_exinf)
 
         encoder_read(&left_now, &right_now);
         now_ms = board_millis();
+        if ((now_ms - last_encoder_report_ms) >= 1000U)
+        {
+            uint32_t left_rejected;
+            uint32_t right_rejected;
+            encoder_read_rejected(&left_rejected, &right_rejected);
+            if ((left_rejected != reported_left_rejected) ||
+                (right_rejected != reported_right_rejected))
+            {
+                tm_printf((UB *) "S2: encoder short edges rejected "
+                          "left=%u right=%u (totals)\n",
+                          (unsigned int) left_rejected,
+                          (unsigned int) right_rejected);
+                reported_left_rejected = left_rejected;
+                reported_right_rejected = right_rejected;
+            }
+            last_encoder_report_ms = now_ms;
+        }
         {
             int32_t const left_delta = left_now - prev_left;
             int32_t const right_delta = right_now - prev_right;
@@ -444,7 +488,7 @@ motion_task (INT stacd, void * p_exinf)
 #endif
 
         motion_post(left_now, right_now, left_speed, right_speed,
-                    total_distance, completed_turn_id);
+                    total_distance, completed_turn_id, now_ms);
     }
 }
 

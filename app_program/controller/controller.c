@@ -18,6 +18,7 @@
 #include "../subsystem1/subsystem1.h"
 #include "../subsystem2/subsystem2.h"
 #include "../subsystem5/avoidance.h"
+#include "../subsystem4/imu_height.h"
 
 #define CTRL_STEER_GAIN         (0.18f)
 #define CTRL_STEER_LIMIT        (0.25f)
@@ -45,6 +46,10 @@ typedef struct
     uint32_t            barcode;
     uint32_t            fault_code;
     bool                b_imu_healthy;
+    imu_event_t         imu;
+    imu_height_t        height;
+    uint32_t            imu_ms;
+    bool                b_have_imu;
     bool                b_turn_in_progress;
     uint16_t            pending_turn;
     uint32_t            next_turn_id;
@@ -211,10 +216,15 @@ ctrl_handle_command (ctrl_state_t * p_ctrl,
     switch (p_command->type)
     {
         case CONTROL_START:
-            if (MISSION_FAULT != p_ctrl->state)
+            if ((MISSION_FAULT != p_ctrl->state) && p_ctrl->b_imu_healthy)
             {
                 p_ctrl->state = MISSION_FOLLOWING;
                 ctrl_set_bits(SYSTEM_BIT_MISSION_RUN);
+            }
+            else
+            {
+                tm_printf((UB *) "CTRL: START refused: fault or IMU "
+                          "not calibrated/healthy\n");
             }
             break;
 
@@ -339,12 +349,21 @@ ctrl_handle_line (ctrl_state_t * p_ctrl, line_event_t const * p_line)
 static void
 ctrl_handle_imu (ctrl_state_t * p_ctrl, imu_event_t const * p_imu)
 {
+    bool const b_new_shock = (p_imu->shock_count != p_ctrl->imu.shock_count);
+    p_ctrl->imu = *p_imu;
     if (p_imu->b_sensor_valid)
     {
-        p_ctrl->b_imu_healthy = true;
+        p_ctrl->b_imu_healthy = p_imu->b_calibrated && (!p_imu->b_saturated);
         p_ctrl->hump_m        = p_imu->estimated_hump_height_m;
 
-        if (p_imu->b_shock_detected)
+        if ((!p_imu->b_calibrated) &&
+            ((MISSION_FOLLOWING == p_ctrl->state) ||
+             (MISSION_AVOIDING == p_ctrl->state)))
+        {
+            ctrl_enter_fault(p_ctrl, FAULT_IMU);
+        }
+        else if (p_imu->b_calibrated &&
+                 (p_imu->b_shock_detected || b_new_shock))
         {
             p_ctrl->base_speed = rmath_minf(p_ctrl->base_speed,
                                             ROBOT_BASE_SPEED *
@@ -356,6 +375,52 @@ ctrl_handle_imu (ctrl_state_t * p_ctrl, imu_event_t const * p_imu)
         p_ctrl->b_imu_healthy = false;
         ctrl_enter_fault(p_ctrl, FAULT_IMU);
     }
+}
+
+static void
+ctrl_apply_height (ctrl_state_t * p_ctrl)
+{
+    imu_height_apply(&p_ctrl->height, &p_ctrl->imu);
+    p_ctrl->hump_m = p_ctrl->imu.estimated_hump_height_m;
+}
+
+static void
+ctrl_report_height_rejection (ctrl_state_t const * p_ctrl, bool b_active,
+                              uint32_t motion_ms, uint32_t interval_ms)
+{
+    tm_printf((UB *) "S4: encoder height rejected reason=%s active=%u "
+              "imu_ms=%u motion_ms=%u interval_ms=%u "
+              "sensor=%u cal=%u tilt=%u saturated=%u shock=%u\n",
+              imu_height_rejection_name(p_ctrl->height.last_rejection),
+              (unsigned int) b_active,
+              (unsigned int) p_ctrl->imu_ms,
+              (unsigned int) motion_ms,
+              (unsigned int) interval_ms,
+              (unsigned int) p_ctrl->imu.b_sensor_valid,
+              (unsigned int) p_ctrl->imu.b_calibrated,
+              (unsigned int) p_ctrl->imu.b_tilt_valid,
+              (unsigned int) p_ctrl->imu.b_saturated,
+              (unsigned int) p_ctrl->imu.b_shock_detected);
+}
+
+static void
+ctrl_report_height_wheels (motion_event_t const * p_motion)
+{
+    char left[S1_FIXED_TEXT_MAX];
+    char right[S1_FIXED_TEXT_MAX];
+    bool const b_left_finite = (p_motion->left_speed_m_s >= -1000000.0f &&
+                                p_motion->left_speed_m_s <= 1000000.0f);
+    bool const b_right_finite = (p_motion->right_speed_m_s >= -1000000.0f &&
+                                 p_motion->right_speed_m_s <= 1000000.0f);
+    if (b_left_finite)
+        telemetry_format_fixed(left, p_motion->left_speed_m_s, 3U);
+    if (b_right_finite)
+        telemetry_format_fixed(right, p_motion->right_speed_m_s, 3U);
+    tm_printf((UB *) "S4: rejected wheel data left_m_s=%s right_m_s=%s "
+              "left_ticks=%d right_ticks=%d\n",
+              b_left_finite ? left : "nonfinite/out_of_range",
+              b_right_finite ? right : "nonfinite/out_of_range",
+              (int) p_motion->left_ticks, (int) p_motion->right_ticks);
 }
 
 static void
@@ -394,7 +459,40 @@ ctrl_handle_event (ctrl_state_t * p_ctrl, system_event_t const * p_event)
             break;
 
         case SYSTEM_EVENT_MOTION:
+        {
+            bool const b_was_valid = p_ctrl->height.b_valid;
+            bool const b_was_active = p_ctrl->height.b_active;
+            bool const b_was_gap = p_ctrl->height.b_gap;
+            uint32_t const gap_count = p_ctrl->height.gap_count;
+            uint32_t const interval_ms =
+                p_event->timestamp_ms - p_ctrl->height.last_ms;
             p_ctrl->distance_m = p_event->data.motion.distance_m;
+            if (p_ctrl->b_have_imu)
+            {
+                imu_height_update(&p_ctrl->height, &p_event->data.motion,
+                                  &p_ctrl->imu, p_ctrl->imu_ms,
+                                  p_event->timestamp_ms);
+                if (((b_was_valid || b_was_gap) && !p_ctrl->height.b_valid &&
+                     !p_ctrl->height.b_gap) ||
+                    p_ctrl->height.b_rejected)
+                {
+                    ctrl_report_height_rejection(p_ctrl, b_was_active,
+                                                  p_event->timestamp_ms,
+                                                  interval_ms);
+                    ctrl_report_height_wheels(&p_event->data.motion);
+                }
+                if (p_ctrl->height.gap_count != gap_count)
+                {
+                    tm_printf((UB *) "S4: bounded tilt gap bridged count=%u\n",
+                              (unsigned int) p_ctrl->height.gap_count);
+                }
+                if (p_ctrl->height.b_complete)
+                {
+                    tm_printf((UB *) "S4: encoder hump complete peak_mm=%d\n",
+                              (int) (p_ctrl->height.last_peak_m * 1000.0f));
+                }
+                ctrl_apply_height(p_ctrl);
+            }
             if (p_ctrl->b_turn_in_progress &&
                 p_event->data.motion.turn_complete &&
                 (p_event->data.motion.turn_id == p_ctrl->active_turn_id))
@@ -403,10 +501,41 @@ ctrl_handle_event (ctrl_state_t * p_ctrl, system_event_t const * p_event)
                 p_ctrl->active_turn_id = 0U;
             }
             break;
+        }
 
         case SYSTEM_EVENT_IMU:
+        {
+            imu_height_rejection_t reason;
+            bool const b_was_valid = p_ctrl->height.b_valid;
+            bool const b_was_active = p_ctrl->height.b_active;
+            bool const b_was_gap = p_ctrl->height.b_gap;
             ctrl_handle_imu(p_ctrl, &p_event->data.imu);
+            p_ctrl->imu_ms = p_event->timestamp_ms;
+            p_ctrl->b_have_imu = true;
+            imu_height_observe_imu(&p_ctrl->height, &p_ctrl->imu,
+                                   p_ctrl->imu_ms);
+            reason = HEIGHT_REJECT_NONE;
+            if (p_ctrl->height.b_have_distance &&
+                 ((p_ctrl->imu_ms - p_ctrl->height.last_ms) > 100U) &&
+                 ((p_ctrl->height.last_ms - p_ctrl->imu_ms) > 60U))
+            {
+                reason = HEIGHT_REJECT_WHEEL_AGE;
+            }
+            if (HEIGHT_REJECT_NONE != reason)
+            {
+                imu_height_invalidate(&p_ctrl->height, reason);
+            }
+            if ((b_was_valid || b_was_active || b_was_gap) &&
+                !p_ctrl->height.b_gap && !p_ctrl->height.b_valid)
+            {
+                ctrl_report_height_rejection(p_ctrl, b_was_active,
+                                              p_ctrl->height.last_ms,
+                                              p_ctrl->imu_ms -
+                                              p_ctrl->height.last_ms);
+            }
+            ctrl_apply_height(p_ctrl);
             break;
+        }
 
         case SYSTEM_EVENT_OBSTACLE:
             ctrl_handle_obstacle(p_ctrl, &p_event->data.obstacle);
@@ -521,6 +650,7 @@ ctrl_publish_telemetry (ctrl_state_t * p_ctrl, uint32_t now_ms)
         telemetry.obstacle_distance_cm = p_ctrl->obstacle_cm;
         telemetry.last_barcode         = p_ctrl->barcode;
         telemetry.fault_code           = p_ctrl->fault_code;
+        telemetry.imu                  = p_ctrl->imu;
         (void) telemetry_publish(&telemetry);
         p_ctrl->last_telemetry_ms = now_ms;
     }
@@ -546,6 +676,8 @@ controller_task (INT stacd, void * p_exinf)
 
 #if (!ROBOT_SIMULATION) && (CTRL_AUTO_START_MS > 0)
     bool                b_auto_started = false;
+#elif ROBOT_SIMULATION
+    bool                b_sim_started = false;
 #endif
 
     ctrl.state             = MISSION_IDLE;
@@ -555,11 +687,9 @@ controller_task (INT stacd, void * p_exinf)
     ctrl.next_turn_id       = 0U;
     ctrl.active_turn_id     = 0U;
     ctrl.last_telemetry_ms = board_millis();
+    imu_height_init(&ctrl.height);
 
-#if ROBOT_SIMULATION
-    ctrl.state = MISSION_FOLLOWING;
-    ctrl_set_bits(SYSTEM_BIT_MISSION_RUN);
-#elif CTRL_AUTO_START_MS > 0
+#if (!ROBOT_SIMULATION) && (CTRL_AUTO_START_MS > 0)
 #warning "CTRL_AUTO_START_MS is on: the car drives off by itself after power-up"
     tm_printf((UB *) "CTRL: TEST auto-start: following the line in %u ms\n",
               (unsigned int) CTRL_AUTO_START_MS);
@@ -575,7 +705,8 @@ controller_task (INT stacd, void * p_exinf)
 
 #if (!ROBOT_SIMULATION) && (CTRL_AUTO_START_MS > 0)
         /* Test only: one START, as if a user had sent it. */
-        if ((!b_auto_started) && (board_millis() >= CTRL_AUTO_START_MS))
+        if ((!b_auto_started) && ctrl.b_imu_healthy &&
+            (board_millis() >= CTRL_AUTO_START_MS))
         {
             b_auto_started = true;
             command.type   = CONTROL_START;
@@ -595,6 +726,14 @@ controller_task (INT stacd, void * p_exinf)
             msg_size = tk_rcv_mbf(gh_event_mbf, &event, TMO_POL);
         }
 
+#if ROBOT_SIMULATION
+        if ((!b_sim_started) && ctrl.b_imu_healthy)
+        {
+            b_sim_started = true;
+            command.type = CONTROL_START;
+            ctrl_handle_command(&ctrl, &command);
+        }
+#endif
         ctrl_step_avoidance(&ctrl, board_millis());
         ctrl_publish_telemetry(&ctrl, board_millis());
     }

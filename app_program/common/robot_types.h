@@ -90,12 +90,13 @@ typedef struct
 
 typedef enum
 {
-    MOTION_STATIONARY   = 0,    /* |a| < 0.5 g and |gz| < 10 dps      */
-    MOTION_ACCELERATING = 1,    /* |a| > 1.5 g                        */
-    MOTION_TURNING      = 2,    /* |gz| > 20 dps                      */
-    MOTION_CLIMBING     = 3,    /* az > 1.3 g                         */
-    MOTION_DESCENDING   = 4,    /* az < 0.7 g                         */
-    MOTION_IMPACT       = 5     /* |a| > 3.0 g                        */
+    MOTION_STATIONARY   = 0,    /* Quiet IMU; cannot prove zero speed. */
+    MOTION_ACCELERATING = 1,
+    MOTION_TURNING      = 2,
+    MOTION_CLIMBING     = 3,
+    MOTION_DESCENDING   = 4,
+    MOTION_IMPACT       = 5,
+    MOTION_UNKNOWN     = 6     /* Calibrating or invalid sample. */
 } motion_class_t;
 
 typedef struct
@@ -110,6 +111,31 @@ typedef struct
     motion_class_t  motion_state;
     float           tilt_roll_deg;
     float           tilt_pitch_deg;
+    bool            b_calibrated;
+    bool            b_tilt_valid;
+    bool            b_hump_active;
+    bool            b_hump_complete;
+    bool            b_hump_height_valid;
+    bool            b_hump_rejected;
+    bool            b_saturated;
+    float           vertical_acceleration_g;
+    uint32_t        hump_count;
+    uint32_t        shock_count;
+    uint32_t        rejected_hump_count;
+    float           magnetic_heading_deg;
+    bool            b_heading_valid;
+    bool            b_turn_rate_valid;
+    bool            b_magnetic_disturbed;
+    bool            b_has_gyro;
+    bool            b_turn_rate_estimated;
+    bool            b_height_approximate;
+    bool            b_mag_calibrated;
+    float           terrain_rise_m;
+    float           terrain_peak_m;
+    bool            b_height_tracking_valid;
+    bool            b_height_uses_odometry;
+    bool            b_height_gap_pending;
+    uint32_t        height_gap_count;
 } imu_event_t;
 
 /* Scanner's decision for the controller (stage 4 of Buddy 5). */
@@ -178,6 +204,7 @@ typedef struct
     float           obstacle_distance_cm;
     uint32_t        last_barcode;
     uint32_t        fault_code;
+    imu_event_t     imu;
 } telemetry_message_t;
 
 /* System status bits (event flag owned by the controller, IF-05). */

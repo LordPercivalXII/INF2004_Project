@@ -27,3 +27,7 @@ IMPORT void tm_com_init(void);
 IMPORT void tm_snd_dat( const UB* buf, INT size );
 IMPORT void tm_rcv_dat( UB* buf, INT size );
 
+#if TK_SUPPORT_SMP && TM_CONSOLE_USB_CDC
+IMPORT void tm_console_lock(UINT *intsts);
+IMPORT void tm_console_unlock(UINT intsts);
+#endif

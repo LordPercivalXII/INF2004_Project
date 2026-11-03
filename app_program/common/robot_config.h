@@ -70,20 +70,22 @@
 #define ULTRASONIC_FINE_MARGIN_DEG      (15U)   /* up to the next coarse angle */
 #define ULTRASONIC_BEAM_WIDTH_DEG       (15U)
 
-/* ---- Buddy 4: MPU6050 IMU on I2C0 through the kernel "iica" driver ---- */
+/* ---- Buddy 4: LSM303DLHC on I2C0 through kernel "iica" ---- */
 #define IMU_I2C_DEVICE_NAME             "iica"
-#define IMU_I2C_ADDRESS                 (0x68U)
+#define IMU_ACCEL_ADDRESS               (0x19U)
+#define IMU_MAG_ADDRESS                 (0x1EU)
 #define IMU_SAMPLE_RATE_HZ              (100U)
 #define IMU_GRAVITY_M_S2                (9.80665f)
-#define IMU_ACCEL_COUNTS_PER_G          (8192.0f)   /* +-4 g (AFS_SEL=1)    */
-#define IMU_GYRO_COUNTS_PER_DPS         (65.5f)     /* +-1000 dps (FS_SEL=1) */
 #define IMU_SHOCK_THRESHOLD_G           (3.0f)      /* FR10                 */
-#define IMU_HUMP_THRESHOLD_G            (0.25f)     /* FR11                 */
+#define IMU_HUMP_THRESHOLD_G            (0.08f)     /* world vertical       */
 #define IMU_FILTER_WINDOW_SIZE          (5U)        /* moving average taps  */
 
 /* ---- Buddy 2: motors and encoders ---- */
 #define MOTOR_ENCODER_TICKS_PER_REV     (630.0f)
 #define MOTOR_WHEEL_DIAMETER_M          (0.066f)
+/* 100 us still permits 3.29 m/s with the geometry above, well above the
+ * 0.70 m/s drive limit. Suppress faster duplicate electrical edges. */
+#define MOTOR_ENCODER_MIN_EDGE_US       (100U)
 #define MOTOR_TRACK_WIDTH_M             (0.110f)  /* Measured wheel-center spacing, approx. */
 /* 1 = motors off and raw encoder ticks printed (build TEST=1 SIM=0). */
 #ifndef S2_ENCODER_CALIBRATION
