@@ -65,8 +65,8 @@ bool telemetry_submit_command(control_command_t const *p_command)
 }
 
 /*
- * Buddy 1: Accept a speed command received by the MQTT networking task.
- * Payload format: SPEED:0.35 (ASCII, no trailing whitespace).
+ * Buddy 1: Accept START, STOP, or SPEED commands from MQTT.
+ * Payloads: START, STOP, SPEED:0.35 (ASCII, no trailing whitespace).
  * Parse thousandths as integers to avoid floating-point boundary errors.
  * Valid speed range comes from robot_config.h.
  */
@@ -82,7 +82,34 @@ void mqtt_utk_control_rx(char const *p_payload, uint32_t length)
     bool seen_digit = false;
     control_command_t command;
 
-    if ((NULL == p_payload) || (length <= 6U) || (length > 16U))
+    /* Exact START/STOP payloads are accepted before SPEED parsing. */
+    if (NULL == p_payload)
+    {
+        return;
+    }
+
+    if ((5U == length) &&
+        ('S' == p_payload[0]) && ('T' == p_payload[1]) &&
+        ('A' == p_payload[2]) && ('R' == p_payload[3]) &&
+        ('T' == p_payload[4]))
+    {
+        command.type = CONTROL_START;
+        command.value = 0.0f;
+        (void)telemetry_submit_command(&command);
+        return;
+    }
+
+    if ((4U == length) &&
+        ('S' == p_payload[0]) && ('T' == p_payload[1]) &&
+        ('O' == p_payload[2]) && ('P' == p_payload[3]))
+    {
+        command.type = CONTROL_STOP;
+        command.value = 0.0f;
+        (void)telemetry_submit_command(&command);
+        return;
+    }
+
+    if ((length <= 6U) || (length > 16U))
     {
         return;
     }
@@ -197,7 +224,7 @@ void telemetry_format_fixed(char *p_text, float value, uint32_t decimals)
  * @brief Print one telemetry snapshot as a JSON line.
  */
 static void
-telemetry_trace_fixed (char * p_text, float value)
+telemetry_trace_fixed(char *p_text, float value)
 {
     if ((value >= -TELEMETRY_FIXED_LIMIT) &&
         (value <= TELEMETRY_FIXED_LIMIT))
@@ -215,7 +242,7 @@ telemetry_trace_fixed (char * p_text, float value)
 }
 
 static void
-telemetry_print_height_trace (telemetry_message_t const * p_msg)
+telemetry_print_height_trace(telemetry_message_t const *p_msg)
 {
     char line[640];
     char pitch[S1_FIXED_TEXT_MAX];
@@ -241,35 +268,35 @@ telemetry_print_height_trace (telemetry_message_t const * p_msg)
     telemetry_trace_fixed(distance, p_msg->motion.distance_m);
     telemetry_trace_fixed(left, p_msg->motion.left_speed_m_s);
     telemetry_trace_fixed(right, p_msg->motion.right_speed_m_s);
-    (void) tm_sprintf((UB *) line,
-                      (UB *) "{\"height_trace\":1,\"seq\":%u,\"dropped\":%u,"
-                      "\"t_ms\":%u,\"imu_ms\":%u,\"dt_ms\":%u,"
-                      "\"pitch_deg\":%s,\"roll_deg\":%s,"
-                      "\"ax_g\":%s,\"ay_g\":%s,\"az_g\":%s,"
-                      "\"left_ticks\":%d,\"right_ticks\":%d,"
-                      "\"left_m_s\":%s,\"right_m_s\":%s,"
-                      "\"distance_m\":%s,\"ds_mm\":%s,"
-                      "\"rise_mm\":%s,\"peak_mm\":%s,"
-                      "\"tilt_valid\":%u,\"tracking_valid\":%u,"
-                      "\"active\":%u,\"gap\":%u,\"imu_dt_ms\":%u,"
-                      "\"timing_gap\":%u,\"acquisition_us\":%u}\n",
-                      (unsigned int) p_msg->trace_sequence,
-                      (unsigned int) p_msg->trace_dropped,
-                      (unsigned int) p_msg->timestamp_ms,
-                      (unsigned int) p_msg->imu_ms,
-                      (unsigned int) p_msg->motion_interval_ms,
-                      pitch, roll, ax, ay, az,
-                      (int) p_msg->motion.left_ticks,
-                      (int) p_msg->motion.right_ticks,
-                      left, right, distance, ds, rise, peak,
-                      (unsigned int) p_msg->imu.b_tilt_valid,
-                      (unsigned int) p_msg->imu.b_height_tracking_valid,
-                      (unsigned int) p_msg->imu.b_hump_active,
-                      (unsigned int) p_msg->imu.b_height_gap_pending,
-                      (unsigned int) p_msg->imu.sample_interval_ms,
-                      (unsigned int) p_msg->imu.b_timing_gap,
-                      (unsigned int) p_msg->imu.acquisition_us);
-    (void) tm_putstring((UB *) line);
+    (void)tm_sprintf((UB *)line,
+                     (UB *)"{\"height_trace\":1,\"seq\":%u,\"dropped\":%u,"
+                           "\"t_ms\":%u,\"imu_ms\":%u,\"dt_ms\":%u,"
+                           "\"pitch_deg\":%s,\"roll_deg\":%s,"
+                           "\"ax_g\":%s,\"ay_g\":%s,\"az_g\":%s,"
+                           "\"left_ticks\":%d,\"right_ticks\":%d,"
+                           "\"left_m_s\":%s,\"right_m_s\":%s,"
+                           "\"distance_m\":%s,\"ds_mm\":%s,"
+                           "\"rise_mm\":%s,\"peak_mm\":%s,"
+                           "\"tilt_valid\":%u,\"tracking_valid\":%u,"
+                           "\"active\":%u,\"gap\":%u,\"imu_dt_ms\":%u,"
+                           "\"timing_gap\":%u,\"acquisition_us\":%u}\n",
+                     (unsigned int)p_msg->trace_sequence,
+                     (unsigned int)p_msg->trace_dropped,
+                     (unsigned int)p_msg->timestamp_ms,
+                     (unsigned int)p_msg->imu_ms,
+                     (unsigned int)p_msg->motion_interval_ms,
+                     pitch, roll, ax, ay, az,
+                     (int)p_msg->motion.left_ticks,
+                     (int)p_msg->motion.right_ticks,
+                     left, right, distance, ds, rise, peak,
+                     (unsigned int)p_msg->imu.b_tilt_valid,
+                     (unsigned int)p_msg->imu.b_height_tracking_valid,
+                     (unsigned int)p_msg->imu.b_hump_active,
+                     (unsigned int)p_msg->imu.b_height_gap_pending,
+                     (unsigned int)p_msg->imu.sample_interval_ms,
+                     (unsigned int)p_msg->imu.b_timing_gap,
+                     (unsigned int)p_msg->imu.acquisition_us);
+    (void)tm_putstring((UB *)line);
 }
 
 static void telemetry_print(telemetry_message_t const *p_msg)
@@ -301,69 +328,69 @@ static void telemetry_print(telemetry_message_t const *p_msg)
     telemetry_format_fixed(rise, p_msg->imu.terrain_rise_m, 3U);
     telemetry_format_fixed(peak, p_msg->imu.terrain_peak_m, 3U);
 
-    (void) tm_sprintf((UB *) line,
-                      (UB *) "{\"t_ms\":%u,\"mission\":%u,\"speed\":%s,"
-                      "\"line\":%s,\"distance\":%s,\"hump_m\":%s,"
-                      "\"obstacle_cm\":%s,\"barcode\":%u,\"fault\":%u,"
-                      "\"imu_valid\":%u,\"imu_calibrated\":%u,"
-                      "\"motion\":%u,\"roll_deg\":%s,\"pitch_deg\":%s,"
-                      "\"turn_dps\":%s,\"vertical_g\":%s,"
-                      "\"hump_active\":%u,\"hump_valid\":%u,"
-                      "\"hump_count\":%u,\"imu_saturated\":%u,"
-                      "\"tilt_valid\":%u,\"shock_count\":%u,"
-                      "\"hump_rejected_count\":%u,\"imu_model\":\"LSM303DLHC\","
-                      "\"heading_deg\":%s,\"heading_valid\":%u,"
-                      "\"turn_valid\":%u,\"mag_disturbed\":%u,"
-                      "\"has_gyro\":%u,\"turn_estimated\":%u,"
-                      "\"height_approx\":%u,\"mag_calibrated\":%u,"
-                      "\"rise_m\":%s,\"terrain_peak_m\":%s,"
-                      "\"height_tracking_valid\":%u,\"height_uses_odometry\":%u,"
-                      "\"height_gap_pending\":%u,\"height_gap_count\":%u}\n",
-                      (unsigned int) p_msg->timestamp_ms,
-                      (unsigned int) p_msg->mission_state,
-                      speed, error, dist, hump, obst,
-                      (unsigned int) p_msg->last_barcode,
-                      (unsigned int) p_msg->fault_code,
-                      (unsigned int) p_msg->imu.b_sensor_valid,
-                      (unsigned int) p_msg->imu.b_calibrated,
-                      (unsigned int) p_msg->imu.motion_state,
-                      roll, pitch, turn, vertical,
-                      (unsigned int) p_msg->imu.b_hump_active,
-                      (unsigned int) p_msg->imu.b_hump_height_valid,
-                      (unsigned int) p_msg->imu.hump_count,
-                      (unsigned int) p_msg->imu.b_saturated,
-                      (unsigned int) p_msg->imu.b_tilt_valid,
-                      (unsigned int) p_msg->imu.shock_count,
-                      (unsigned int) p_msg->imu.rejected_hump_count,
-                      heading,
-                      (unsigned int) p_msg->imu.b_heading_valid,
-                      (unsigned int) p_msg->imu.b_turn_rate_valid,
-                      (unsigned int) p_msg->imu.b_magnetic_disturbed,
-                      (unsigned int) p_msg->imu.b_has_gyro,
-                      (unsigned int) p_msg->imu.b_turn_rate_estimated,
-                      (unsigned int) p_msg->imu.b_height_approximate,
-                      (unsigned int) p_msg->imu.b_mag_calibrated,
-                      rise, peak,
-                      (unsigned int) p_msg->imu.b_height_tracking_valid,
-                      (unsigned int) p_msg->imu.b_height_uses_odometry,
-                      (unsigned int) p_msg->imu.b_height_gap_pending,
-                      (unsigned int) p_msg->imu.height_gap_count);
-    (void) tm_putstring((UB *) line);
+    (void)tm_sprintf((UB *)line,
+                     (UB *)"{\"t_ms\":%u,\"mission\":%u,\"speed\":%s,"
+                           "\"line\":%s,\"distance\":%s,\"hump_m\":%s,"
+                           "\"obstacle_cm\":%s,\"barcode\":%u,\"fault\":%u,"
+                           "\"imu_valid\":%u,\"imu_calibrated\":%u,"
+                           "\"motion\":%u,\"roll_deg\":%s,\"pitch_deg\":%s,"
+                           "\"turn_dps\":%s,\"vertical_g\":%s,"
+                           "\"hump_active\":%u,\"hump_valid\":%u,"
+                           "\"hump_count\":%u,\"imu_saturated\":%u,"
+                           "\"tilt_valid\":%u,\"shock_count\":%u,"
+                           "\"hump_rejected_count\":%u,\"imu_model\":\"LSM303DLHC\","
+                           "\"heading_deg\":%s,\"heading_valid\":%u,"
+                           "\"turn_valid\":%u,\"mag_disturbed\":%u,"
+                           "\"has_gyro\":%u,\"turn_estimated\":%u,"
+                           "\"height_approx\":%u,\"mag_calibrated\":%u,"
+                           "\"rise_m\":%s,\"terrain_peak_m\":%s,"
+                           "\"height_tracking_valid\":%u,\"height_uses_odometry\":%u,"
+                           "\"height_gap_pending\":%u,\"height_gap_count\":%u}\n",
+                     (unsigned int)p_msg->timestamp_ms,
+                     (unsigned int)p_msg->mission_state,
+                     speed, error, dist, hump, obst,
+                     (unsigned int)p_msg->last_barcode,
+                     (unsigned int)p_msg->fault_code,
+                     (unsigned int)p_msg->imu.b_sensor_valid,
+                     (unsigned int)p_msg->imu.b_calibrated,
+                     (unsigned int)p_msg->imu.motion_state,
+                     roll, pitch, turn, vertical,
+                     (unsigned int)p_msg->imu.b_hump_active,
+                     (unsigned int)p_msg->imu.b_hump_height_valid,
+                     (unsigned int)p_msg->imu.hump_count,
+                     (unsigned int)p_msg->imu.b_saturated,
+                     (unsigned int)p_msg->imu.b_tilt_valid,
+                     (unsigned int)p_msg->imu.shock_count,
+                     (unsigned int)p_msg->imu.rejected_hump_count,
+                     heading,
+                     (unsigned int)p_msg->imu.b_heading_valid,
+                     (unsigned int)p_msg->imu.b_turn_rate_valid,
+                     (unsigned int)p_msg->imu.b_magnetic_disturbed,
+                     (unsigned int)p_msg->imu.b_has_gyro,
+                     (unsigned int)p_msg->imu.b_turn_rate_estimated,
+                     (unsigned int)p_msg->imu.b_height_approximate,
+                     (unsigned int)p_msg->imu.b_mag_calibrated,
+                     rise, peak,
+                     (unsigned int)p_msg->imu.b_height_tracking_valid,
+                     (unsigned int)p_msg->imu.b_height_uses_odometry,
+                     (unsigned int)p_msg->imu.b_height_gap_pending,
+                     (unsigned int)p_msg->imu.height_gap_count);
+    (void)tm_putstring((UB *)line);
     if (p_msg->imu.b_height_interrupted_available)
     {
         telemetry_format_fixed(rise, p_msg->imu.interrupted_rise_m, 3U);
         telemetry_format_fixed(peak, p_msg->imu.interrupted_peak_m, 3U);
-        (void) tm_sprintf((UB *) line,
-                          (UB *) "{\"height_interrupted\":1,\"t_ms\":%u,"
-                          "\"interrupted_height_valid\":0,"
-                          "\"interrupted_rise_m\":%s,"
-                          "\"interrupted_peak_m\":%s,"
-                          "\"interrupted_reason\":\"%s\"}\n",
-                          (unsigned int) p_msg->timestamp_ms, rise, peak,
-                          imu_height_rejection_name(
-                              (imu_height_rejection_t)
-                              p_msg->imu.height_interrupted_reason));
-        (void) tm_putstring((UB *) line);
+        (void)tm_sprintf((UB *)line,
+                         (UB *)"{\"height_interrupted\":1,\"t_ms\":%u,"
+                               "\"interrupted_height_valid\":0,"
+                               "\"interrupted_rise_m\":%s,"
+                               "\"interrupted_peak_m\":%s,"
+                               "\"interrupted_reason\":\"%s\"}\n",
+                         (unsigned int)p_msg->timestamp_ms, rise, peak,
+                         imu_height_rejection_name(
+                             (imu_height_rejection_t)
+                                 p_msg->imu.height_interrupted_reason));
+        (void)tm_putstring((UB *)line);
     }
 }
 
@@ -463,8 +490,8 @@ void telemetry_task(INT stacd, void *p_exinf)
                     {
                         if (!b_mqtt_queue_error)
                         {
-                            tm_printf((UB *) "S1: MQTT telemetry buffer full; "
-                                      "snapshot not delivered\n");
+                            tm_printf((UB *)"S1: MQTT telemetry buffer full; "
+                                            "snapshot not delivered\n");
                             b_mqtt_queue_error = true;
                         }
                     }
@@ -481,27 +508,27 @@ void telemetry_task(INT stacd, void *p_exinf)
 
         if ((now_ms - last_heartbeat_ms) >= ROBOT_TELEMETRY_PERIOD_MS)
         {
-            (void) tm_sprintf((UB *) line, (UB *) "{\"heartbeat_ms\":%u}\n",
-                              (unsigned int) now_ms);
-            (void) tm_putstring((UB *) line);
+            (void)tm_sprintf((UB *)line, (UB *)"{\"heartbeat_ms\":%u}\n",
+                             (unsigned int)now_ms);
+            (void)tm_putstring((UB *)line);
 #if TK_SUPPORT_SMP && TM_CONSOLE_USB_CDC
             {
                 KNL_LOCK_DIAG locks;
 
                 knl_kernel_lock_audit(&locks);
-                tm_printf((UB *) "{\"timing_diag\":1,\"t_ms\":%u,"
-                          "\"kernel_hold_us\":%u,\"kernel_wait_us\":%u,"
-                          "\"console_hold0_us\":%u,\"console_hold1_us\":%u,"
-                          "\"console_wait0_us\":%u,\"console_wait1_us\":%u,"
-                          "\"usb_dropped_bytes\":%u}\n",
-                          (unsigned int) now_ms,
-                          (unsigned int) locks.max_hold_us,
-                          (unsigned int) locks.max_wait_us,
-                          (unsigned int) tm_console_max_hold_us[0],
-                          (unsigned int) tm_console_max_hold_us[1],
-                          (unsigned int) tm_console_max_wait_us[0],
-                          (unsigned int) tm_console_max_wait_us[1],
-                          (unsigned int) tm_usb_dropped);
+                tm_printf((UB *)"{\"timing_diag\":1,\"t_ms\":%u,"
+                                "\"kernel_hold_us\":%u,\"kernel_wait_us\":%u,"
+                                "\"console_hold0_us\":%u,\"console_hold1_us\":%u,"
+                                "\"console_wait0_us\":%u,\"console_wait1_us\":%u,"
+                                "\"usb_dropped_bytes\":%u}\n",
+                          (unsigned int)now_ms,
+                          (unsigned int)locks.max_hold_us,
+                          (unsigned int)locks.max_wait_us,
+                          (unsigned int)tm_console_max_hold_us[0],
+                          (unsigned int)tm_console_max_hold_us[1],
+                          (unsigned int)tm_console_max_wait_us[0],
+                          (unsigned int)tm_console_max_wait_us[1],
+                          (unsigned int)tm_usb_dropped);
             }
 #endif
             last_heartbeat_ms = now_ms;

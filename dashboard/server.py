@@ -1,5 +1,4 @@
 import os
-import re
 import json
 import time
 import threading
@@ -30,13 +29,11 @@ def on_disconnect(c, userdata, disconnect_flags, reason_code, properties):
         state['connected'] = False
 
 def on_message(c, userdata, msg):
-    print("MQTT MESSAGE RECEIVED:", msg.topic, repr(msg.payload), flush=True)
+    print('MQTT MESSAGE RECEIVED:', msg.topic, repr(msg.payload), flush=True)
     try:
         value = json.loads(msg.payload.decode('utf-8-sig'))
         if not isinstance(value, dict):
             return
-    except (UnicodeDecodeError, ValueError):
-        return
     except (UnicodeDecodeError, ValueError):
         return
     with lock:
@@ -79,7 +76,7 @@ def publish(topic, payload, retain=False):
     if info.rc != mqtt.MQTT_ERR_SUCCESS:
         return jsonify({'error': f'MQTT publish failed: {info.rc}'}), 503
     return jsonify({'ok': True, 'topic': topic, 'payload': payload,
-                    'note': 'Broker accepted the publish request; robot application is not acknowledged.'})
+                    'note': 'MQTT publish queued; robot application is not acknowledged.'})
 
 CODE39 = set('0123456789ABCDEFGHIJKLMNOPQRSTUVWXYZ-.$/+%')
 
@@ -105,6 +102,14 @@ def speed():
     if isinstance(value, bool) or not isinstance(value, (float, int)) or not 0.10 <= value <= 0.70:
         return jsonify({'error': 'Speed must be between 0.10 and 0.70 m/s'}), 400
     return publish(CONTROL, f'SPEED:{value:.2f}', retain=False)
+
+@app.post('/api/start')
+def start():
+    return publish(CONTROL, 'START', retain=False)
+
+@app.post('/api/stop')
+def stop():
+    return publish(CONTROL, 'STOP', retain=False)
 
 if __name__ == '__main__':
     app.run(host='127.0.0.1', port=8080, debug=False)
