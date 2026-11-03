@@ -30,7 +30,9 @@
 #define ROBOT_IMU_PERIOD_MS             (10U)
 #define ROBOT_CONTROLLER_WAIT_MS        (10U)   /* was 2 ms at 1 kHz tick */
 
+#ifndef ROBOT_BASE_SPEED
 #define ROBOT_BASE_SPEED                (0.35f)
+#endif
 #define ROBOT_MAX_SPEED                 (0.70f)
 #define ROBOT_MIN_SPEED                 (0.10f)
 

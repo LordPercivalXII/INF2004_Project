@@ -21,8 +21,9 @@
 #include "../subsystem4/imu_height.h"
 #include "../subsystem4/imu_processing.h"
 
-#define CTRL_STEER_GAIN         (0.18f)
-#define CTRL_STEER_LIMIT        (0.25f)
+#define CTRL_STEER_GAIN         (0.10f)
+#define CTRL_STEER_LIMIT        (0.12f)
+#define CTRL_STEER_SMOOTH       (0.30f) /* low-pass on the error: less jerk */
 #define CTRL_STEER_KD           (0.001f) /* per (error/s): damps zig-zag */
 #define CTRL_LINE_DT_S          ((float) ROBOT_LINE_PERIOD_MS / 1000.0f)
 #define CTRL_BARCODE_SLOW_SIDE  (0.55f)
@@ -348,6 +349,12 @@ ctrl_handle_line (ctrl_state_t * p_ctrl, line_event_t const * p_line)
         /* PD steering.  With the line sensors on the line edges the
            error is continuous near the centre; the D term damps the
            zig-zag.  No D kick on the first cycle after a turn. */
+        static float smooth_error = 0.0f;
+        smooth_error = p_ctrl->b_steer_primed
+            ? (smooth_error +
+               (CTRL_STEER_SMOOTH * (p_ctrl->line_error - smooth_error)))
+            : p_ctrl->line_error;
+        p_ctrl->line_error = smooth_error;
         float const derivative = p_ctrl->b_steer_primed
             ? ((p_ctrl->line_error - p_ctrl->prev_line_error) /
                CTRL_LINE_DT_S)
@@ -383,7 +390,9 @@ ctrl_handle_imu (ctrl_state_t * p_ctrl, imu_event_t const * p_imu)
             (!p_imu->b_saturated) && !b_bad_timing;
         p_ctrl->hump_m        = p_imu->estimated_hump_height_m;
 
-        if ((!p_imu->b_calibrated || b_bad_timing) &&
+        /* A transient IMU timing gap (e.g. motor noise or a blocked I2C
+         * read) is not fatal; only an uncalibrated IMU stops the car. */
+        if ((!p_imu->b_calibrated) &&
             ((MISSION_FOLLOWING == p_ctrl->state) ||
              (MISSION_AVOIDING == p_ctrl->state)))
         {
@@ -809,7 +818,7 @@ controller_task (INT stacd, void * p_exinf)
 #if (!ROBOT_SIMULATION) && (CTRL_AUTO_START_MS > 0)
         /* Test only: one START, as if a user had sent it. */
         if ((!b_auto_started) && ctrl.b_imu_healthy &&
-            (board_millis() >= CTRL_AUTO_START_MS))
+            ctrl.b_line_detected && (board_millis() >= CTRL_AUTO_START_MS))
         {
             b_auto_started = true;
             command.type   = CONTROL_START;

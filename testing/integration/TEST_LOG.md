@@ -16,6 +16,14 @@ Define a test here before running it. Test IDs never change.
 | INT-04 | IF-04: telemetry snapshot every 1 s | IF-04 | manual | watch console | 1 line/s |
 | INT-05 | IF-05: obstacle sets SYSTEM_BIT_OBSTACLE, avoidance runs | IF-05 | manual | SIM=1, every 12th scan reports 24 cm ahead | mission 2 then back to 1 |
 | INT-06 | barcode `*L*`/`*R*` reaches the controller (S3 → controller) | IF-01 | manual | SIM=1, every 10 s | `barcode` alternates 1 / 2 |
+| INT-07 | S3 line error steers Buddy 2 motion | IF-01, IF-03 | manual | `TEST=1 SIM=1`; capture telemetry and height traces for 10 s after auto-start | `mission` stays 1, `line` changes, `distance` increases, and `left_m_s` / `right_m_s` respond differently to line drift |
+| INT-08 | S3 routed junction action completes through Buddy 2 motion | IF-01, IF-03 | manual | `TEST=1 SIM=1`; scan Code 39 `*A*` across GP28, then observe the simulated junction 3 s later | `barcode` is 65 (`A`), `S3` reports `A -> LEFT`, the trace shows the turn and return to forward wheel speeds, and no fault is reported |
+| INT-09 | Real S3 line tracking steers Buddy 2 hardware motion | IF-01, IF-03, FR7 | manual | Build `TEST=0 SIM=0 AUTO_START_MS=15000 S3_LINE_DEBUG=1 BASE_SPEED=0.20`; calibrate both sensors across line and floor during the 3 s boot calibration, then observe after 15 s | calibration reports measured white/black counts (not defaults), `S3 line` readings show the line/error changing, telemetry `mission` becomes 1, `distance` increases slower than the 0.35 m/s run, and wheel motion responds to steering; no fault is reported |
+
+**Hardware safety:** INT-09's image can start the motors automatically after boot
+once the IMU is healthy. Keep the track clear and be ready to cut motor power.
+Flash a normal non-auto-start image after the test; the auto-start repeats on
+every reboot.
 
 *Method:* **auto** = `TEST_CHECK` in code, result printed on the console;
 **manual** = a person observes the result (LED, scope, meter, phone app…).
