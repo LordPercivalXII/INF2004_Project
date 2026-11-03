@@ -22,6 +22,8 @@
 
 #define CTRL_STEER_GAIN         (0.18f)
 #define CTRL_STEER_LIMIT        (0.25f)
+#define CTRL_STEER_KD           (0.001f) /* per (error/s): damps zig-zag */
+#define CTRL_LINE_DT_S          ((float) ROBOT_LINE_PERIOD_MS / 1000.0f)
 #define CTRL_BARCODE_SLOW_SIDE  (0.55f)
 #define CTRL_SHOCK_FACTOR       (0.7f)
 
@@ -55,6 +57,8 @@ typedef struct
     uint32_t            next_turn_id;
     uint32_t            active_turn_id;
     bool                b_line_detected;
+    float               prev_line_error;    /* for the D term           */
+    bool                b_steer_primed;     /* prev_line_error is valid */
     avoid_t             avoid;
     uint32_t            last_telemetry_ms;
 } ctrl_state_t;
@@ -333,16 +337,27 @@ ctrl_handle_line (ctrl_state_t * p_ctrl, line_event_t const * p_line)
         ((MISSION_AVOIDING == p_ctrl->state) &&
          avoid_is_following(&p_ctrl->avoid)))
     {
+        /* PD steering.  With the line sensors on the line edges the
+           error is continuous near the centre; the D term damps the
+           zig-zag.  No D kick on the first cycle after a turn. */
+        float const derivative = p_ctrl->b_steer_primed
+            ? ((p_ctrl->line_error - p_ctrl->prev_line_error) /
+               CTRL_LINE_DT_S)
+            : 0.0f;
         float const correction =
-            rmath_clampf(p_ctrl->line_error * CTRL_STEER_GAIN,
+            rmath_clampf((p_ctrl->line_error * CTRL_STEER_GAIN) +
+                         (derivative * CTRL_STEER_KD),
                          -CTRL_STEER_LIMIT, CTRL_STEER_LIMIT);
 
+        p_ctrl->prev_line_error = p_ctrl->line_error;
+        p_ctrl->b_steer_primed  = true;
         ctrl_set_motion(p_ctrl->base_speed + correction,
                         p_ctrl->base_speed - correction);
     }
     else
     {
         /* Not steering in this state. */
+        p_ctrl->b_steer_primed = false;
     }
 }
 

@@ -9,7 +9,8 @@
  *   2. line_task stores the decoded character in RAM as the pending
  *      waypoint (route.c), plus a short history of recent characters.
  *   3. The car keeps line-following; nothing changes until a junction
- *      (left, centre and right sensors all black for JUNCTION_MIN_MS).
+ *      (left and middle line sensors both black for
+ *      LINE_JUNCTION_MIN_CYCLES; the barcode sensor is not used).
  *   4. At the junction line_task looks the stored character up in the
  *      route table and sends the action (left / right / straight /
  *      U-turn) to the controller with that SYSTEM_EVENT_LINE.  The route
@@ -19,6 +20,10 @@
  * Tasks:
  *   line_task     periodic 10 ms: IR averaging, calibration, line error,
  *                 junctions, route table updates, SYSTEM_EVENT_LINE.
+ *
+ * Line sensing: the left (GP26) and middle (GP27) analog sensors each sit
+ * over one edge of the line, so when centred both read grey.  See the
+ * LINE_xxx constants in robot_config.h for the states.
  *   barcode_task  event-driven: debounce GP28 edges, decode Code 39.
  *
  * Interrupts: TIMER alarm 3 at 1 kHz (drv_ir_sampler.c); GP28 edges via
@@ -110,8 +115,18 @@ void     line_task(INT stacd, void * p_exinf);
 void     barcode_task(INT stacd, void * p_exinf);
 void     barcode_result_put(barcode_result_t const * p_result);
 bool     barcode_result_take(barcode_result_t * p_result);
-float    line_compute_error(float left, float center, bool b_detected,
-                            float last_error);
+
+/* Junction detector state (line.c). */
+typedef struct
+{
+    uint32_t black_cycles;  /* consecutive cycles with both sensors black */
+    bool     b_reported;    /* this crossing already reported             */
+} line_junction_t;
+
+float    line_compute_error(float left, float center, float last_error,
+                            bool * p_b_detected);
+bool     line_junction_update(line_junction_t * p_junction, float left,
+                              float center);
 
 void     route_table_reset(route_table_t * p_table);
 void     route_table_parse(route_table_t * p_table, char const * p_text,

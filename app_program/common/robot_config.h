@@ -132,8 +132,40 @@
 #define IR_MIN_CONTRAST_COUNTS          (400U)
 #define IR_DEFAULT_WHITE_COUNTS         (600U)
 #define IR_DEFAULT_BLACK_COUNTS         (3000U)
-#define IR_ON_LINE_THRESHOLD            (0.5f)
-#define JUNCTION_MIN_MS                 (150U)
+
+/* Line position with TWO analog sensors, left (GP26) and middle (GP27),
+ * each sitting over one EDGE of the ~18 mm line (sensors ~18-20 mm
+ * apart).  Normalised readings (0 = white, 1 = black):
+ *   centred  both grey (~0.5)  error 0, continuous for a few mm
+ *   drifted  one up, one down  error -1..+1 (middle - left)
+ *   lost     both white        steer towards the side last seen
+ *   junction both black        a crossing line covers both sensors
+ * The right sensor (GP28) is for barcodes only. */
+#define LINE_LOST_LEVEL                 (0.15f)  /* both below: lost      */
+#define LINE_JUNCTION_LEVEL             (0.80f)  /* both above: junction  */
+#define LINE_JUNCTION_RELEASE           (0.65f)  /* re-arm when one below:
+                                                    > 0.5 so a centred car
+                                                    (L + M ~ 1) re-arms */
+#define LINE_JUNCTION_MIN_CYCLES        (2U)     /* x 10 ms: an 18 mm
+                                                    crossing at 0.6 m/s
+                                                    gives ~3 cycles     */
+#define LINE_ERROR_SIGN                 (1.0f)   /* -1.0f if the car steers
+                                                    away from the line  */
+
+/* 1 = read the REAL line sensors (ADC, boot calibration) even in a
+ * SIM=1 build, to check polarity and steering sign by hand while the
+ * motors stay simulated.  Default: real sensors only in SIM=0 builds. */
+#ifndef S3_LINE_HW
+#define S3_LINE_HW                      (!ROBOT_SIMULATION)
+#endif
+/* 1 = print L, M (raw and %), error and state every 200 ms. */
+#ifndef S3_LINE_DEBUG
+#define S3_LINE_DEBUG                   (0)
+#endif
+#define LINE_DEBUG_PERIOD_MS            (200U)
+#if (!ROBOT_SIMULATION) && (!S3_LINE_HW)
+#error "SIM=0 needs the real line sensors (S3_LINE_HW = 1)"
+#endif
 
 /* ---- Buddy 3: Code 39 barcode (FR8, FR9, NFR5) ---- */
 #define IR_BARCODE_BLACK_LEVEL          (1U)     /* verify on hardware    */
