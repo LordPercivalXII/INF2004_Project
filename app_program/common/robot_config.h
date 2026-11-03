@@ -30,7 +30,9 @@
 #define ROBOT_IMU_PERIOD_MS             (10U)
 #define ROBOT_CONTROLLER_WAIT_MS        (10U)   /* was 2 ms at 1 kHz tick */
 
+#ifndef ROBOT_BASE_SPEED
 #define ROBOT_BASE_SPEED                (0.35f)
+#endif
 #define ROBOT_MAX_SPEED                 (0.70f)
 #define ROBOT_MIN_SPEED                 (0.10f)
 
@@ -82,7 +84,17 @@
 /* Temporary terrain commissioning trace, up to 50 Hz while moving.
  * Printed by telemetry_task, never by the sensor/motion event producers. */
 #ifndef IMU_HEIGHT_TRACE_ENABLED
-#define IMU_HEIGHT_TRACE_ENABLED        (1)
+#define IMU_HEIGHT_TRACE_ENABLED        (0)
+#endif
+
+/* Serial console: 1 = one readable status line per second instead of the
+ * long JSON record (MQTT still gets JSON); S1_SERIAL_DIAG = 1 brings back
+ * the heartbeat and timing_diag lines. */
+#ifndef S1_SERIAL_COMPACT
+#define S1_SERIAL_COMPACT               (1)
+#endif
+#ifndef S1_SERIAL_DIAG
+#define S1_SERIAL_DIAG                  (0)
 #endif
 
 /* ---- Buddy 2: motors and encoders ---- */
@@ -132,7 +144,7 @@
 #define ADC_CHANNEL_IR_CENTER           (1U)     /* GP27 = ADC1           */
 #define IR_SAMPLE_RATE_HZ               (1000U)  /* TIMER alarm interrupt */
 #define IR_ANALOG_BLACK_IS_HIGH         (1)      /* verify on hardware    */
-#define IR_CALIBRATION_MS               (3000U)
+#define IR_CALIBRATION_MS               (1000U)
 #define IR_CALIBRATION_STEP_MS          (10U)    /* was 5 ms; 10 ms tick  */
 #define IR_MIN_CONTRAST_COUNTS          (400U)
 #define IR_DEFAULT_WHITE_COUNTS         (600U)
@@ -167,7 +179,7 @@
 #ifndef S3_LINE_DEBUG
 #define S3_LINE_DEBUG                   (0)
 #endif
-#define LINE_DEBUG_PERIOD_MS            (200U)
+#define LINE_DEBUG_PERIOD_MS            (500U)
 #if (!ROBOT_SIMULATION) && (!S3_LINE_HW)
 #error "SIM=0 needs the real line sensors (S3_LINE_HW = 1)"
 #endif
@@ -195,6 +207,10 @@
 #define S3_BARCODE_HW                   (1)
 #endif
 /* 1 = print every scan's bar/space widths and the decode result. */
+/* 1 = print every bar/space width as it is read (very verbose). */
+#ifndef S3_BARCODE_EDGE_DEBUG
+#define S3_BARCODE_EDGE_DEBUG           (0)
+#endif
 #ifndef S3_BARCODE_DEBUG
 #define S3_BARCODE_DEBUG                (1)
 #endif

@@ -328,54 +328,80 @@ static void telemetry_print(telemetry_message_t const *p_msg)
     telemetry_format_fixed(rise, p_msg->imu.terrain_rise_m, 3U);
     telemetry_format_fixed(peak, p_msg->imu.terrain_peak_m, 3U);
 
-    (void)tm_sprintf((UB *)line,
-                     (UB *)"{\"t_ms\":%u,\"mission\":%u,\"speed\":%s,"
-                           "\"line\":%s,\"distance\":%s,\"hump_m\":%s,"
-                           "\"obstacle_cm\":%s,\"barcode\":%u,\"fault\":%u,"
-                           "\"imu_valid\":%u,\"imu_calibrated\":%u,"
-                           "\"motion\":%u,\"roll_deg\":%s,\"pitch_deg\":%s,"
-                           "\"turn_dps\":%s,\"vertical_g\":%s,"
-                           "\"hump_active\":%u,\"hump_valid\":%u,"
-                           "\"hump_count\":%u,\"imu_saturated\":%u,"
-                           "\"tilt_valid\":%u,\"shock_count\":%u,"
-                           "\"hump_rejected_count\":%u,\"imu_model\":\"LSM303DLHC\","
-                           "\"heading_deg\":%s,\"heading_valid\":%u,"
-                           "\"turn_valid\":%u,\"mag_disturbed\":%u,"
-                           "\"has_gyro\":%u,\"turn_estimated\":%u,"
-                           "\"height_approx\":%u,\"mag_calibrated\":%u,"
-                           "\"rise_m\":%s,\"terrain_peak_m\":%s,"
-                           "\"height_tracking_valid\":%u,\"height_uses_odometry\":%u,"
-                           "\"height_gap_pending\":%u,\"height_gap_count\":%u}\n",
-                     (unsigned int)p_msg->timestamp_ms,
-                     (unsigned int)p_msg->mission_state,
-                     speed, error, dist, hump, obst,
-                     (unsigned int)p_msg->last_barcode,
-                     (unsigned int)p_msg->fault_code,
-                     (unsigned int)p_msg->imu.b_sensor_valid,
-                     (unsigned int)p_msg->imu.b_calibrated,
-                     (unsigned int)p_msg->imu.motion_state,
-                     roll, pitch, turn, vertical,
-                     (unsigned int)p_msg->imu.b_hump_active,
-                     (unsigned int)p_msg->imu.b_hump_height_valid,
-                     (unsigned int)p_msg->imu.hump_count,
-                     (unsigned int)p_msg->imu.b_saturated,
-                     (unsigned int)p_msg->imu.b_tilt_valid,
-                     (unsigned int)p_msg->imu.shock_count,
-                     (unsigned int)p_msg->imu.rejected_hump_count,
-                     heading,
-                     (unsigned int)p_msg->imu.b_heading_valid,
-                     (unsigned int)p_msg->imu.b_turn_rate_valid,
-                     (unsigned int)p_msg->imu.b_magnetic_disturbed,
-                     (unsigned int)p_msg->imu.b_has_gyro,
-                     (unsigned int)p_msg->imu.b_turn_rate_estimated,
-                     (unsigned int)p_msg->imu.b_height_approximate,
-                     (unsigned int)p_msg->imu.b_mag_calibrated,
-                     rise, peak,
-                     (unsigned int)p_msg->imu.b_height_tracking_valid,
-                     (unsigned int)p_msg->imu.b_height_uses_odometry,
-                     (unsigned int)p_msg->imu.b_height_gap_pending,
-                     (unsigned int)p_msg->imu.height_gap_count);
-    (void)tm_putstring((UB *)line);
+#if S1_SERIAL_COMPACT
+    {
+        static char const * const p_names[] =
+            {"IDLE", "FOLLOW", "AVOID", "FAULT"};
+        unsigned int const mission = (unsigned int) p_msg->mission_state;
+        unsigned int const secs10  = (unsigned int) (p_msg->timestamp_ms / 100U);
+        char bc[4] = "-";
+
+        if ((p_msg->last_barcode >= 32U) && (p_msg->last_barcode < 127U))
+        {
+            bc[0] = (char) p_msg->last_barcode;
+            bc[1] = '\0';
+        }
+
+        (void) tm_sprintf((UB *) line,
+                          (UB *) "[%4u.%u s] %-6s spd=%s line=%s dist=%sm "
+                          "pitch=%s roll=%s obst=%scm bc=%s fault=%u%s\n",
+                          secs10 / 10U, secs10 % 10U,
+                          p_names[(mission < 4U) ? mission : 3U],
+                          speed, error, dist, pitch, roll, obst, bc,
+                          (unsigned int) p_msg->fault_code,
+                          p_msg->imu.b_calibrated ? "" : " IMU-CAL");
+        (void) tm_putstring((UB *) line);
+    }
+#else
+    (void) tm_sprintf((UB *) line,
+                      (UB *) "{\"t_ms\":%u,\"mission\":%u,\"speed\":%s,"
+                      "\"line\":%s,\"distance\":%s,\"hump_m\":%s,"
+                      "\"obstacle_cm\":%s,\"barcode\":%u,\"fault\":%u,"
+                      "\"imu_valid\":%u,\"imu_calibrated\":%u,"
+                      "\"motion\":%u,\"roll_deg\":%s,\"pitch_deg\":%s,"
+                      "\"turn_dps\":%s,\"vertical_g\":%s,"
+                      "\"hump_active\":%u,\"hump_valid\":%u,"
+                      "\"hump_count\":%u,\"imu_saturated\":%u,"
+                      "\"tilt_valid\":%u,\"shock_count\":%u,"
+                      "\"hump_rejected_count\":%u,\"imu_model\":\"LSM303DLHC\","
+                      "\"heading_deg\":%s,\"heading_valid\":%u,"
+                      "\"turn_valid\":%u,\"mag_disturbed\":%u,"
+                      "\"has_gyro\":%u,\"turn_estimated\":%u,"
+                      "\"height_approx\":%u,\"mag_calibrated\":%u,"
+                      "\"rise_m\":%s,\"terrain_peak_m\":%s,"
+                      "\"height_tracking_valid\":%u,\"height_uses_odometry\":%u,"
+                      "\"height_gap_pending\":%u,\"height_gap_count\":%u}\n",
+                      (unsigned int) p_msg->timestamp_ms,
+                      (unsigned int) p_msg->mission_state,
+                      speed, error, dist, hump, obst,
+                      (unsigned int) p_msg->last_barcode,
+                      (unsigned int) p_msg->fault_code,
+                      (unsigned int) p_msg->imu.b_sensor_valid,
+                      (unsigned int) p_msg->imu.b_calibrated,
+                      (unsigned int) p_msg->imu.motion_state,
+                      roll, pitch, turn, vertical,
+                      (unsigned int) p_msg->imu.b_hump_active,
+                      (unsigned int) p_msg->imu.b_hump_height_valid,
+                      (unsigned int) p_msg->imu.hump_count,
+                      (unsigned int) p_msg->imu.b_saturated,
+                      (unsigned int) p_msg->imu.b_tilt_valid,
+                      (unsigned int) p_msg->imu.shock_count,
+                      (unsigned int) p_msg->imu.rejected_hump_count,
+                      heading,
+                      (unsigned int) p_msg->imu.b_heading_valid,
+                      (unsigned int) p_msg->imu.b_turn_rate_valid,
+                      (unsigned int) p_msg->imu.b_magnetic_disturbed,
+                      (unsigned int) p_msg->imu.b_has_gyro,
+                      (unsigned int) p_msg->imu.b_turn_rate_estimated,
+                      (unsigned int) p_msg->imu.b_height_approximate,
+                      (unsigned int) p_msg->imu.b_mag_calibrated,
+                      rise, peak,
+                      (unsigned int) p_msg->imu.b_height_tracking_valid,
+                      (unsigned int) p_msg->imu.b_height_uses_odometry,
+                      (unsigned int) p_msg->imu.b_height_gap_pending,
+                      (unsigned int) p_msg->imu.height_gap_count);
+    (void) tm_putstring((UB *) line);
+#endif /* S1_SERIAL_COMPACT */
     if (p_msg->imu.b_height_interrupted_available)
     {
         telemetry_format_fixed(rise, p_msg->imu.interrupted_rise_m, 3U);
@@ -506,6 +532,7 @@ void telemetry_task(INT stacd, void *p_exinf)
 
         now_ms = board_millis();
 
+#if S1_SERIAL_DIAG
         if ((now_ms - last_heartbeat_ms) >= ROBOT_TELEMETRY_PERIOD_MS)
         {
             (void)tm_sprintf((UB *)line, (UB *)"{\"heartbeat_ms\":%u}\n",
@@ -533,6 +560,11 @@ void telemetry_task(INT stacd, void *p_exinf)
 #endif
             last_heartbeat_ms = now_ms;
         }
+#else
+        (void) now_ms;
+        (void) last_heartbeat_ms;
+        (void) line;
+#endif /* S1_SERIAL_DIAG */
     }
 }
 
