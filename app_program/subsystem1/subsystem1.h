@@ -28,6 +28,9 @@ extern ID gh_mqtt_telemetry_mbf;
 bool telemetry_publish(telemetry_message_t const * p_message);
 bool telemetry_submit_command(control_command_t const * p_command);
 
+/* Buddy 1: receive speed commands from MQTT. */
+void mqtt_utk_control_rx(char const * p_payload, uint32_t length);
+
 /* Private to subsystem 1 (public only for subsystem1_test.c). */
 void telemetry_task(INT stacd, void * p_exinf);
 void telemetry_format_fixed(char * p_text, float value, uint32_t decimals);
