@@ -26,6 +26,14 @@
 #define CTRL_STEER_SMOOTH       (0.30f) /* low-pass on the error: less jerk */
 #define CTRL_STEER_KD           (0.001f) /* per (error/s): damps zig-zag */
 #define CTRL_LINE_DT_S          ((float) ROBOT_LINE_PERIOD_MS / 1000.0f)
+/* Ramp handling (S4 pitch: negative = nose up, positive = nose down). */
+#define CTRL_RAMP_ENTER_DEG     (6.0f)
+#define CTRL_RAMP_EXIT_DEG      (3.0f)
+#define CTRL_RAMP_PITCH_SMOOTH  (0.15f)
+#define CTRL_RAMP_CLIMB_FACTOR  (1.6f)  /* extra drive to hold speed uphill */
+#define CTRL_RAMP_DESCEND_FACTOR (0.6f) /* brake downhill */
+#define CTRL_RAMP_SPEED_SLEW    (0.02f) /* factor change per line cycle */
+#define CTRL_SHOCK_HOLD_MS      (800U)
 #define CTRL_BARCODE_SLOW_SIDE  (0.55f)
 #define CTRL_SHOCK_FACTOR       (0.7f)
 
@@ -43,6 +51,10 @@ typedef struct
 {
     mission_state_t     state;
     float               base_speed;
+    float               pitch_deg;          /* smoothed */
+    float               ramp_factor;        /* speed multiplier */
+    int8_t              ramp_state;         /* -1 down, 0 flat, 1 up */
+    uint32_t            shock_until_ms;
     float               line_error;
     float               distance_m;
     float               hump_m;
@@ -275,6 +287,35 @@ ctrl_handle_command (ctrl_state_t * p_ctrl,
 /* System events (IF-01)                                               */
 /* ------------------------------------------------------------------ */
 
+static float
+ctrl_drive_speed (ctrl_state_t * p_ctrl)
+{
+    float target = 1.0f;
+    float speed;
+
+    if (p_ctrl->ramp_state > 0)
+    {
+        target = CTRL_RAMP_CLIMB_FACTOR;
+    }
+    else if (p_ctrl->ramp_state < 0)
+    {
+        target = CTRL_RAMP_DESCEND_FACTOR;
+    }
+
+    /* Slew so the speed changes smoothly instead of jerking. */
+    p_ctrl->ramp_factor += rmath_clampf(target - p_ctrl->ramp_factor,
+                                        -CTRL_RAMP_SPEED_SLEW,
+                                        CTRL_RAMP_SPEED_SLEW);
+    speed = p_ctrl->base_speed * p_ctrl->ramp_factor;
+    if ((0 == p_ctrl->ramp_state) &&
+        (board_millis() < p_ctrl->shock_until_ms))
+    {
+        speed = rmath_minf(speed, ROBOT_BASE_SPEED * CTRL_SHOCK_FACTOR);
+    }
+
+    return rmath_clampf(speed, ROBOT_MIN_SPEED, ROBOT_MAX_SPEED);
+}
+
 static void
 ctrl_handle_line (ctrl_state_t * p_ctrl, line_event_t const * p_line)
 {
@@ -366,8 +407,9 @@ ctrl_handle_line (ctrl_state_t * p_ctrl, line_event_t const * p_line)
 
         p_ctrl->prev_line_error = p_ctrl->line_error;
         p_ctrl->b_steer_primed  = true;
-        ctrl_set_motion(p_ctrl->base_speed + correction,
-                        p_ctrl->base_speed - correction);
+        float const speed = ctrl_drive_speed(p_ctrl);
+
+        ctrl_set_motion(speed + correction, speed - correction);
     }
     else
     {
@@ -390,6 +432,38 @@ ctrl_handle_imu (ctrl_state_t * p_ctrl, imu_event_t const * p_imu)
             (!p_imu->b_saturated) && !b_bad_timing;
         p_ctrl->hump_m        = p_imu->estimated_hump_height_m;
 
+        p_ctrl->pitch_deg += CTRL_RAMP_PITCH_SMOOTH *
+            (p_imu->tilt_pitch_deg - p_ctrl->pitch_deg);
+        int8_t new_ramp = p_ctrl->ramp_state;
+
+        if (p_ctrl->pitch_deg < -CTRL_RAMP_ENTER_DEG)
+        {
+            new_ramp = 1;
+        }
+        else if (p_ctrl->pitch_deg > CTRL_RAMP_ENTER_DEG)
+        {
+            new_ramp = -1;
+        }
+        else if (rmath_absf(p_ctrl->pitch_deg) < CTRL_RAMP_EXIT_DEG)
+        {
+            new_ramp = 0;
+        }
+        else
+        {
+            /* Between exit and enter thresholds: keep the current state. */
+        }
+
+        if (new_ramp != p_ctrl->ramp_state)
+        {
+            p_ctrl->ramp_state = new_ramp;
+            tm_printf((UB *) "[CTRL] RAMP %s pitch=%d.%d deg\n",
+                      (new_ramp > 0) ? "UP (climb boost)" :
+                      ((new_ramp < 0) ? "DOWN (slowing)" : "FLAT"),
+                      (int) p_ctrl->pitch_deg,
+                      (int) rmath_absf((p_ctrl->pitch_deg -
+                                        (float) (int) p_ctrl->pitch_deg) * 10.0f));
+        }
+
         /* A transient IMU timing gap (e.g. motor noise or a blocked I2C
          * read) is not fatal; only an uncalibrated IMU stops the car. */
         if ((!p_imu->b_calibrated) &&
@@ -401,9 +475,7 @@ ctrl_handle_imu (ctrl_state_t * p_ctrl, imu_event_t const * p_imu)
         else if (p_imu->b_calibrated &&
                  (p_imu->b_shock_detected || b_new_shock))
         {
-            p_ctrl->base_speed = rmath_minf(p_ctrl->base_speed,
-                                            ROBOT_BASE_SPEED *
-                                            CTRL_SHOCK_FACTOR);
+            p_ctrl->shock_until_ms = board_millis() + CTRL_SHOCK_HOLD_MS;
         }
     }
     else
@@ -751,7 +823,7 @@ ctrl_publish_telemetry (ctrl_state_t * p_ctrl, uint32_t now_ms)
     {
         telemetry.timestamp_ms         = now_ms;
         telemetry.mission_state        = p_ctrl->state;
-        telemetry.speed_m_s            = p_ctrl->base_speed;
+        telemetry.speed_m_s            = p_ctrl->base_speed * p_ctrl->ramp_factor;
         telemetry.line_error           = p_ctrl->line_error;
         telemetry.distance_m           = p_ctrl->distance_m;
         telemetry.hump_height_m        = p_ctrl->hump_m;
@@ -794,6 +866,7 @@ controller_task (INT stacd, void * p_exinf)
 
     ctrl.state             = MISSION_IDLE;
     ctrl.base_speed        = ROBOT_BASE_SPEED;
+    ctrl.ramp_factor       = 1.0f;
     ctrl.b_turn_in_progress = false;
     ctrl.pending_turn       = (uint16_t) BARCODE_CMD_NONE;
     ctrl.next_turn_id       = 0U;
@@ -803,7 +876,7 @@ controller_task (INT stacd, void * p_exinf)
 
 #if (!ROBOT_SIMULATION) && (CTRL_AUTO_START_MS > 0)
 #warning "CTRL_AUTO_START_MS is on: the car drives off by itself after power-up"
-    tm_printf((UB *) "CTRL: TEST auto-start: following the line in %u ms\n",
+    tm_printf((UB *) "[CTRL] auto-start armed: starts when line seen or at %u ms\n",
               (unsigned int) CTRL_AUTO_START_MS);
 #endif
     ctrl_set_bits(SYSTEM_BIT_READY);
@@ -818,13 +891,14 @@ controller_task (INT stacd, void * p_exinf)
 #if (!ROBOT_SIMULATION) && (CTRL_AUTO_START_MS > 0)
         /* Test only: one START, as if a user had sent it. */
         if ((!b_auto_started) && ctrl.b_imu_healthy &&
-            ctrl.b_line_detected && (board_millis() >= CTRL_AUTO_START_MS))
+            (ctrl.b_line_detected ||
+             (board_millis() >= CTRL_AUTO_START_MS)))
         {
             b_auto_started = true;
             command.type   = CONTROL_START;
             command.value  = 0.0f;
             ctrl_handle_command(&ctrl, &command);
-            tm_printf((UB *) "CTRL: TEST auto-start: START sent\n");
+            tm_printf((UB *) "[CTRL] auto-start: START sent\n");
         }
 #endif
 

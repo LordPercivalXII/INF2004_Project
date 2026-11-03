@@ -136,22 +136,21 @@ barcode_debug_dump (barcode_session_t const * p_session, bool b_decoded,
     uint32_t changes;
 
     barcode_sensor_take_counts(&irqs, &changes);
-    tm_printf((UB *) "S3 dbg: GP28 IRQs %u, level changes %u, received %u,"
-              " merged %u, restored %u, now %s\n", (unsigned int) irqs,
+    tm_printf((UB *) "[S3 barcode] GP28 irq=%u edges=%u rx=%u merged=%u restored=%u now=%s\n", (unsigned int) irqs,
               (unsigned int) changes, (unsigned int) p_session->received,
               (unsigned int) p_session->merged,
               (unsigned int) p_session->restored,
               (0U != barcode_sensor_is_black()) ? "BLACK" : "WHITE");
-    tm_printf((UB *) "S3 dbg: %u elements, ", (unsigned int) p_session->count);
+    tm_printf((UB *) "[S3 barcode] %u elements, ", (unsigned int) p_session->count);
 
     if (b_decoded)
     {
-        tm_printf((UB *) "decoded \"%s\" (%s)\n", p_result->text,
+        tm_printf((UB *) "DECODED \"%s\" (%s)\n", p_result->text,
                   p_result->b_reversed ? "right-to-left" : "left-to-right");
     }
     else
     {
-        tm_printf((UB *) "NOT decoded%s\n",
+        tm_printf((UB *) "not decoded%s\n",
                   b_overflow ? " (overflow)" : "");
     }
 
@@ -371,7 +370,7 @@ barcode_task (INT stacd, void * p_exinf)
     }
 
 #if S3_BARCODE_DEBUG
-    tm_printf((UB *) "S3 dbg: barcode sensor GP28 reads %s at start\n",
+    tm_printf((UB *) "[S3 barcode] sensor GP28 reads %s at start\n",
               (0U != barcode_sensor_is_black()) ? "BLACK" : "WHITE");
 #endif
 #endif
@@ -389,10 +388,12 @@ barcode_task (INT stacd, void * p_exinf)
                it cannot flood the console. */
             if (element.width_us >= BARCODE_GLITCH_US)
             {
-                tm_printf((UB *) "S3 dbg: %s %u us  (+%u glitch edges)\n",
+#if S3_BARCODE_EDGE_DEBUG
+                tm_printf((UB *) "[S3 bar] %s %u us (+%u glitch)\n",
                           (0U != element.is_black) ? "BLACK" : "white",
                           (unsigned int) element.width_us,
                           (unsigned int) glitches);
+#endif
                 glitches = 0U;
             }
             else

@@ -301,6 +301,31 @@ static void telemetry_print(telemetry_message_t const *p_msg)
     telemetry_format_fixed(rise, p_msg->imu.terrain_rise_m, 3U);
     telemetry_format_fixed(peak, p_msg->imu.terrain_peak_m, 3U);
 
+#if S1_SERIAL_COMPACT
+    {
+        static char const * const p_names[] =
+            {"IDLE", "FOLLOW", "AVOID", "FAULT"};
+        unsigned int const mission = (unsigned int) p_msg->mission_state;
+        unsigned int const secs10  = (unsigned int) (p_msg->timestamp_ms / 100U);
+        char bc[4] = "-";
+
+        if ((p_msg->last_barcode >= 32U) && (p_msg->last_barcode < 127U))
+        {
+            bc[0] = (char) p_msg->last_barcode;
+            bc[1] = '\0';
+        }
+
+        (void) tm_sprintf((UB *) line,
+                          (UB *) "[%4u.%u s] %-6s spd=%s line=%s dist=%sm "
+                          "pitch=%s roll=%s obst=%scm bc=%s fault=%u%s\n",
+                          secs10 / 10U, secs10 % 10U,
+                          p_names[(mission < 4U) ? mission : 3U],
+                          speed, error, dist, pitch, roll, obst, bc,
+                          (unsigned int) p_msg->fault_code,
+                          p_msg->imu.b_calibrated ? "" : " IMU-CAL");
+        (void) tm_putstring((UB *) line);
+    }
+#else
     (void) tm_sprintf((UB *) line,
                       (UB *) "{\"t_ms\":%u,\"mission\":%u,\"speed\":%s,"
                       "\"line\":%s,\"distance\":%s,\"hump_m\":%s,"
@@ -349,6 +374,7 @@ static void telemetry_print(telemetry_message_t const *p_msg)
                       (unsigned int) p_msg->imu.b_height_gap_pending,
                       (unsigned int) p_msg->imu.height_gap_count);
     (void) tm_putstring((UB *) line);
+#endif /* S1_SERIAL_COMPACT */
     if (p_msg->imu.b_height_interrupted_available)
     {
         telemetry_format_fixed(rise, p_msg->imu.interrupted_rise_m, 3U);
@@ -479,6 +505,7 @@ void telemetry_task(INT stacd, void *p_exinf)
 
         now_ms = board_millis();
 
+#if S1_SERIAL_DIAG
         if ((now_ms - last_heartbeat_ms) >= ROBOT_TELEMETRY_PERIOD_MS)
         {
             (void) tm_sprintf((UB *) line, (UB *) "{\"heartbeat_ms\":%u}\n",
@@ -506,6 +533,11 @@ void telemetry_task(INT stacd, void *p_exinf)
 #endif
             last_heartbeat_ms = now_ms;
         }
+#else
+        (void) now_ms;
+        (void) last_heartbeat_ms;
+        (void) line;
+#endif /* S1_SERIAL_DIAG */
     }
 }
 

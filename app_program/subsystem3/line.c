@@ -383,20 +383,19 @@ line_debug (line_ctx_t * p_ctx, uint32_t now_ms, uint16_t raw_left,
 
         if (!b_detected)
         {
-            p_state = "LOST (both white)";
+            p_state = "LOST";
         }
         else if ((left >= LINE_JUNCTION_LEVEL) &&
                  (center >= LINE_JUNCTION_LEVEL))
         {
-            p_state = "JUNCTION? (both black)";
+            p_state = "JUNCTION";
         }
         else
         {
             /* On the line. */
         }
 
-        tm_printf((UB *) "S3 line: L %4u (%3d%%)  M %4u (%3d%%)  "
-                  "error %4d%%  %s\n",
+        tm_printf((UB *) "[S3 line] L=%4u(%3d%%) M=%4u(%3d%%) err=%+4d%% %s\n",
                   (unsigned int) raw_left, (int) (left * 100.0f),
                   (unsigned int) raw_center, (int) (center * 100.0f),
                   (int) (error * 100.0f), p_state);

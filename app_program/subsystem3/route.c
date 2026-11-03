@@ -462,8 +462,7 @@ route_store_waypoint (barcode_result_t const * p_result, uint32_t now_ms)
         (void) tk_unl_mtx(gh_route_mtx);
     }
 
-    tm_printf((UB *) "S3: barcode \"%s\" (%s) stored, '%c' -> %s "
-              "at next junction\n", waypoint.text,
+    tm_printf((UB *) "[S3 route] barcode \"%s\" (%s) stored: '%c' -> %s at next junction\n", waypoint.text,
               waypoint.b_reversed ? "right-to-left" : "left-to-right",
               waypoint.symbol,
               route_action_name(route_table_lookup(&g_table,
@@ -504,7 +503,7 @@ route_take_junction_action (char * p_symbol)
     }
     else
     {
-        tm_printf((UB *) "S3: junction: no barcode stored -> STRAIGHT\n");
+        tm_printf((UB *) "[S3 route] junction: no barcode -> STRAIGHT\n");
     }
 
     return (action);

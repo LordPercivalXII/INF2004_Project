@@ -44,7 +44,7 @@ accurate height during arbitrary acceleration, wheel slip or chassis rocking.
 
 ### Diagnosing an incomplete ramp crossing
 
-`IMU_HEIGHT_TRACE_ENABLED=1` enables separate `height_trace` JSON records at
+`IMU_HEIGHT_TRACE_ENABLED` (default 0; build with `-DIMU_HEIGHT_TRACE_ENABLED=1`) enables separate `height_trace` JSON records at
 each motion sample (up to 50 Hz), during wheel movement/tracking and for
 500 ms afterward. Normal one-second snapshots and heartbeats are unchanged.
 The low-priority telemetry task prints the records; acquisition does not wait
@@ -110,7 +110,7 @@ These changes remove service-priority starvation paths without increasing any
 height-recovery limit. Elimination of the observed 182 ms stall still requires
 a hardware crossing test; the serial log alone cannot prove its exact source.
 
-On SMP USB builds, a separate `timing_diag` JSON line reports cumulative maximum
+The serial console prints one compact status line per second (`S1_SERIAL_COMPACT=1`; set 0 for the full JSON, which MQTT always uses). Heartbeat and `timing_diag` lines are off unless `S1_SERIAL_DIAG=1`. On SMP USB builds, a separate `timing_diag` JSON line reports cumulative maximum
 kernel-lock hold/wait times, per-core console-lock hold/wait times (microseconds),
 and USB-ring dropped bytes once per heartbeat. These are boot-to-date maxima,
 including startup, not the duration of a particular IMU delay; compare before

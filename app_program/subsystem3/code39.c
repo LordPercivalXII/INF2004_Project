@@ -13,6 +13,7 @@
 #define CODE39_NORM_BEFORE      (5U)    /* window: 5 before, 4 after   */
 #define CODE39_NORM_AFTER       (4U)
 #define CODE39_NORM_SCALE       (10000U)
+#define CODE39_FIT_MAX_OVERLAP_X1000 (1250U) /* narrow max <= 1.25 x wide min */
 
 typedef struct
 {
@@ -187,8 +188,85 @@ code39_classify (uint32_t const * p_elements, int32_t bias,
 }
 
 /*!
+ * @brief Last resort for a hand/car scan whose speed drifts within one
+ *        character: try every valid Code 39 pattern and keep the one
+ *        whose "wide" elements are best separated from its "narrow" ones,
+ *        tolerating a small overlap.  Start/stop '*' framing in the caller
+ *        still has to hold, which keeps false reads unlikely.
+ */
+static bool
+code39_best_fit (uint32_t const * p_elements, int32_t bias,
+                 char * p_symbol, uint32_t * p_split)
+{
+    uint32_t corrected[CODE39_CHAR_ELEMENTS];
+    uint32_t best_score = UINT32_MAX;
+    uint32_t best_split = 0U;
+    char     best_symbol = '\0';
+    uint32_t entry;
+    uint32_t idx;
+
+    for (idx = 0U; idx < CODE39_CHAR_ELEMENTS; idx++)
+    {
+        int32_t const value = (int32_t) p_elements[idx] +
+                              ((0U == (idx % 2U)) ? bias : -bias);
+
+        corrected[idx] = (value > 0) ? (uint32_t) value : 1U;
+    }
+
+    for (entry = 0U; entry < CODE39_TABLE_SIZE; entry++)
+    {
+        uint16_t const pattern    = g_code39_table[entry].pattern;
+        uint32_t       wide_min   = UINT32_MAX;
+        uint32_t       narrow_max = 0U;
+        uint64_t       wide_sum   = 0U;
+        uint64_t       narrow_sum = 0U;
+        uint32_t       score;
+
+        for (idx = 0U; idx < CODE39_CHAR_ELEMENTS; idx++)
+        {
+            uint32_t const width = corrected[idx];
+
+            if (0U != ((pattern >> (CODE39_CHAR_ELEMENTS - 1U - idx)) & 1U))
+            {
+                wide_min = (width < wide_min) ? width : wide_min;
+                wide_sum += width;
+            }
+            else
+            {
+                narrow_max = (width > narrow_max) ? width : narrow_max;
+                narrow_sum += width;
+            }
+        }
+
+        /* Wide must average at least 1.8x narrow. */
+        if ((wide_sum * (CODE39_CHAR_ELEMENTS - CODE39_WIDE_COUNT) * 10U) <
+            (narrow_sum * CODE39_WIDE_COUNT * 18U))
+        {
+            continue;
+        }
+
+        score = (uint32_t) (((uint64_t) narrow_max * 1000U) / wide_min);
+        if (score < best_score)
+        {
+            best_score  = score;
+            best_symbol = g_code39_table[entry].symbol;
+            best_split  = (narrow_max + wide_min) / 2U;
+        }
+    }
+
+    if (best_score <= CODE39_FIT_MAX_OVERLAP_X1000)
+    {
+        *p_symbol = best_symbol;
+        *p_split  = best_split;
+    }
+
+    return (best_score <= CODE39_FIT_MAX_OVERLAP_X1000);
+}
+
+/*!
  * @brief Decode one character: as measured first, and only if that does
- *        not give a valid character, again with edge-bias correction.
+ *        not give a valid character, again with edge-bias correction,
+ *        and finally with the tolerant best-fit.
  */
 static bool
 code39_decode_char (uint32_t const * p_elements, char * p_symbol,
@@ -206,6 +284,11 @@ code39_decode_char (uint32_t const * p_elements, char * p_symbol,
         *p_bias = code39_estimate_bias(p_elements);
         b_ok = code39_classify(p_elements, *p_bias, &pattern, p_split) &&
                code39_lookup_pattern(pattern, p_symbol);
+    }
+
+    if (!b_ok)
+    {
+        b_ok = code39_best_fit(p_elements, *p_bias, p_symbol, p_split);
     }
 
     return (b_ok);
