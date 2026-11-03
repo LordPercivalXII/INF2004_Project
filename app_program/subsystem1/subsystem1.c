@@ -8,6 +8,9 @@
 
 ID gh_telemetry_mbf = E_ID;
 
+/* Buddy 1: telemetry handoff to the Wi-Fi/MQTT task */
+ID gh_mqtt_telemetry_mbf = E_ID;
+
 /*!
  * @brief Create the telemetry message buffer (was a FreeRTOS queue).
  */
@@ -16,13 +19,28 @@ subsystem1_init (void)
 {
     T_CMBF cmbf = {0};
 
+    /* Existing controller-to-telemetry buffer */
     cmbf.mbfatr = TA_TFIFO;
     cmbf.maxmsz = (INT) sizeof(telemetry_message_t);
     cmbf.bufsz  = (SZ) APP_MBF_BUFSZ(ROBOT_QUEUE_LENGTH,
                                      sizeof(telemetry_message_t));
+
     gh_telemetry_mbf = tk_cre_mbf(&cmbf);
 
-    return ((gh_telemetry_mbf < E_OK) ? gh_telemetry_mbf : E_OK);
+    if (gh_telemetry_mbf < E_OK)
+    {
+        return gh_telemetry_mbf;
+    }
+
+    /* New telemetry-to-MQTT buffer */
+    gh_mqtt_telemetry_mbf = tk_cre_mbf(&cmbf);
+
+    if (gh_mqtt_telemetry_mbf < E_OK)
+    {
+        return gh_mqtt_telemetry_mbf;
+    }
+
+    return E_OK;
 }
 
 /*!

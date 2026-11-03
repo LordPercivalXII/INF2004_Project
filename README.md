@@ -50,6 +50,9 @@ each motion sample (up to 50 Hz), during wheel movement/tracking and for
 The low-priority telemetry task prints the records; acquisition does not wait
 for USB output. Trace queue loss is counted in `dropped` and reported explicitly;
 motion-event queue loss is reported separately by subsystem 2.
+With MQTT enabled, only normal snapshots are forwarded to its queue; height
+traces, interrupted-height diagnostics and timing diagnostics remain USB-only.
+MQTT queue failures are reported without blocking sensor/control tasks.
 
 Each record contains motion and IMU timestamps, motion interval, corrected
 acceleration in g, pitch/roll, both signed encoder totals and speeds, cumulative

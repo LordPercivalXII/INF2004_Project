@@ -22,6 +22,9 @@
 
 extern ID gh_telemetry_mbf;
 
+/* Buddy 1: message buffer for wireless MQTT telemetry */
+extern ID gh_mqtt_telemetry_mbf;
+
 bool telemetry_publish(telemetry_message_t const * p_message);
 bool telemetry_submit_command(control_command_t const * p_command);
 

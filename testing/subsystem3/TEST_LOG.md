@@ -14,7 +14,9 @@ Printable test barcodes: `code39_test_sheet.pdf` (A B C D E F L R U 1 7 X, narro
 | S3-U02 | Code 39 read right-to-left, direction reported | FR8, req. 1 | auto | `subsystem3_test.c` | `[TEST] S3-U02 PASS` |
 | S3-U03 | corrupted symbol rejected or correct | NFR5 | auto | `subsystem3_test.c` | `[TEST] S3-U03 PASS` |
 | S3-U04 | punctuation characters both ways | FR8 | auto | `subsystem3_test.c` | `[TEST] S3-U04 PASS` |
-| S3-U05 | line error sign + lost-line saturation | FR7 | auto | `subsystem3_test.c` | `[TEST] S3-U05 PASS` |
+| S3-U05 | both edge sensors grey = centred, error 0 | FR7 | auto | `subsystem3_test.c` | `[TEST] S3-U05 PASS` |
+| S3-U17 | drift left/right gives -/+ error; lost line steers to last side | FR7 | auto | `subsystem3_test.c` | `[TEST] S3-U17 PASS` |
+| S3-U18 | junction after 2 both-black cycles, reported once per crossing | junction | auto | `subsystem3_test.c` | `[TEST] S3-U18 PASS` |
 | S3-U06 | empty route table → straight | req. 4 | auto | `subsystem3_test.c` | `[TEST] S3-U06 PASS` |
 | S3-U07 | `A:L,B:R,C:S,D:U` → left/right/straight/U-turn | req. 4 | auto | `subsystem3_test.c` | `[TEST] S3-U07 PASS` |
 | S3-U08 | JSON payload; cumulative updates | req. 4 | auto | `subsystem3_test.c` | `[TEST] S3-U08 PASS` |
@@ -26,6 +28,7 @@ Printable test barcodes: `code39_test_sheet.pdf` (A B C D E F L R U 1 7 X, narro
 | S3-U14 | edge-biased scan + stray edges still decodes | FR8, NFR5 | auto | `subsystem3_test.c` | `[TEST] S3-U14 PASS` |
 | S3-U15 | stretched first bar, right-to-left `F` decodes | FR8 | auto | `subsystem3_test.c` | `[TEST] S3-U15 PASS` |
 | S3-U16 | speed varying 50% during the scan, right-to-left `R` decodes | FR8 | auto | `subsystem3_test.c` | `[TEST] S3-U16 PASS` |
+| S3-M05 | line sensor hand check (`S3_LINE_HW 1`, `S3_LINE_DEBUG 1`, SIM=1) | FR7 | manual | slide car sideways over the line | centred: L, M ~50%, error ~0; car right of line: error negative; lifted/off line: LOST; on a cross: JUNCTION? |
 | S3-M01 | route table from a real broker | IF-06, req. 4 | manual | `NET=lwip MQTT=1` build; `mosquitto_pub -r -t inf2004/car/route -m "A:L,B:R,C:S,D:U"` | console: `S3: route map: AL BR CS DU (others STRAIGHT)` |
 | S3-M02 | barcode both ways on the track, every sheet character | req. 1, 2 | manual | push car over each barcode of `code39_test_sheet.pdf` forwards, then backwards | `S3: barcode "A" (left-to-right / right-to-left) stored` |
 | S3-M03 | car keeps following, acts at junction | req. 3, 4 | manual | track: barcode `*B*` then a cross junction | no turn at barcode; `S3: junction: 'B' -> RIGHT`, car turns right |

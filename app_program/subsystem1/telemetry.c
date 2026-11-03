@@ -1,12 +1,13 @@
 /** @file telemetry.c
  *
- * @brief Telemetry task: prints controller snapshots and a heartbeat as
- *        JSON lines on the console (USB CDC, or UART0).
+ * @brief Buddy 1 telemetry: USB console output and MQTT telemetry bridge.
  *
  * tm_printf() has no floating-point conversions, so floats are formatted
- * as fixed-point text by telemetry_format_fixed().  Each JSON line is
- * built in one buffer and written with a single tm_putstring() so lines
- * from tasks on the other core cannot interleave with it.
+ * as fixed-point text by telemetry_format_fixed().
+ *
+ * Each USB JSON line is written using a single tm_putstring() call.
+ * MQTT telemetry is passed through a non-blocking micro T-Kernel
+ * message buffer and retrieved by the Wi-Fi task.
  */
 
 #include "subsystem1.h"
@@ -22,6 +23,8 @@ extern volatile UW tm_console_max_hold_us[TK_MAX_CORE];
 extern volatile UW tm_usb_dropped;
 #endif
 
+#include <stdint.h>
+
 #define TELEMETRY_LINE_MAX      (896U)
 #define TELEMETRY_FIXED_LIMIT   (1000000.0f)
 
@@ -30,18 +33,17 @@ extern volatile UW tm_usb_dropped;
  *
  * @return true if queued.
  */
-bool
-telemetry_publish (telemetry_message_t const * p_message)
+bool telemetry_publish(telemetry_message_t const *p_message)
 {
     bool b_ok = false;
 
     if ((NULL != p_message) && (gh_telemetry_mbf > 0))
     {
-        b_ok = (E_OK == tk_snd_mbf(gh_telemetry_mbf, (void *) p_message,
-                                   (INT) sizeof(*p_message), TMO_POL));
+        b_ok = (E_OK == tk_snd_mbf(gh_telemetry_mbf, (void *)p_message,
+                                   (INT)sizeof(*p_message), TMO_POL));
     }
 
-    return (b_ok);
+    return b_ok;
 }
 
 /*!
@@ -49,18 +51,17 @@ telemetry_publish (telemetry_message_t const * p_message)
  *
  * @return true if queued.
  */
-bool
-telemetry_submit_command (control_command_t const * p_command)
+bool telemetry_submit_command(control_command_t const *p_command)
 {
     bool b_ok = false;
 
     if ((NULL != p_command) && (gh_control_mbf > 0))
     {
-        b_ok = (E_OK == tk_snd_mbf(gh_control_mbf, (void *) p_command,
-                                   (INT) sizeof(*p_command), TMO_POL));
+        b_ok = (E_OK == tk_snd_mbf(gh_control_mbf, (void *)p_command,
+                                   (INT)sizeof(*p_command), TMO_POL));
     }
 
-    return (b_ok);
+    return b_ok;
 }
 
 /*!
@@ -70,34 +71,33 @@ telemetry_submit_command (control_command_t const * p_command)
  * @param[in]  value     Value; clamped to +-1e6.
  * @param[in]  decimals  1 or 3 (anything else is treated as 3).
  */
-void
-telemetry_format_fixed (char * p_text, float value, uint32_t decimals)
+void telemetry_format_fixed(char *p_text, float value, uint32_t decimals)
 {
-    uint32_t const scale  = (1U == decimals) ? 10U : 1000U;
-    bool const     b_neg  = (value < 0.0f);
-    float          mag    = b_neg ? -value : value;
-    uint32_t       scaled = 0U;
+    uint32_t const scale = (1U == decimals) ? 10U : 1000U;
+    bool const b_neg = (value < 0.0f);
+    float mag = b_neg ? -value : value;
+    uint32_t scaled = 0U;
 
     if (mag > TELEMETRY_FIXED_LIMIT)
     {
         mag = TELEMETRY_FIXED_LIMIT;
     }
 
-    scaled = (uint32_t) ((mag * (float) scale) + 0.5f);
+    scaled = (uint32_t)((mag * (float)scale) + 0.5f);
 
     if (1U == decimals)
     {
-        (void) tm_sprintf((UB *) p_text, (UB *) "%s%u.%01u",
-                          (b_neg && (0U != scaled)) ? "-" : "",
-                          (unsigned int) (scaled / scale),
-                          (unsigned int) (scaled % scale));
+        (void)tm_sprintf((UB *)p_text, (UB *)"%s%u.%01u",
+                         (b_neg && (0U != scaled)) ? "-" : "",
+                         (unsigned int)(scaled / scale),
+                         (unsigned int)(scaled % scale));
     }
     else
     {
-        (void) tm_sprintf((UB *) p_text, (UB *) "%s%u.%03u",
-                          (b_neg && (0U != scaled)) ? "-" : "",
-                          (unsigned int) (scaled / scale),
-                          (unsigned int) (scaled % scale));
+        (void)tm_sprintf((UB *)p_text, (UB *)"%s%u.%03u",
+                         (b_neg && (0U != scaled)) ? "-" : "",
+                         (unsigned int)(scaled / scale),
+                         (unsigned int)(scaled % scale));
     }
 }
 
@@ -180,8 +180,7 @@ telemetry_print_height_trace (telemetry_message_t const * p_msg)
     (void) tm_putstring((UB *) line);
 }
 
-static void
-telemetry_print (telemetry_message_t const * p_msg)
+static void telemetry_print(telemetry_message_t const *p_msg)
 {
     char line[TELEMETRY_LINE_MAX];
     char speed[S1_FIXED_TEXT_MAX];
@@ -277,24 +276,84 @@ telemetry_print (telemetry_message_t const * p_msg)
 }
 
 /*!
- * @brief Telemetry task: print snapshots as they arrive, plus a
- *        heartbeat once per ROBOT_TELEMETRY_PERIOD_MS.
+ * @brief Retrieve one telemetry snapshot as JSON for MQTT.
+ *
+ * Called by the Wi-Fi task through the MQTT telemetry interface.
+ * Does not block if the message buffer is empty.
+ *
+ * @param[out] buffer       Destination for JSON.
+ * @param[in]  buffer_size  Available destination capacity.
+ *
+ * @return JSON payload length, or 0 if no data is available.
  */
-void
-telemetry_task (INT stacd, void * p_exinf)
+uint32_t mqtt_utk_telemetry_read(char *buffer, uint32_t buffer_size)
 {
     telemetry_message_t message;
-    uint32_t            last_heartbeat_ms = board_millis();
-    uint32_t            now_ms;
-    char                line[S1_FIXED_TEXT_MAX * 2U];
+    char speed[S1_FIXED_TEXT_MAX];
+    char error[S1_FIXED_TEXT_MAX];
+    char dist[S1_FIXED_TEXT_MAX];
+    char hump[S1_FIXED_TEXT_MAX];
+    char obst[S1_FIXED_TEXT_MAX];
+    int len;
 
-    (void) stacd;
-    (void) p_exinf;
+    if ((buffer == NULL) ||
+        (buffer_size < TELEMETRY_LINE_MAX) ||
+        (gh_mqtt_telemetry_mbf <= 0))
+    {
+        return 0U;
+    }
+
+    if (tk_rcv_mbf(gh_mqtt_telemetry_mbf, &message, TMO_POL) <= 0)
+    {
+        return 0U;
+    }
+
+    telemetry_format_fixed(speed, message.speed_m_s, 3U);
+    telemetry_format_fixed(error, message.line_error, 3U);
+    telemetry_format_fixed(dist, message.distance_m, 3U);
+    telemetry_format_fixed(hump, message.hump_height_m, 3U);
+    telemetry_format_fixed(obst, message.obstacle_distance_cm, 1U);
+
+    len = tm_sprintf(
+        (UB *)buffer,
+        (UB *)"{\"t_ms\":%u,\"mission\":%u,\"speed\":%s,"
+              "\"line\":%s,\"distance\":%s,\"hump_m\":%s,"
+              "\"obstacle_cm\":%s,\"barcode\":%u,\"fault\":%u}",
+        (unsigned int)message.timestamp_ms,
+        (unsigned int)message.mission_state,
+        speed,
+        error,
+        dist,
+        hump,
+        obst,
+        (unsigned int)message.last_barcode,
+        (unsigned int)message.fault_code
+    );
+
+    return (len > 0) ? (uint32_t)len : 0U;
+}
+
+/*!
+ * @brief Telemetry task: print snapshots as they arrive, forward them
+ *        to MQTT, and print a periodic USB heartbeat.
+ */
+void telemetry_task(INT stacd, void *p_exinf)
+{
+    telemetry_message_t message;
+    uint32_t last_heartbeat_ms = board_millis();
+    uint32_t now_ms;
+    char line[S1_FIXED_TEXT_MAX * 2U];
+#if TM_MQTT
+    bool b_mqtt_queue_error = false;
+#endif
+
+    (void)stacd;
+    (void)p_exinf;
 
     for (;;)
     {
         if (tk_rcv_mbf(gh_telemetry_mbf, &message,
-                       (TMO) S1_RECEIVE_TIMEOUT_MS) > 0)
+                       (TMO)S1_RECEIVE_TIMEOUT_MS) > 0)
         {
             if (message.b_height_trace)
             {
@@ -303,6 +362,27 @@ telemetry_task (INT stacd, void * p_exinf)
             else
             {
                 telemetry_print(&message);
+#if TM_MQTT
+                /* Commissioning traces stay on USB; MQTT receives snapshots. */
+                if (gh_mqtt_telemetry_mbf > 0)
+                {
+                    if (E_OK != tk_snd_mbf(gh_mqtt_telemetry_mbf,
+                                           (void *)&message,
+                                           (INT)sizeof(message), TMO_POL))
+                    {
+                        if (!b_mqtt_queue_error)
+                        {
+                            tm_printf((UB *) "S1: MQTT telemetry buffer full; "
+                                      "snapshot not delivered\n");
+                            b_mqtt_queue_error = true;
+                        }
+                    }
+                    else
+                    {
+                        b_mqtt_queue_error = false;
+                    }
+                }
+#endif
             }
         }
 
