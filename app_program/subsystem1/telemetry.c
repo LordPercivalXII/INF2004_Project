@@ -25,8 +25,8 @@ extern volatile UW tm_usb_dropped;
 
 #include <stdint.h>
 
-#define TELEMETRY_LINE_MAX      (896U)
-#define TELEMETRY_FIXED_LIMIT   (1000000.0f)
+#define TELEMETRY_LINE_MAX (896U)
+#define TELEMETRY_FIXED_LIMIT (1000000.0f)
 
 /*!
  * @brief Queue a telemetry snapshot without waiting.
@@ -62,6 +62,98 @@ bool telemetry_submit_command(control_command_t const *p_command)
     }
 
     return b_ok;
+}
+
+/*
+ * Buddy 1: Accept a speed command received by the MQTT networking task.
+ * Payload format: SPEED:0.35 (ASCII, no trailing whitespace).
+ * Parse thousandths as integers to avoid floating-point boundary errors.
+ * Valid speed range comes from robot_config.h.
+ */
+void mqtt_utk_control_rx(char const *p_payload, uint32_t length)
+{
+    static char const prefix[] = "SPEED:";
+    uint32_t pos;
+    uint32_t whole = 0U;
+    uint32_t fractional = 0U;
+    uint32_t fractional_digits = 0U;
+    uint32_t speed_milli;
+    bool seen_dot = false;
+    bool seen_digit = false;
+    control_command_t command;
+
+    if ((NULL == p_payload) || (length <= 6U) || (length > 16U))
+    {
+        return;
+    }
+
+    for (pos = 0U; pos < 6U; pos++)
+    {
+        if (p_payload[pos] != prefix[pos])
+        {
+            return;
+        }
+    }
+
+    for (pos = 6U; pos < length; pos++)
+    {
+        char const c = p_payload[pos];
+
+        if ((c >= '0') && (c <= '9'))
+        {
+            uint32_t const digit = (uint32_t)(c - '0');
+            seen_digit = true;
+
+            if (!seen_dot)
+            {
+                if (whole > 1U)
+                {
+                    return;
+                }
+                whole = (whole * 10U) + digit;
+            }
+            else
+            {
+                if (fractional_digits >= 3U)
+                {
+                    return;
+                }
+                fractional = (fractional * 10U) + digit;
+                fractional_digits++;
+            }
+        }
+        else if ((c == '.') && !seen_dot)
+        {
+            seen_dot = true;
+        }
+        else
+        {
+            return;
+        }
+    }
+
+    if (!seen_digit || (whole > 1U))
+    {
+        return;
+    }
+
+    while (fractional_digits < 3U)
+    {
+        fractional *= 10U;
+        fractional_digits++;
+    }
+
+    speed_milli = (whole * 1000U) + fractional;
+
+    if ((speed_milli < (uint32_t)(ROBOT_MIN_SPEED * 1000.0f + 0.5f)) ||
+        (speed_milli > (uint32_t)(ROBOT_MAX_SPEED * 1000.0f + 0.5f)))
+    {
+        return;
+    }
+
+    command.type = CONTROL_SET_SPEED;
+    command.value = (float)speed_milli / 1000.0f;
+    (void)telemetry_submit_command(&command);
 }
 
 /*!
@@ -327,8 +419,7 @@ uint32_t mqtt_utk_telemetry_read(char *buffer, uint32_t buffer_size)
         hump,
         obst,
         (unsigned int)message.last_barcode,
-        (unsigned int)message.fault_code
-    );
+        (unsigned int)message.fault_code);
 
     return (len > 0) ? (uint32_t)len : 0U;
 }

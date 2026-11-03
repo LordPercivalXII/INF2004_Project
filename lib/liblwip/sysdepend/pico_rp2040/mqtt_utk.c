@@ -27,6 +27,10 @@
 
 #define MQTT_ROUTE_QOS 1
 
+/* Buddy 1: remote speed commands. */
+#define MQTT_CONTROL_TOPIC "inf2004/car/control"
+#define MQTT_CONTROL_QOS 1
+
 /* Buddy 1: wireless robot telemetry topic. */
 #ifndef MQTT_TELEMETRY_TOPIC
 #define MQTT_TELEMETRY_TOPIC "inf2004/car/telemetry"
@@ -58,6 +62,14 @@ static void heartbeat_timeout(void *arg);
  */
 __attribute__((weak))
 void mqtt_utk_route_rx(const char *payload, uint32_t length)
+{
+    (void)payload;
+    (void)length;
+}
+
+/* Weak default so the MQTT library links without Subsystem 1. */
+__attribute__((weak))
+void mqtt_utk_control_rx(const char *payload, uint32_t length)
 {
     (void)payload;
     (void)length;
@@ -159,6 +171,12 @@ static void incoming_data_cb(void *arg,
                 (const char *)rx_data,
                 (uint32_t)rx_len
             );
+        }
+
+        /* Buddy 1: dispatch validated speed commands to Subsystem 1. */
+        if (topic_is(rx_topic, MQTT_CONTROL_TOPIC) && !rx_truncated)
+        {
+            mqtt_utk_control_rx((const char *)rx_data, (uint32_t)rx_len);
         }
     }
 }
@@ -397,6 +415,20 @@ static void connection_cb(mqtt_client_t *c,
                 (UB *)"mqtt: route subscribe failed, err=%d\n",
                 (int)err
             );
+        }
+
+        /* Buddy 1: subscribe to dashboard speed commands. */
+        err = mqtt_subscribe(
+            client,
+            MQTT_CONTROL_TOPIC,
+            MQTT_CONTROL_QOS,
+            subscribe_done_cb,
+            (void *)MQTT_CONTROL_TOPIC
+        );
+
+        if (err != ERR_OK)
+        {
+            tm_printf((UB *)"mqtt: control subscribe failed, err=%d\n", (int)err);
         }
 
         /*
