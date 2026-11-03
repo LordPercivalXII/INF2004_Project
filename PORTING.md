@@ -98,4 +98,4 @@ see "Check on hardware" below.
 4. IR: during the 3 s calibration sweep the sensors across line and floor;
    verify `IR_ANALOG_BLACK_IS_HIGH` and `IR_BARCODE_BLACK_LEVEL`.
 5. IMU: no `S4: MPU6050 not found on iica` message; a tap gives a shock.
-6. Ultrasonic/servo: servo sweeps 45/90/135°, `obstacle_cm` tracks a hand.
+6. Ultrasonic/servo: servo sweeps 60/75/90/105/120°, `obstacle_cm` tracks a hand.

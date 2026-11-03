@@ -1,0 +1,89 @@
+microT-Kernel Version 3.00
+=== INF2004 autonomous car on micro T-Kernel (spec 0x6300) simulation=1 ===
+S3: route table empty; waiting for MQTT route
+all tasks started
+S3 dbg: barcode sensor GP28 reads BLACK at start
+wifi: cyw43_utk_task starting (proc 1)
+wifi: cyw43_init() ...
+wifi: cyw43_init() returned, bringing interface up ...
+S3: route msg "A:L,B:R,C:S,D:U": 4 applied, 0 rejected
+S3: route map: AL BR CS DU (others STRAIGHT)
+{"t_ms":1000,"mission":1,"speed":0.350,"line":0.000,"distance":0.343,"hump_m":0.000,"obstacle_cm":59.6,"barcode":0,"fault":0}
+{"heartbeat_ms":1000}
+{"t_ms":2000,"mission":1,"speed":0.350,"line":1.000,"distance":0.693,"hump_m":0.000,"obstacle_cm":60.3,"barcode":0,"fault":0}
+{"heartbeat_ms":2000}
+{"t_ms":3000,"mission":1,"speed":0.350,"line":0.000,"distance":1.043,"hump_m":0.000,"obstacle_cm":60.3,"barcode":0,"fault":0}
+{"heartbeat_ms":3000}
+{"t_ms":4000,"mission":1,"speed":0.350,"line":-1.000,"distance":1.393,"hump_m":0.000,"obstacle_cm":59.7,"barcode":0,"fault":0}
+{"heartbeat_ms":4000}
+{"t_ms":5000,"mission":1,"speed":0.350,"line":0.000,"distance":1.743,"hump_m":0.000,"obstacle_cm":59.3,"barcode":0,"fault":0}
+{"heartbeat_ms":5000}
+{"t_ms":6000,"mission":1,"speed":0.350,"line":1.000,"distance":2.093,"hump_m":0.000,"obstacle_cm":167.4,"barcode":0,"fault":0}
+{"heartbeat_ms":6000}
+{"t_ms":7000,"mission":1,"speed":0.350,"line":0.000,"distance":2.443,"hump_m":0.000,"obstacle_cm":167.5,"barcode":0,"fault":0}
+{"heartbeat_ms":7000}
+{"t_ms":8000,"mission":1,"speed":0.350,"line":-1.000,"distance":2.793,"hump_m":0.000,"obstacle_cm":167.5,"barcode":0,"fault":0}
+{"heartbeat_ms":8000}
+{"t_ms":9000,"mission":1,"speed":0.350,"line":0.000,"distance":3.143,"hump_m":0.000,"obstacle_cm":167.4,"barcode":0,"fault":0}
+{"heartbeat_ms":9000}
+{"t_ms":10000,"mission":1,"speed":0.350,"line":1.000,"distance":3.493,"hump_m":0.000,"obstacle_cm":60.1,"barcode":0,"fault":0}
+{"heartbeat_ms":10000}
+{"t_ms":11000,"mission":1,"speed":0.350,"line":0.000,"distance":3.843,"hump_m":0.000,"obstacle_cm":167.3,"barcode":0,"fault":0}
+{"heartbeat_ms":11000}
+{"t_ms":12000,"mission":1,"speed":0.350,"line":-1.000,"distance":4.193,"hump_m":0.000,"obstacle_cm":167.4,"barcode":0,"fault":0}
+{"heartbeat_ms":12000}
+{"t_ms":13000,"mission":1,"speed":0.350,"line":0.000,"distance":4.543,"hump_m":0.000,"obstacle_cm":167.3,"barcode":0,"fault":0}
+{"heartbeat_ms":13000}
+{"t_ms":14000,"mission":1,"speed":0.350,"line":1.000,"distance":4.893,"hump_m":0.000,"obstacle_cm":167.3,"barcode":0,"fault":0}
+{"heartbeat_ms":14000}
+{"t_ms":15000,"mission":1,"speed":0.350,"line":0.000,"distance":5.243,"hump_m":0.000,"obstacle_cm":167.5,"barcode":0,"fault":0}
+{"heartbeat_ms":15000}
+{"t_ms":16000,"mission":1,"speed":0.350,"line":-1.000,"distance":5.593,"hump_m":0.000,"obstacle_cm":167.4,"barcode":0,"fault":0}
+{"heartbeat_ms":16000}
+{"t_ms":17000,"mission":1,"speed":0.350,"line":0.000,"distance":5.943,"hump_m":0.000,"obstacle_cm":36.7,"barcode":0,"fault":0}
+{"heartbeat_ms":17000}
+{"t_ms":18000,"mission":1,"speed":0.350,"line":1.000,"distance":6.293,"hump_m":0.000,"obstacle_cm":32.8,"barcode":0,"fault":0}
+{"heartbeat_ms":18000}
+{"t_ms":19000,"mission":1,"speed":0.350,"line":0.000,"distance":6.643,"hump_m":0.000,"obstacle_cm":400.0,"barcode":0,"fault":0}
+{"heartbeat_ms":19000}
+{"t_ms":20000,"mission":1,"speed":0.350,"line":-1.000,"distance":6.993,"hump_m":0.000,"obstacle_cm":70.1,"barcode":0,"fault":0}
+{"heartbeat_ms":20000}
+{"t_ms":21000,"mission":1,"speed":0.350,"line":0.000,"distance":7.343,"hump_m":0.000,"obstacle_cm":167.3,"barcode":0,"fault":0}
+{"heartbeat_ms":21000}
+{"t_ms":22000,"mission":1,"speed":0.350,"line":1.000,"distance":7.693,"hump_m":0.000,"obstacle_cm":167.4,"barcode":0,"fault":0}
+{"heartbeat_ms":22000}
+S5: servo test start
+S5: servo test at -45 deg, reads 167 cm
+{"t_ms":23000,"mission":1,"speed":0.350,"line":0.000,"distance":8.043,"hump_m":0.000,"obstacle_cm":167.3,"barcode":0,"fault":0}
+{"heartbeat_ms":23000}
+S5: servo test at 45 deg, reads 167 cm
+{"t_ms":24000,"mission":1,"speed":0.350,"line":-1.000,"distance":8.393,"hump_m":0.000,"obstacle_cm":167.3,"barcode":0,"fault":0}
+{"heartbeat_ms":24000}
+S5: servo test at -45 deg, reads 167 cm
+{"t_ms":25000,"mission":1,"speed":0.350,"line":0.000,"distance":8.743,"hump_m":0.000,"obstacle_cm":167.3,"barcode":0,"fault":0}
+{"heartbeat_ms":25000}
+S5: servo test at 45 deg, reads 167 cm
+{"t_ms":26000,"mission":1,"speed":0.350,"line":1.000,"distance":9.093,"hump_m":0.000,"obstacle_cm":167.3,"barcode":0,"fault":0}
+{"heartbeat_ms":26000}
+S5: servo test at 0 deg, reads 167 cm
+S5: servo test done
+{"t_ms":27000,"mission":1,"speed":0.350,"line":0.000,"distance":9.443,"hump_m":0.000,"obstacle_cm":167.4,"barcode":0,"fault":0}
+{"heartbeat_ms":27000}
+{"t_ms":28000,"mission":1,"speed":0.350,"line":-1.000,"distance":9.793,"hump_m":0.000,"obstacle_cm":167.3,"barcode":0,"fault":0}
+{"heartbeat_ms":28000}
+{"t_ms":29000,"mission":1,"speed":0.350,"line":0.000,"distance":10.143,"hump_m":0.000,"obstacle_cm":167.3,"barcode":0,"fault":0}
+{"heartbeat_ms":29000}
+{"t_ms":30000,"mission":1,"speed":0.350,"line":1.000,"distance":10.493,"hump_m":0.000,"obstacle_cm":167.4,"barcode":0,"fault":0}
+{"heartbeat_ms":30000}
+{"t_ms":31000,"mission":1,"speed":0.350,"line":0.000,"distance":10.843,"hump_m":0.000,"obstacle_cm":167.3,"barcode":0,"fault":0}
+{"heartbeat_ms":31000}
+{"t_ms":32000,"mission":1,"speed":0.350,"line":-1.000,"distance":11.193,"hump_m":0.000,"obstacle_cm":167.4,"barcode":0,"fault":0}
+{"heartbeat_ms":32000}
+{"t_ms":33000,"mission":1,"speed":0.350,"line":0.000,"distance":11.543,"hump_m":0.000,"obstacle_cm":167.3,"barcode":0,"fault":0}
+{"heartbeat_ms":33000}
+{"t_ms":34000,"mission":1,"speed":0.350,"line":1.000,"distance":11.893,"hump_m":0.000,"obstacle_cm":59.0,"barcode":0,"fault":0}
+{"heartbeat_ms":34000}
+{"t_ms":35000,"mission":1,"speed":0.350,"line":0.000,"distance":12.243,"hump_m":0.000,"obstacle_cm":60.4,"barcode":0,"fault":0}
+{"heartbeat_ms":35000}
+{"t_ms":36000,"mission":1,"speed":0.350,"line":-1.000,"distance":12.593,"hump_m":0.000,"obstacle_cm":57.7,"barcode":0,"fault":0}
+{"heartbeat_ms":36000}

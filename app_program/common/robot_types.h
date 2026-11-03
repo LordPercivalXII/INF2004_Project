@@ -112,14 +112,30 @@ typedef struct
     float           tilt_pitch_deg;
 } imu_event_t;
 
+/* Scanner's decision for the controller (stage 4 of Buddy 5). */
+typedef enum
+{
+    OBSTACLE_ACTION_CONTINUE = 0,
+    OBSTACLE_ACTION_STOP,           /* in the path: stop, profile follows */
+    OBSTACLE_ACTION_TURN_LEFT,
+    OBSTACLE_ACTION_TURN_RIGHT,
+    OBSTACLE_ACTION_REVERSE_RETRY
+} obstacle_action_t;
+
 typedef struct
 {
     bool        b_detected;
     bool        b_scan_complete;
+    obstacle_action_t action;
+    uint32_t    scan_start_ms;      /* board_millis() when the scan began */
+    float       bypass_offset_cm;   /* sideways move for a turn action */
     float       center_distance_cm;
     float       estimated_width_cm;
     float       left_clearance_cm;
     float       right_clearance_cm;
+    float       closest_distance_cm;
+    float       center_angle_deg;   /* from straight ahead, - left */
+    float       lateral_offset_cm;  /* sideways offset, - left */
     int8_t      bypass_direction;   /* -1 left, +1 right, 0 none */
 } obstacle_event_t;
 
