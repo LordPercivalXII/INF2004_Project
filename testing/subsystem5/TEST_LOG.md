@@ -25,6 +25,11 @@ See `testing/README.md` for how to run tests and record results.
 | S5-U15 | manoeuvre: stop, bypass, find line, align, verify, done | Stage 5 | auto | `subsystem5_test.c` | PASS |
 | S5-U16 | three reverses at one spot, then gives up as boxed in | Stage 4 | auto | `subsystem5_test.c` | PASS |
 | S5-U17 | driving: three close readings in a row stop the car; one bad echo does not | Stage 4 | auto | `subsystem5_test.c` | PASS |
+| S5-U18 | passing: side readings measure the obstacle's thickness | Stage 3, 5 | auto | `subsystem5_test.c` | PASS (~26 cm) |
+| S5-U19 | turns aim at a heading: a short turn-out is undone exactly | Stage 5 | auto | `subsystem5_test.c` | PASS |
+| S5-U20 | something close ahead while going round: stop, carry on when clear, else give up | Stage 5 | auto | `subsystem5_test.c` | PASS |
+| S5-M08 | while driving past, the sensor stays on the obstacle's side and the thickness is printed | Stage 3, 5 | manual | SIM=0, floor, boxes of known depth; save the console output | `S5: side …` lines while passing, then `S5: obstacle thickness x cm` within ±3 cm, or `not measured` for a box too shallow to see from the side |
+| S5-M09 | a second box placed in the car's path while it goes round the first | Stage 5 | manual | SIM=0, floor | car stops short of it (`S5: avoid BLOCKED`); carries on when it is removed; gives up after 8 s if not |
 | S5-M07 | servo stays still until something is within 25 cm, then scans once and repeats only if still close | Stage 1 | manual | bench build, hand or box moved in from far away | `S5: STOP` near 25 cm, then a scan; no sweeping with a clear path |
 | S5-M01 | box on a straight: car goes round it and rejoins the line going the same way | Stage 4, 5, IF-01, IF-03 | manual | SIM=0, floor; tune the distances in `avoidance.c` | mission 1 → 2 → 1, no contact |
 | S5-M02 | box placed on the line, car at driving speed | Stage 4 | manual | SIM=0, floor, save the console output | car stops short of the box; `S5: STOP obstacle in path at x cm` is printed |

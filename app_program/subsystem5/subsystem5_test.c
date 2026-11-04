@@ -136,12 +136,14 @@ subsystem5_test (void)
     TEST_CHECK("S5-U17", b_ok,
                "driving: three close readings in a row stop the car");
 
-    /* Stage 5: walk the manoeuvre through every phase, passing right. */
+    /* Stage 5: walk the manoeuvre through every phase, passing right.
+       The obstacle's front face is 20 cm ahead; heading is + to the left. */
     avoid = (avoid_t) {0};
     avoid_start(&avoid, 0U, 0.0f);
-    input = (avoid_input_t) {0U, 0.0f, false, true};
+    input = (avoid_input_t) {0U, 0.0f, 0.0f, false, true};
     (void) avoid_step(&avoid, &input, &output);
-    b_ok = (AVOID_OUT_STOP == output.type);
+    b_ok = (AVOID_OUT_STOP == output.type) &&
+           (AVOID_LOOK_SCAN == avoid_look(&avoid));
     obstacle = (obstacle_event_t) {0};
     obstacle.b_scan_complete     = true;
     obstacle.action              = OBSTACLE_ACTION_TURN_RIGHT;
@@ -151,23 +153,52 @@ subsystem5_test (void)
     (void) avoid_step(&avoid, &input, &output);     /* to TURN_OUT */
     (void) avoid_step(&avoid, &input, &output);
     b_ok = b_ok && (AVOID_OUT_TURN == output.type) &&
-           (output.turn_deg < 0.0f);                /* right is negative */
+           (output.turn_deg < -44.0f) &&            /* right is negative */
+           (AVOID_LOOK_AHEAD == avoid_look(&avoid));
+    input.b_turn_done = false;                      /* never reported: */
+    input.heading_deg = -45.0f;                     /* the heading ends it */
     (void) avoid_step(&avoid, &input, &output);     /* to LEG_OUT */
     (void) avoid_step(&avoid, &input, &output);
     b_ok = b_ok && (AVOID_OUT_DRIVE == output.type);
-    input.distance_m = 0.2f;
+    input.distance_m = 0.2f;                        /* 14 cm out */
     (void) avoid_step(&avoid, &input, &output);     /* to TURN_PARALLEL */
     (void) avoid_step(&avoid, &input, &output);
-    b_ok = b_ok && (output.turn_deg > 0.0f);
+    b_ok = b_ok && (output.turn_deg > 44.0f) && (output.turn_deg < 46.0f);
+    input.heading_deg = 0.0f;
     (void) avoid_step(&avoid, &input, &output);     /* to LEG_PAST */
     (void) avoid_step(&avoid, &input, &output);
-    input.distance_m = 0.7f;
+    b_ok = b_ok && (AVOID_PHASE_LEG_PAST == avoid.phase) &&
+           (AVOID_OUT_DRIVE == output.type) &&
+           (AVOID_LOOK_LEFT == avoid_look(&avoid)); /* obstacle on left */
+
+    /* The sensor, held 30 deg left, sees the obstacle's side twice, then
+       passes its rear edge: 24 + 25 cos 30 = 45.8 cm along, so 26 cm
+       thick behind the face at 20 cm. */
+    input.distance_m = 0.30f;
+    avoid_on_side_reading(&avoid, 25.0f);
+    (void) avoid_step(&avoid, &input, &output);
+    input.distance_m = 0.31f;
+    avoid_on_side_reading(&avoid, 400.0f);
+    (void) avoid_step(&avoid, &input, &output);
+    input.distance_m = 0.32f;
+    avoid_on_side_reading(&avoid, 400.0f);
+    (void) avoid_step(&avoid, &input, &output);
+    b_ok = b_ok && avoid.b_rear_found &&
+           (AVOID_PHASE_LEG_PAST == avoid.phase) && /* rear not clear yet */
+           (AVOID_LOOK_AHEAD == avoid_look(&avoid));    /* side done */
+    TEST_CHECK("S5-U18",
+               (avoid.b_rear_found && (avoid.thickness_cm > 25.0f) &&
+                (avoid.thickness_cm < 26.5f)),
+               "passing: side readings measure the thickness, ~26 cm");
+    input.distance_m = 0.75f;                       /* rear 21 cm past */
     (void) avoid_step(&avoid, &input, &output);     /* to TURN_IN */
     (void) avoid_step(&avoid, &input, &output);
-    b_ok = b_ok && (output.turn_deg > 0.0f);
+    b_ok = b_ok && (output.turn_deg > 44.0f) && (output.turn_deg < 46.0f);
+    input.heading_deg = 45.0f;
     (void) avoid_step(&avoid, &input, &output);     /* to SEARCH */
     (void) avoid_step(&avoid, &input, &output);
-    b_ok = b_ok && (AVOID_PHASE_SEARCH == avoid.phase);
+    b_ok = b_ok && (AVOID_PHASE_SEARCH == avoid.phase) &&
+           (AVOID_LOOK_AHEAD == avoid_look(&avoid));
 #if !ROBOT_SIMULATION
     input.b_line_detected = true;                   /* cross 2.5 cm of tape */
     for (step = 0U; step < 5U; step++)
@@ -204,13 +235,66 @@ subsystem5_test (void)
                (b_ok && (AVOID_DONE == avoid_step(&avoid, &input, &output))),
                "manoeuvre: stop, bypass, find line, align, verify, done");
 
+    /* Passing left, subsystem 2 turns only 35 of the 45 deg and says it
+       is done: the turn back aims at the original heading, so 35 back. */
+    avoid = (avoid_t) {0};
+    avoid_start(&avoid, 0U, 0.0f);
+    input = (avoid_input_t) {0U, 0.0f, 0.0f, false, true};
+    (void) avoid_step(&avoid, &input, &output);
+    obstacle.action = OBSTACLE_ACTION_TURN_LEFT;
+    avoid_on_scan(&avoid, &obstacle);
+    (void) avoid_step(&avoid, &input, &output);     /* to TURN_OUT */
+    (void) avoid_step(&avoid, &input, &output);
+    b_ok = (output.turn_deg > 44.0f);
+    input.heading_deg = 35.0f;
+    (void) avoid_step(&avoid, &input, &output);     /* to LEG_OUT */
+    (void) avoid_step(&avoid, &input, &output);
+    input.distance_m = 0.25f;                       /* 14 cm out */
+    (void) avoid_step(&avoid, &input, &output);     /* to TURN_PARALLEL */
+    (void) avoid_step(&avoid, &input, &output);
+    TEST_CHECK("S5-U19",
+               (b_ok && (AVOID_PHASE_TURN_PARALLEL == avoid.phase) &&
+                (output.turn_deg < -34.0f) && (output.turn_deg > -36.0f) &&
+                (avoid.lateral_cm > 13.0f)),
+               "turns aim at a heading: a 35 deg turn-out is undone by 35");
+
+    /* Driving past, something 10 cm ahead: stop, wait for three clear
+       readings, carry on with the same step.  If it never clears, give
+       up after 8 s. */
+    input.heading_deg = 0.0f;
+    (void) avoid_step(&avoid, &input, &output);     /* to LEG_PAST */
+    (void) avoid_step(&avoid, &input, &output);
+    b_ok = (AVOID_PHASE_LEG_PAST == avoid.phase) &&
+           (AVOID_LOOK_RIGHT == avoid_look(&avoid)); /* obstacle on right */
+    avoid_on_ahead_reading(&avoid, 10.0f);
+    (void) avoid_step(&avoid, &input, &output);
+    b_ok = b_ok && (AVOID_PHASE_BLOCKED == avoid.phase) &&
+           (AVOID_OUT_STOP == output.type);
+    for (step = 0U; step < 3U; step++)
+    {
+        b_ok = b_ok && (AVOID_PHASE_BLOCKED == avoid.phase);
+        input.now_ms += 100U;
+        avoid_on_ahead_reading(&avoid, 80.0f);
+        (void) avoid_step(&avoid, &input, &output);
+    }
+    b_ok = b_ok && (AVOID_PHASE_LEG_PAST == avoid.phase) &&
+           (AVOID_OUT_DRIVE == output.type);
+    avoid_on_ahead_reading(&avoid, 10.0f);
+    (void) avoid_step(&avoid, &input, &output);
+    input.now_ms += 8000U;
+    TEST_CHECK("S5-U20",
+               (b_ok && (AVOID_FAILED_BLOCKED ==
+                         avoid_step(&avoid, &input, &output))),
+               "something close ahead: stop, carry on when clear, else "
+               "give up");
+
     /* A dead end: reversing and driving back must not loop forever. */
     avoid = (avoid_t) {0};
     obstacle.action = OBSTACLE_ACTION_REVERSE_RETRY;
     status = AVOID_RUNNING;
     for (step = 0U; (step < 6U) && (AVOID_RUNNING == status); step++)
     {
-        input = (avoid_input_t) {step * 1000U, 0.0f, false, true};
+        input = (avoid_input_t) {step * 1000U, 0.0f, 0.0f, false, true};
         avoid_start(&avoid, input.now_ms, 0.0f);
         obstacle.scan_start_ms = input.now_ms;
         (void) avoid_step(&avoid, &input, &output);

@@ -12,6 +12,10 @@
  * (IF-01).  avoidance.c holds the manoeuvre and line recovery (stage 5); the
  * controller runs it, because the controller owns the motors.
  *
+ * While going round the obstacle the controller points the scanner with
+ * obstacle_set_look(): held toward the obstacle's side, each reading is
+ * posted with b_side_reading so avoidance can measure its thickness.
+ *
  * Owns: GP15 (PWM slice 7), GP16, GP17.
  */
 
@@ -21,8 +25,13 @@
 #include "../app.h"
 #include "../common/robot_types.h"
 #include "obstacle_profile.h"
+#include "avoidance.h"
 
 #define S5_PRI_OBSTACLE     (18)    /* band 18-19 (TEAM.md) */
+
+/* Controller -> S5: where to point the scanner while avoiding (only read
+ * while SYSTEM_BIT_OBSTACLE is set). */
+void   obstacle_set_look(avoid_look_t look);
 
 /* Private to subsystem 5: echo widths from the interrupt to the task. */
 extern ID gh_echo_mbf;

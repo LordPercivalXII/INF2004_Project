@@ -17,7 +17,7 @@
 #include "../common/rmath.h"
 #include "../subsystem1/subsystem1.h"
 #include "../subsystem2/subsystem2.h"
-#include "../subsystem5/avoidance.h"
+#include "../subsystem5/subsystem5.h"
 #include "../subsystem4/imu_height.h"
 #include "../subsystem4/imu_processing.h"
 
@@ -57,6 +57,7 @@ typedef struct
     uint32_t            shock_until_ms;
     float               line_error;
     float               distance_m;
+    float               heading_deg;    /* from the encoders, + = left */
     float               hump_m;
     float               obstacle_cm;
     uint32_t            barcode;
@@ -74,6 +75,7 @@ typedef struct
     float               prev_line_error;    /* for the D term           */
     bool                b_steer_primed;     /* prev_line_error is valid */
     avoid_t             avoid;
+    avoid_phase_t       avoid_phase_shown;  /* last phase printed */
     uint32_t            last_telemetry_ms;
     uint32_t            height_trace_sequence;
     uint32_t            height_trace_dropped;
@@ -190,6 +192,21 @@ ctrl_set_motion (float left_speed, float right_speed)
     command.left_speed  = left_speed;
     command.right_speed = right_speed;
     (void) motion_send_command(&command);
+}
+
+/*!
+ * @brief Heading since power-up from the wheel encoder counts, + = left
+ *        (as MOTION_TURN).  Counts, not speeds, so no error builds up
+ *        from a dropped motion event.
+ */
+static float
+ctrl_heading_deg (motion_event_t const * p_motion)
+{
+    float const m_per_tick = (RMATH_PI * MOTOR_WHEEL_DIAMETER_M) /
+                             MOTOR_ENCODER_TICKS_PER_REV;
+
+    return (((float) (p_motion->right_ticks - p_motion->left_ticks) *
+             m_per_tick / MOTOR_TRACK_WIDTH_M) * RMATH_RAD_TO_DEG);
 }
 
 static bool
@@ -554,20 +571,41 @@ static void
 ctrl_handle_obstacle (ctrl_state_t * p_ctrl,
                       obstacle_event_t const * p_obs)
 {
-    p_ctrl->obstacle_cm = p_obs->center_distance_cm;
-
-    if ((MISSION_FOLLOWING == p_ctrl->state) &&
-        (OBSTACLE_ACTION_CONTINUE != p_obs->action))
+    if (!p_obs->b_side_reading)
     {
+        p_ctrl->obstacle_cm = p_obs->center_distance_cm;
+    }
+
+    if (p_obs->b_side_reading)
+    {
+        /* The sensor is held toward the obstacle's side, not ahead. */
+        if (MISSION_AVOIDING == p_ctrl->state)
+        {
+            avoid_on_side_reading(&p_ctrl->avoid, p_obs->side_distance_cm);
+        }
+    }
+    else if ((MISSION_FOLLOWING == p_ctrl->state) &&
+             (OBSTACLE_ACTION_CONTINUE != p_obs->action))
+    {
+        obstacle_set_look(AVOID_LOOK_SCAN);
         ctrl_set_bits(SYSTEM_BIT_OBSTACLE);
         p_ctrl->state = MISSION_AVOIDING;
         p_ctrl->b_turn_in_progress = false;
         p_ctrl->active_turn_id = 0U;
         p_ctrl->pending_turn = (uint16_t) BARCODE_CMD_NONE;
         avoid_start(&p_ctrl->avoid, board_millis(), p_ctrl->distance_m);
+        p_ctrl->avoid_phase_shown = AVOID_PHASE_IDLE;
     }
     else if (MISSION_AVOIDING == p_ctrl->state)
     {
+        if ((!p_obs->b_scan_complete) &&
+            (OBSTACLE_ACTION_CONTINUE == p_obs->action))
+        {
+            /* One straight-ahead reading while going round. */
+            avoid_on_ahead_reading(&p_ctrl->avoid,
+                                   p_obs->center_distance_cm);
+        }
+
         avoid_on_scan(&p_ctrl->avoid, p_obs);
     }
     else
@@ -642,6 +680,7 @@ ctrl_handle_event (ctrl_state_t * p_ctrl, system_event_t const * p_event)
                 p_event->timestamp_ms - p_ctrl->height.last_ms;
             float const ds = p_event->data.motion.distance_m - p_ctrl->distance_m;
             p_ctrl->distance_m = p_event->data.motion.distance_m;
+            p_ctrl->heading_deg = ctrl_heading_deg(&p_event->data.motion);
             if (p_ctrl->b_have_imu)
             {
                 imu_height_update(&p_ctrl->height, &p_event->data.motion,
@@ -735,6 +774,53 @@ ctrl_handle_event (ctrl_state_t * p_ctrl, system_event_t const * p_event)
 /* Avoidance manoeuvre (subsystem5/avoidance.c) and telemetry          */
 /* ------------------------------------------------------------------ */
 
+/*!
+ * @brief Print each new step of the manoeuvre, the obstacle's measured
+ *        thickness and how it ended, so a test log shows where it went.
+ */
+static void
+ctrl_show_avoidance (ctrl_state_t * p_ctrl, avoid_status_t status)
+{
+    static char const * const results[] =
+    {
+        "running", "done", "boxed in", "line not found", "timed out",
+        "blocked ahead"
+    };
+    avoid_t const * const p_avoid = &p_ctrl->avoid;
+
+    if (p_avoid->phase != p_ctrl->avoid_phase_shown)
+    {
+        if ((AVOID_PHASE_TURN_IN == p_avoid->phase) &&
+            (AVOID_PHASE_LEG_PAST == p_ctrl->avoid_phase_shown))
+        {
+            if (p_avoid->b_rear_found)
+            {
+                tm_printf((UB *) "S5: obstacle thickness %d cm\n",
+                          (int) (p_avoid->thickness_cm + 0.5f));
+            }
+            else
+            {
+                tm_printf((UB *) "S5: obstacle thickness not measured "
+                          "(side %s)\n",
+                          p_avoid->b_side_seen ? "never cleared"
+                                               : "not seen");
+            }
+        }
+
+        tm_printf((UB *) "S5: avoid %s heading %d along %d out %d cm\n",
+                  avoid_phase_name(p_avoid->phase),
+                  (int) (p_ctrl->heading_deg - p_avoid->heading0_deg),
+                  (int) p_avoid->along_cm, (int) p_avoid->lateral_cm);
+        p_ctrl->avoid_phase_shown = p_avoid->phase;
+    }
+
+    if ((AVOID_RUNNING != status) &&
+        ((uint32_t) status < (sizeof(results) / sizeof(results[0]))))
+    {
+        tm_printf((UB *) "S5: avoid %s\n", results[status]);
+    }
+}
+
 static void
 ctrl_step_avoidance (ctrl_state_t * p_ctrl, uint32_t now_ms)
 {
@@ -746,10 +832,13 @@ ctrl_step_avoidance (ctrl_state_t * p_ctrl, uint32_t now_ms)
     {
         input.now_ms          = now_ms;
         input.distance_m      = p_ctrl->distance_m;
+        input.heading_deg     = p_ctrl->heading_deg;
         input.b_line_detected = p_ctrl->b_line_detected;
         input.b_turn_done     = !p_ctrl->b_turn_in_progress;
 
         status = avoid_step(&p_ctrl->avoid, &input, &output);
+        obstacle_set_look(avoid_look(&p_ctrl->avoid));
+        ctrl_show_avoidance(p_ctrl, status);
 
         if ((AVOID_OUT_STOP == output.type) ||
             (AVOID_OUT_DRIVE == output.type))
@@ -797,9 +886,11 @@ ctrl_step_avoidance (ctrl_state_t * p_ctrl, uint32_t now_ms)
         else if (AVOID_DONE == status)
         {
             p_ctrl->state = MISSION_FOLLOWING;
+            obstacle_set_look(AVOID_LOOK_SCAN);
             ctrl_clear_bits(SYSTEM_BIT_OBSTACLE);
         }
-        else if (AVOID_FAILED_BOXED_IN == status)
+        else if ((AVOID_FAILED_BOXED_IN == status) ||
+                 (AVOID_FAILED_BLOCKED == status))
         {
             ctrl_enter_fault(p_ctrl, FAULT_BOXED_IN);
         }

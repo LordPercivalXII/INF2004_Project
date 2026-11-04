@@ -171,6 +171,10 @@ typedef struct
     float       center_angle_deg;   /* from straight ahead, - left */
     float       lateral_offset_cm;  /* sideways offset, - left */
     int8_t      bypass_direction;   /* -1 left, +1 right, 0 none */
+    bool        b_side_reading;     /* one reading toward the obstacle's
+                                       side while going round it; only
+                                       side_distance_cm is set */
+    float       side_distance_cm;
 } obstacle_event_t;
 
 typedef struct

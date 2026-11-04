@@ -19,6 +19,7 @@
 #define OBSTACLE_STOP_SETTLE_MS (300)   /* car at rest before rescanning */
 #define OBSTACLE_STOP_LINE_MAX  (64U)
 #define OBSTACLE_WATCH_REPORT_COUNT (5U)    /* readings per distance report */
+#define OBSTACLE_GLANCE_EVERY   (3U)    /* off the side: every 3rd ahead */
 
 /* Servo test, requested by testing/subsystem5/scan_recorder.ps1 pulsing
  * the USB DTR line.  Bench build only (real scanner, simulated motors):
@@ -31,6 +32,10 @@
 #define OBSTACLE_POINT_TEXT_MAX (12U)   /* " 135:400" plus margin */
 #define OBSTACLE_LINE_MAX       (16U + (OBSTACLE_MAX_POINTS * \
                                         OBSTACLE_POINT_TEXT_MAX))
+
+/* Set by the controller (obstacle_set_look()); a single aligned word, so
+ * the write from the other core is seen whole. */
+static volatile avoid_look_t g_look = AVOID_LOOK_SCAN;
 
 /* 60 / 75 / 90 / 105 / 120 deg: edges, centre and the midpoints. */
 static uint32_t const g_coarse_angles[OBSTACLE_COARSE_COUNT] =
@@ -115,6 +120,25 @@ obstacle_car_is_avoiding (void)
 }
 
 /*!
+ * @brief Controller -> S5: where to point the scanner while avoiding.
+ */
+void
+obstacle_set_look (avoid_look_t look)
+{
+    g_look = look;
+}
+
+/*!
+ * @brief True while the controller still wants full scans: always, unless
+ *        it is going round an obstacle and has pointed the sensor.
+ */
+static bool
+obstacle_wants_scan (void)
+{
+    return ((AVOID_LOOK_SCAN == g_look) || (!obstacle_car_is_avoiding()));
+}
+
+/*!
  * @brief Round to the nearest whole number (tm_printf has no %f).
  */
 static int
@@ -165,12 +189,38 @@ obstacle_post_distance (float distance_cm)
 }
 
 /*!
- * @brief One full scan.
+ * @brief While going round the obstacle, report one reading toward its
+ *        side for the thickness measurement (avoid_on_side_reading()).
+ */
+static void
+obstacle_post_side (float distance_cm, int angle_deg)
+{
+    system_event_t event = {0};
+    char           line[OBSTACLE_STOP_LINE_MAX];
+
+    event.type         = SYSTEM_EVENT_OBSTACLE;
+    event.timestamp_ms = board_millis();
+    event.data.obstacle.action           = OBSTACLE_ACTION_CONTINUE;
+    event.data.obstacle.b_side_reading   = true;
+    event.data.obstacle.side_distance_cm = distance_cm;
+    obstacle_publish(&event);
+
+    (void) tm_sprintf((UB *) line, (UB *) "S5: side %d cm at %d deg\n",
+                      obstacle_round(distance_cm), angle_deg);
+    (void) tm_putstring((UB *) line);
+}
+
+/*!
+ * @brief One full scan.  Abandoned part-way if the controller stops
+ *        wanting scans (the car has started to move).
+ *
+ * @param[out] p_complete  true if every planned angle was read.
  *
  * @return The straight-ahead distance.
  */
 static float
-obstacle_scan (obstacle_scan_t * p_scan, uint32_t scan_number)
+obstacle_scan (obstacle_scan_t * p_scan, uint32_t scan_number,
+               bool * p_complete)
 {
     uint32_t first_hit = ULTRASONIC_COARSE_RIGHT_DEG;
     uint32_t last_hit  = ULTRASONIC_COARSE_LEFT_DEG;
@@ -186,8 +236,10 @@ obstacle_scan (obstacle_scan_t * p_scan, uint32_t scan_number)
     float    distance;
 
     obstacle_scan_reset(p_scan);
+    *p_complete = false;
 
-    for (idx = 0U; idx < OBSTACLE_COARSE_COUNT; idx++)
+    for (idx = 0U; (idx < OBSTACLE_COARSE_COUNT) && obstacle_wants_scan();
+         idx++)
     {
         angle    = b_from_right
                    ? g_coarse_angles[OBSTACLE_COARSE_COUNT - 1U - idx]
@@ -219,13 +271,16 @@ obstacle_scan (obstacle_scan_t * p_scan, uint32_t scan_number)
                      ? (last_hit + ULTRASONIC_FINE_MARGIN_DEG)
                      : ULTRASONIC_COARSE_RIGHT_DEG;
 
-        for (angle = fine_start; angle <= fine_end;
+        for (angle = fine_start;
+             (angle <= fine_end) && obstacle_wants_scan();
              angle += ULTRASONIC_FINE_STEP_DEG)
         {
             obstacle_scan_add(p_scan, angle,
                               obstacle_measure_at(angle, scan_number));
         }
     }
+
+    *p_complete = obstacle_wants_scan();
 
     return (center_cm);
 }
@@ -372,6 +427,11 @@ obstacle_task (INT stacd, void * p_exinf)
     uint32_t               close_count = 0U;
     uint32_t               watch_count = 0U;
     float                  center_cm;
+    avoid_look_t           look;
+    uint32_t               look_angle;
+    uint32_t               side_count  = 0U;
+    float                  side_cm     = ULTRASONIC_MAX_DISTANCE_CM;
+    bool                   b_complete;
     bool                   b_hw_ok;
 
     (void) stacd;
@@ -403,6 +463,49 @@ obstacle_task (INT stacd, void * p_exinf)
         }
 #endif
 
+        look = g_look;
+
+        if ((AVOID_LOOK_LEFT != look) && (AVOID_LOOK_RIGHT != look))
+        {
+            /* The next side watch starts without contact. */
+            side_cm    = ULTRASONIC_MAX_DISTANCE_CM;
+            side_count = 0U;
+        }
+
+        if (obstacle_car_is_avoiding() && (AVOID_LOOK_SCAN != look))
+        {
+            /* Going round the obstacle: hold the sensor where the
+               controller wants it, one reading at a time. */
+            if (AVOID_LOOK_AHEAD == look)
+            {
+                obstacle_post_distance(
+                    obstacle_measure_at(ULTRASONIC_COARSE_CENTER_DEG,
+                                        scan_number));
+            }
+            else if ((side_cm > AVOID_SIDE_SEEN_CM) &&
+                     (0U == (++side_count % OBSTACLE_GLANCE_EVERY)))
+            {
+                /* Not touching the obstacle's side: glance ahead for
+                   anything else in the way. */
+                obstacle_post_distance(
+                    obstacle_measure_at(ULTRASONIC_COARSE_CENTER_DEG,
+                                        scan_number));
+            }
+            else
+            {
+                /* On the obstacle's side: stay on it, every reading counts
+                   toward where its rear edge is. */
+                look_angle = (AVOID_LOOK_LEFT == look)
+                             ? ULTRASONIC_COARSE_LEFT_DEG
+                             : ULTRASONIC_COARSE_RIGHT_DEG;
+                side_cm    = obstacle_measure_at(look_angle, scan_number);
+                obstacle_post_side(side_cm, (int) look_angle -
+                                            (int) ULTRASONIC_COARSE_CENTER_DEG);
+            }
+
+            continue;
+        }
+
         if (!obstacle_car_is_avoiding())
         {
             /* Driving: look straight ahead, no sweeping, until something
@@ -430,7 +533,14 @@ obstacle_task (INT stacd, void * p_exinf)
         }
 
         scan_start_ms = board_millis();
-        center_cm     = obstacle_scan(&scan, scan_number);
+        center_cm     = obstacle_scan(&scan, scan_number, &b_complete);
+
+        if (!b_complete)
+        {
+            /* The car moved off mid-scan: the readings are stale. */
+            continue;
+        }
+
         obstacle_profile_build(&scan, &profile);
         obstacle_plan_build(&profile, &plan);
 
