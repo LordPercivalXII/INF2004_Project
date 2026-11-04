@@ -22,10 +22,11 @@
 #include "../subsystem4/imu_height.h"
 #include "../subsystem4/imu_processing.h"
 
-#define CTRL_STEER_GAIN         (0.05f)
+#define CTRL_STEER_GAIN         (0.02f)
 #define CTRL_STEER_LIMIT        (0.08f)
-#define CTRL_STEER_SMOOTH       (0.50f) /* low-pass on the error: less jerk */
-#define CTRL_STEER_KD           (0.0005f) /* per (error/s): damps zig-zag */
+#define CTRL_STEER_SMOOTH       (0.70f)
+#define CTRL_STEER_KD           (0.002f)
+#define CTRL_STEER_DEADBAND     (0.05f)
 #define CTRL_LINE_DT_S          ((float) ROBOT_LINE_PERIOD_MS / 1000.0f)
 /* Ramp handling (S4 pitch: negative = nose up, positive = nose down). */
 #define CTRL_RAMP_ENTER_DEG     (6.0f)
@@ -421,7 +422,7 @@ ctrl_handle_line (ctrl_state_t * p_ctrl, line_event_t const * p_line)
     {
         /* PD steering.  With the line sensors on the line edges the
            error is continuous near the centre; the D term damps the
-           zig-zag.  No D kick on the first cycle after a turn. */
+           zig-zag.  Deadband reduces jitter near the line centre. */
         static float smooth_error = 0.0f;
         smooth_error = p_ctrl->b_steer_primed
             ? (smooth_error +
@@ -432,8 +433,11 @@ ctrl_handle_line (ctrl_state_t * p_ctrl, line_event_t const * p_line)
             ? ((p_ctrl->line_error - p_ctrl->prev_line_error) /
                CTRL_LINE_DT_S)
             : 0.0f;
+        float error_deadband = p_ctrl->line_error;
+        if (rmath_absf(error_deadband) < CTRL_STEER_DEADBAND)
+            error_deadband = 0.0f;
         float const correction =
-            rmath_clampf((p_ctrl->line_error * CTRL_STEER_GAIN) +
+            rmath_clampf((error_deadband * CTRL_STEER_GAIN) +
                          (derivative * CTRL_STEER_KD),
                          -CTRL_STEER_LIMIT, CTRL_STEER_LIMIT);
 

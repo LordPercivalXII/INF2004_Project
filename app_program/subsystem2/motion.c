@@ -23,6 +23,7 @@
 
 #define MOTION_INTEGRAL_LIMIT   (1.0f)
 #define MOTION_PI               (3.14159265f)
+#define MOTION_STRAIGHT_GAIN    (0.1f)  /* speed error feedback for straight-line */
 
 static bool
 motion_float_is_finite (float value)
@@ -517,9 +518,19 @@ motion_task (INT stacd, void * p_exinf)
         right_out = 0.0f;
         if ((MOTION_DRIVE == requested.type) || (MOTION_TURN == requested.type))
         {
-            left_out = motion_pid_step(&left_pid, left_target, left_speed,
+            /* Straight-line correction: compare wheel speeds and adjust
+             * targets to keep the car pointing straight. If one wheel is
+             * going faster, reduce its target slightly. */
+            float speed_error = left_speed - right_speed;
+            float correction = speed_error * MOTION_STRAIGHT_GAIN;
+            float left_target_corrected = rmath_clampf(left_target - correction,
+                                                       -1.0f, 1.0f);
+            float right_target_corrected = rmath_clampf(right_target + correction,
+                                                        -1.0f, 1.0f);
+            
+            left_out = motion_pid_step(&left_pid, left_target_corrected, left_speed,
                                        interval_s);
-            right_out = motion_pid_step(&right_pid, right_target, right_speed,
+            right_out = motion_pid_step(&right_pid, right_target_corrected, right_speed,
                                         interval_s);
         }
 
