@@ -2,3 +2,4 @@ build
 !.vscode/*
 secrets.h
 .DS_Store
+build_make
