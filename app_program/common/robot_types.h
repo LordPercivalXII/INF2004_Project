@@ -45,7 +45,8 @@ typedef enum
     MOTION_STOP = 0,
     MOTION_DRIVE,
     MOTION_TURN,
-    MOTION_BRAKE
+    MOTION_BRAKE,
+    MOTION_MOVE_DISTANCE
 } motion_command_type_t;
 
 #define BARCODE_TEXT_MAX    (8U)
@@ -203,6 +204,7 @@ typedef struct
     float                   right_speed;
     float                   turn_angle_deg;
     uint32_t                turn_id;
+    float                   target_distance_m;  /* for MOTION_MOVE_DISTANCE */
 } motion_command_t;
 
 typedef struct

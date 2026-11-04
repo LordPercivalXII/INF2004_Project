@@ -23,6 +23,7 @@
 
 #define MOTION_INTEGRAL_LIMIT   (1.0f)
 #define MOTION_PI               (3.14159265f)
+#define MOTION_STRAIGHT_GAIN    (0.1f)  /* speed error feedback for straight-line */
 
 static bool
 motion_float_is_finite (float value)
@@ -54,6 +55,13 @@ motion_command_is_valid (motion_command_t const * p_command)
                           (0.0f != p_command->turn_angle_deg) &&
                           (rmath_absf(p_command->turn_angle_deg) <= 360.0f) &&
                           (0U != p_command->turn_id);
+                break;
+
+            case MOTION_MOVE_DISTANCE:
+                b_valid = motion_float_is_finite(p_command->left_speed) &&
+                          motion_float_is_finite(p_command->right_speed) &&
+                          motion_float_is_finite(p_command->target_distance_m) &&
+                          (p_command->target_distance_m > 0.0f);
                 break;
 
             default:
@@ -215,6 +223,11 @@ motion_target_speed (motion_command_t const * p_command, bool b_left_wheel)
         target = b_left_wheel ? -direction * MOTOR_TURN_SPEED_M_S
                               :  direction * MOTOR_TURN_SPEED_M_S;
     }
+    else if (MOTION_MOVE_DISTANCE == p_command->type)
+    {
+        target = b_left_wheel ? p_command->left_speed : p_command->right_speed;
+        target = rmath_clampf(target, -ROBOT_MAX_SPEED, ROBOT_MAX_SPEED);
+    }
     else
     {
         /* Stop and brake commands have no wheel-speed target. */
@@ -272,6 +285,8 @@ motion_task (INT stacd, void * p_exinf)
     uint32_t         reported_right_rejected = 0U;
     bool             encoder_fault_latched = false;
     bool             encoder_fault_pending = false;
+    float            distance_target_m = 0.0f;  /* target distance for MOTION_MOVE_DISTANCE */
+    float            distance_traveled_m = 0.0f;  /* distance accumulated for current move */
 
     (void) stacd;
     (void) p_exinf;
@@ -327,6 +342,8 @@ motion_task (INT stacd, void * p_exinf)
             requested.type = MOTION_STOP;
             active_turn_id = 0U;
             turn_progress_deg = 0.0f;
+            distance_target_m = 0.0f;
+            distance_traveled_m = 0.0f;
             motion_pid_reset(&left_pid);
             motion_pid_reset(&right_pid);
         }
@@ -338,6 +355,9 @@ motion_task (INT stacd, void * p_exinf)
                 (MOTION_TURN == incoming.type) &&
                 ((MOTION_TURN != requested.type) ||
                  (incoming.turn_id != requested.turn_id));
+            bool const b_entering_distance_move =
+                (MOTION_MOVE_DISTANCE == incoming.type) &&
+                (MOTION_MOVE_DISTANCE != requested.type);
 
             if ((MOTION_TURN == requested.type) &&
                 ((MOTION_TURN != incoming.type) ||
@@ -356,6 +376,14 @@ motion_task (INT stacd, void * p_exinf)
                 motion_pid_reset(&right_pid);
             }
 
+            if (b_entering_distance_move)
+            {
+                distance_target_m = incoming.target_distance_m;
+                distance_traveled_m = 0.0f;
+                motion_pid_reset(&left_pid);
+                motion_pid_reset(&right_pid);
+            }
+
             if ((rmath_absf(old_left_target) <= 0.001f) &&
                 (rmath_absf(motion_target_speed(&requested, true)) > 0.001f))
             {
@@ -370,7 +398,8 @@ motion_task (INT stacd, void * p_exinf)
             }
 
             if ((MOTION_DRIVE != requested.type) &&
-                (MOTION_TURN != requested.type))
+                (MOTION_TURN != requested.type) &&
+                (MOTION_MOVE_DISTANCE != requested.type))
             {
                 motion_pid_reset(&left_pid);
                 motion_pid_reset(&right_pid);
@@ -440,6 +469,14 @@ motion_task (INT stacd, void * p_exinf)
             right_speed = ((float) right_delta * m_per_tick) / interval_s;
             total_distance += ((float) (left_delta + right_delta) * 0.5f) *
                               m_per_tick;
+            
+            /* Track distance for MOTION_MOVE_DISTANCE commands */
+            if (MOTION_MOVE_DISTANCE == requested.type)
+            {
+                distance_traveled_m += ((float) (left_delta + right_delta) * 0.5f) *
+                                       m_per_tick;
+            }
+            
             if (0 != left_delta)
             {
                 left_last_tick_ms = now_ms;
@@ -453,6 +490,20 @@ motion_task (INT stacd, void * p_exinf)
         }
 
         completed_turn_id = 0U;
+        
+        /* Check if distance-based movement is complete */
+        if ((MOTION_MOVE_DISTANCE == requested.type) &&
+            (distance_traveled_m >= distance_target_m))
+        {
+            requested.type = MOTION_STOP;
+            distance_target_m = 0.0f;
+            distance_traveled_m = 0.0f;
+            left_target = 0.0f;
+            right_target = 0.0f;
+            motion_pid_reset(&left_pid);
+            motion_pid_reset(&right_pid);
+        }
+        
         if (MOTION_TURN == requested.type)
         {
             float const wheel_delta_m =
@@ -515,11 +566,22 @@ motion_task (INT stacd, void * p_exinf)
 
         left_out = 0.0f;
         right_out = 0.0f;
-        if ((MOTION_DRIVE == requested.type) || (MOTION_TURN == requested.type))
+        if ((MOTION_DRIVE == requested.type) || (MOTION_TURN == requested.type) ||
+            (MOTION_MOVE_DISTANCE == requested.type))
         {
-            left_out = motion_pid_step(&left_pid, left_target, left_speed,
+            /* Straight-line correction: compare wheel speeds and adjust
+             * targets to keep the car pointing straight. If one wheel is
+             * going faster, reduce its target slightly. */
+            float speed_error = left_speed - right_speed;
+            float correction = speed_error * MOTION_STRAIGHT_GAIN;
+            float left_target_corrected = rmath_clampf(left_target - correction,
+                                                       -1.0f, 1.0f);
+            float right_target_corrected = rmath_clampf(right_target + correction,
+                                                        -1.0f, 1.0f);
+            
+            left_out = motion_pid_step(&left_pid, left_target_corrected, left_speed,
                                        interval_s);
-            right_out = motion_pid_step(&right_pid, right_target, right_speed,
+            right_out = motion_pid_step(&right_pid, right_target_corrected, right_speed,
                                         interval_s);
         }
 
@@ -548,6 +610,44 @@ motion_task (INT stacd, void * p_exinf)
         motion_post(left_now, right_now, left_speed, right_speed,
                     total_distance, completed_turn_id, now_ms);
     }
+}
+
+/*!
+ * @brief Move forward a specified distance at base speed.
+ *
+ * @param distance_m Distance to travel in meters (must be positive).
+ * @return true if command was queued.
+ */
+bool
+motion_move_forward (float distance_m)
+{
+    motion_command_t cmd = {0};
+
+    cmd.type = MOTION_MOVE_DISTANCE;
+    cmd.left_speed = ROBOT_BASE_SPEED;
+    cmd.right_speed = ROBOT_BASE_SPEED;
+    cmd.target_distance_m = distance_m;
+
+    return motion_send_command(&cmd);
+}
+
+/*!
+ * @brief Move backward a specified distance at base speed.
+ *
+ * @param distance_m Distance to travel in meters (must be positive).
+ * @return true if command was queued.
+ */
+bool
+motion_move_backward (float distance_m)
+{
+    motion_command_t cmd = {0};
+
+    cmd.type = MOTION_MOVE_DISTANCE;
+    cmd.left_speed = -ROBOT_BASE_SPEED;
+    cmd.right_speed = -ROBOT_BASE_SPEED;
+    cmd.target_distance_m = distance_m;
+
+    return motion_send_command(&cmd);
 }
 
 /*** end of file ***/

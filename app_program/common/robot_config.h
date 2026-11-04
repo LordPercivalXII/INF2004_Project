@@ -31,10 +31,10 @@
 #define ROBOT_CONTROLLER_WAIT_MS        (10U)   /* was 2 ms at 1 kHz tick */
 
 #ifndef ROBOT_BASE_SPEED
-#define ROBOT_BASE_SPEED                (0.35f)
+#define ROBOT_BASE_SPEED                (0.05f)
 #endif
 #define ROBOT_MAX_SPEED                 (0.70f)
-#define ROBOT_MIN_SPEED                 (0.10f)
+#define ROBOT_MIN_SPEED                 (0.05f)
 
 /* ---- Cytron Robo Pico pin map (Group 19 Design Review) ----
  * Measured on the car: motor channel GP10/GP11 drives the physical left
@@ -103,7 +103,7 @@
 /* 100 us still permits 3.29 m/s with the geometry above, well above the
  * 0.70 m/s drive limit. Suppress faster duplicate electrical edges. */
 #define MOTOR_ENCODER_MIN_EDGE_US       (100U)
-#define MOTOR_TRACK_WIDTH_M             (0.110f)  /* Measured wheel-center spacing, approx. */
+#define MOTOR_TRACK_WIDTH_M             (0.125f)  /* Measured wheel-center spacing: 12.5 cm */
 /* 1 = motors off and raw encoder ticks printed (build TEST=1 SIM=0). */
 #ifndef S2_ENCODER_CALIBRATION
 #define S2_ENCODER_CALIBRATION          (0)

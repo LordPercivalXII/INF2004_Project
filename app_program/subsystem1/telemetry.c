@@ -361,12 +361,14 @@ static void telemetry_print(telemetry_message_t const *p_msg)
 
         (void) tm_sprintf((UB *) line,
                           (UB *) "[%4u.%u s] %-6s spd=%s line=%s dist=%sm "
-                          "pitch=%s roll=%s obst=%scm bc=%s fault=%u%s\n",
+                          "pitch=%s roll=%s obst=%scm bc=%s fault=%u%s%s\n",
                           secs10 / 10U, secs10 % 10U,
                           p_names[(mission < 4U) ? mission : 3U],
                           speed, error, dist, pitch, roll, obst, bc,
                           (unsigned int) p_msg->fault_code,
-                          p_msg->imu.b_calibrated ? "" : " IMU-CAL");
+                          p_msg->imu.b_calibrated ? "" : " IMU-CAL",
+                          (p_msg->imu.b_hump_height_valid) ?
+                            " H-VALID" : (p_msg->imu.b_hump_active) ? " H-ACTIVE" : "");
         (void) tm_putstring((UB *) line);
     }
 #else

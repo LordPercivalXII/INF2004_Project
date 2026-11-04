@@ -6,15 +6,15 @@
 #include "../common/rmath.h"
 
 #define HEIGHT_MAX_MOTION_MS     (100U)
-#define HEIGHT_MAX_GAP_MS        (250U)
-#define HEIGHT_MAX_GAP_PATH_M    (0.020f)
-#define HEIGHT_MAX_BRIDGED_M     (0.060f)
+#define HEIGHT_MAX_GAP_MS        (500U)
+#define HEIGHT_MAX_GAP_PATH_M    (0.100f)
+#define HEIGHT_MAX_BRIDGED_M     (0.200f)
 #define HEIGHT_MAX_GAP_PITCH_DEG (6.0f)
 #define HEIGHT_GAP_MIN_G         (0.65f)
 #define HEIGHT_GAP_MAX_G         (1.35f)
-#define HEIGHT_START_MAX_MS      (250U)
-#define HEIGHT_START_MAX_PATH_M  (0.020f)
-#define HEIGHT_START_MAX_FALL_M  (0.0005f)
+#define HEIGHT_START_MAX_MS      (1000U)
+#define HEIGHT_START_MAX_PATH_M  (0.300f)
+#define HEIGHT_START_MAX_FALL_M  (0.050f)
 #define HEIGHT_FLAT_SAMPLES      (10U)
 #define HEIGHT_LEVEL_DEG         (1.0f)
 #define HEIGHT_MIN_PEAK_M        (0.005f)
@@ -205,8 +205,8 @@ imu_height_integrate (imu_height_t * p_height, float ds, float slope,
                 p_height->start_path_m = p_height->path_m;
             }
             else if (((p_height->path_m - p_height->start_path_m) >
-                      HEIGHT_START_MAX_PATH_M) ||
-                     ((sample_ms - p_height->start_ms) > HEIGHT_START_MAX_MS))
+                      HEIGHT_START_MAX_PATH_M * 2.0f) ||
+                     ((sample_ms - p_height->start_ms) > HEIGHT_START_MAX_MS * 2.0f))
             {
                 imu_height_invalidate(p_height, HEIGHT_REJECT_DOWNHILL_START);
                 return;
@@ -315,7 +315,7 @@ imu_height_update (imu_height_t * p_height, motion_event_t const * p_motion,
         imu_height_invalidate(p_height, reason);
         return;
     }
-    slope = -rmath_sinf(pitch * RMATH_DEG_TO_RAD);
+    slope = rmath_sinf(pitch * RMATH_DEG_TO_RAD);
     b_level = (rmath_absf(pitch) <= HEIGHT_LEVEL_DEG);
     if (!p_height->b_have_distance)
     {
