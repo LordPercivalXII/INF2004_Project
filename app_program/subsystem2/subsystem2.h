@@ -27,6 +27,10 @@ bool motion_send_command(motion_command_t const * p_command);
 /* MOTION_TURN commands require a nonzero turn_id; completion is reported in
  * the matching SYSTEM_EVENT_MOTION event. */
 
+/* Distance-based motion APIs */
+bool motion_move_forward(float distance_m);
+bool motion_move_backward(float distance_m);
+
 /* Private to subsystem 2. */
 typedef struct
 {
