@@ -65,6 +65,23 @@ bool telemetry_submit_command(control_command_t const *p_command)
 }
 
 /*
+ * Request STOP when MQTT reports a failed or lost connection.
+ * This is best effort: a full control message buffer can reject STOP.
+ */
+void mqtt_utk_disconnected(void)
+{
+    control_command_t command = {0};
+
+    command.type = CONTROL_STOP;
+    command.value = 0.0f;
+
+    if (!telemetry_submit_command(&command))
+    {
+        tm_printf((UB *)"S1: WARNING: MQTT disconnect STOP queue failed\n");
+    }
+}
+
+/*
  * Buddy 1: Accept START, STOP, or SPEED commands from MQTT.
  * Payloads: START, STOP, SPEED:0.35 (ASCII, no trailing whitespace).
  * Parse thousandths as integers to avoid floating-point boundary errors.
