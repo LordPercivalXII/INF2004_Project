@@ -34,6 +34,7 @@
 #define CTRL_RAMP_DESCEND_FACTOR (0.6f) /* brake downhill */
 #define CTRL_RAMP_SPEED_SLEW    (0.02f) /* factor change per line cycle */
 #define CTRL_SHOCK_HOLD_MS      (800U)
+#define CTRL_START_DELAY_MS     (3000U)
 #define CTRL_BARCODE_SLOW_SIDE  (0.55f)
 #define CTRL_SHOCK_FACTOR       (0.7f)
 
@@ -77,6 +78,8 @@ typedef struct
     avoid_t             avoid;
     avoid_phase_t       avoid_phase_shown;  /* last phase printed */
     uint32_t            last_telemetry_ms;
+    bool                b_start_pending;
+    uint32_t            start_requested_ms;
     uint32_t            height_trace_sequence;
     uint32_t            height_trace_dropped;
     uint32_t            height_trace_last_drop_ms;
@@ -238,6 +241,8 @@ static void
 ctrl_enter_fault (ctrl_state_t * p_ctrl, uint32_t code)
 {
     p_ctrl->fault_code = code;
+    p_ctrl->b_start_pending = false;
+    p_ctrl->start_requested_ms = 0U;
     p_ctrl->state      = MISSION_FAULT;
     p_ctrl->b_turn_in_progress = false;
     p_ctrl->active_turn_id = 0U;
@@ -258,25 +263,32 @@ ctrl_handle_command (ctrl_state_t * p_ctrl,
     switch (p_command->type)
     {
         case CONTROL_START:
-            if ((MISSION_FAULT != p_ctrl->state) && p_ctrl->b_imu_healthy)
+            if ((MISSION_IDLE == p_ctrl->state) &&
+                (!p_ctrl->b_start_pending) && p_ctrl->b_imu_healthy)
             {
-                p_ctrl->state = MISSION_FOLLOWING;
-                ctrl_set_bits(SYSTEM_BIT_MISSION_RUN);
+                p_ctrl->b_start_pending = true;
+                p_ctrl->start_requested_ms = board_millis();
+                ctrl_clear_bits(SYSTEM_BIT_MISSION_RUN);
+                ctrl_stop_motion();
+                tm_printf((UB *) "CTRL: START received, waiting 3 seconds\n");
             }
             else
             {
-                tm_printf((UB *) "CTRL: START refused: fault or IMU "
-                          "not calibrated/healthy\n");
+                tm_printf((UB *) "CTRL: START ignored: not idle, "
+                          "already pending, or IMU not ready\n");
             }
             break;
 
         case CONTROL_STOP:
+            p_ctrl->b_start_pending = false;
+            p_ctrl->start_requested_ms = 0U;
             p_ctrl->state = MISSION_IDLE;
             p_ctrl->b_turn_in_progress = false;
             p_ctrl->active_turn_id = 0U;
             p_ctrl->pending_turn = (uint16_t) BARCODE_CMD_NONE;
             ctrl_clear_bits(SYSTEM_BIT_MISSION_RUN | SYSTEM_BIT_OBSTACLE);
             ctrl_stop_motion();
+            tm_printf((UB *) "CTRL: STOP received, mission idle\n");
             break;
 
         case CONTROL_SET_SPEED:
@@ -289,6 +301,8 @@ ctrl_handle_command (ctrl_state_t * p_ctrl,
             if (p_ctrl->b_imu_healthy)
             {
                 p_ctrl->fault_code = 0U;
+                p_ctrl->b_start_pending = false;
+                p_ctrl->start_requested_ms = 0U;
                 p_ctrl->state      = MISSION_IDLE;
                 ctrl_clear_bits(SYSTEM_BIT_FAULT | SYSTEM_BIT_MISSION_RUN);
             }
@@ -949,13 +963,9 @@ controller_task (INT stacd, void * p_exinf)
     (void) stacd;
     (void) p_exinf;
 
-#if (!ROBOT_SIMULATION) && (CTRL_AUTO_START_MS > 0)
-    bool                b_auto_started = false;
-#elif ROBOT_SIMULATION
-    bool                b_sim_started = false;
-#endif
-
     ctrl.state             = MISSION_IDLE;
+    ctrl.b_start_pending   = false;
+    ctrl.start_requested_ms = 0U;
     ctrl.base_speed        = ROBOT_BASE_SPEED;
     ctrl.ramp_factor       = 1.0f;
     ctrl.b_turn_in_progress = false;
@@ -965,11 +975,7 @@ controller_task (INT stacd, void * p_exinf)
     ctrl.last_telemetry_ms = board_millis();
     imu_height_init(&ctrl.height);
 
-#if (!ROBOT_SIMULATION) && (CTRL_AUTO_START_MS > 0)
-#warning "CTRL_AUTO_START_MS is on: the car drives off by itself after power-up"
-    tm_printf((UB *) "[CTRL] auto-start armed: starts when line seen or at %u ms\n",
-              (unsigned int) CTRL_AUTO_START_MS);
-#endif
+    /* Dashboard-only startup: ignore CTRL_AUTO_START_MS in this build. */
     ctrl_set_bits(SYSTEM_BIT_READY);
 
     for (;;)
@@ -979,19 +985,25 @@ controller_task (INT stacd, void * p_exinf)
             ctrl_handle_command(&ctrl, &command);
         }
 
-#if (!ROBOT_SIMULATION) && (CTRL_AUTO_START_MS > 0)
-        /* Test only: one START, as if a user had sent it. */
-        if ((!b_auto_started) && ctrl.b_imu_healthy &&
-            (ctrl.b_line_detected ||
-             (board_millis() >= CTRL_AUTO_START_MS)))
+        /* Nonblocking 3-second START countdown. STOP clears the pending flag. */
+        if (ctrl.b_start_pending &&
+            ((uint32_t) (board_millis() - ctrl.start_requested_ms) >=
+             CTRL_START_DELAY_MS))
         {
-            b_auto_started = true;
-            command.type   = CONTROL_START;
-            command.value  = 0.0f;
-            ctrl_handle_command(&ctrl, &command);
-            tm_printf((UB *) "[CTRL] auto-start: START sent\n");
+            ctrl.b_start_pending = false;
+            ctrl.start_requested_ms = 0U;
+            if ((MISSION_IDLE == ctrl.state) && ctrl.b_imu_healthy)
+            {
+                ctrl.state = MISSION_FOLLOWING;
+                ctrl_set_bits(SYSTEM_BIT_MISSION_RUN);
+                tm_printf((UB *) "CTRL: Countdown complete, mission STARTED\n");
+            }
+            else
+            {
+                ctrl_stop_motion();
+                tm_printf((UB *) "CTRL: START cancelled, robot not ready\n");
+            }
         }
-#endif
 
         /* Wait for one event, then drain whatever else is queued. */
         msg_size = tk_rcv_mbf(gh_event_mbf, &event,
@@ -1003,14 +1015,6 @@ controller_task (INT stacd, void * p_exinf)
             msg_size = tk_rcv_mbf(gh_event_mbf, &event, TMO_POL);
         }
 
-#if ROBOT_SIMULATION
-        if ((!b_sim_started) && ctrl.b_imu_healthy)
-        {
-            b_sim_started = true;
-            command.type = CONTROL_START;
-            ctrl_handle_command(&ctrl, &command);
-        }
-#endif
         ctrl_step_avoidance(&ctrl, board_millis());
         ctrl_publish_telemetry(&ctrl, board_millis());
     }

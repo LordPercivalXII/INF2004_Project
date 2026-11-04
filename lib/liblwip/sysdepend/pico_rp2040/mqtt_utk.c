@@ -75,6 +75,12 @@ void mqtt_utk_control_rx(const char *payload, uint32_t length)
     (void)length;
 }
 
+/* Optional application callback when MQTT connection fails or drops. */
+__attribute__((weak))
+void mqtt_utk_disconnected(void)
+{
+}
+
 /*
  * Compare MQTT topic strings without string.h.
  */
@@ -447,6 +453,8 @@ static void connection_cb(mqtt_client_t *c,
     }
     else
     {
+        mqtt_utk_disconnected();
+
         tm_printf(
             (UB *)"mqtt: connection status %d, retrying in %ds\n",
             (int)status,

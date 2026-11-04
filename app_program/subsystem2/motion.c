@@ -144,13 +144,25 @@ motion_take_commands (motion_command_t * p_requested)
     motion_command_t incoming;
     INT              msg_size;
     bool             b_received = false;
+    bool             b_stop_received = false;
 
     msg_size = tk_rcv_mbf(gh_motion_cmd_mbf, &incoming, TMO_POL);
 
     while (msg_size > 0)
     {
-        *p_requested = incoming;
-        b_received = true;
+        if ((MOTION_STOP == incoming.type) ||
+            (MOTION_BRAKE == incoming.type))
+        {
+            *p_requested = incoming;
+            b_stop_received = true;
+            b_received = true;
+        }
+        else if (!b_stop_received)
+        {
+            *p_requested = incoming;
+            b_received = true;
+        }
+
         msg_size = tk_rcv_mbf(gh_motion_cmd_mbf, &incoming, TMO_POL);
     }
 
@@ -297,7 +309,28 @@ motion_task (INT stacd, void * p_exinf)
             }
         }
 
-        if (motion_take_commands(&incoming))
+        /* Controller-owned mission flag is the motor movement interlock.
+         * Fail closed if the flag object is unavailable or cannot be read.
+         */
+        T_RFLG mission_status = {0};
+        bool const mission_running =
+            (gh_system_flg > 0) &&
+            (E_OK == tk_ref_flg(gh_system_flg, &mission_status)) &&
+            (0U != (mission_status.flgptn & SYSTEM_BIT_MISSION_RUN));
+
+        /* Drain stale commands even while stopped. They must not be replayed
+         * when the next START countdown completes.
+         */
+        bool const have_command = motion_take_commands(&incoming);
+        if (!mission_running)
+        {
+            requested.type = MOTION_STOP;
+            active_turn_id = 0U;
+            turn_progress_deg = 0.0f;
+            motion_pid_reset(&left_pid);
+            motion_pid_reset(&right_pid);
+        }
+        else if (have_command)
         {
             float const old_left_target = motion_target_speed(&requested, true);
             float const old_right_target = motion_target_speed(&requested, false);
@@ -488,6 +521,20 @@ motion_task (INT stacd, void * p_exinf)
                                        interval_s);
             right_out = motion_pid_step(&right_pid, right_target, right_speed,
                                         interval_s);
+        }
+
+        /* Recheck immediately before writing motor outputs. A STOP may
+         * clear the mission bit while this iteration is running.
+         */
+        {
+            T_RFLG status = {0};
+            if ((gh_system_flg <= 0) ||
+                (E_OK != tk_ref_flg(gh_system_flg, &status)) ||
+                (0U == (status.flgptn & SYSTEM_BIT_MISSION_RUN)))
+            {
+                left_out = 0.0f;
+                right_out = 0.0f;
+            }
         }
 
 #if (!ROBOT_SIMULATION) && (!S2_ENCODER_CALIBRATION)
