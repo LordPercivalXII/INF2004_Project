@@ -15,16 +15,17 @@
 #include "../common/robot_config.h"
 #include "../common/drv_board.h"
 #include "../common/rmath.h"
+#include "../common/diag_led.h"
 #include "../subsystem1/subsystem1.h"
 #include "../subsystem2/subsystem2.h"
 #include "../subsystem5/subsystem5.h"
 #include "../subsystem4/imu_height.h"
 #include "../subsystem4/imu_processing.h"
 
-#define CTRL_STEER_GAIN         (0.10f)
-#define CTRL_STEER_LIMIT        (0.12f)
-#define CTRL_STEER_SMOOTH       (0.30f) /* low-pass on the error: less jerk */
-#define CTRL_STEER_KD           (0.001f) /* per (error/s): damps zig-zag */
+#define CTRL_STEER_GAIN         (0.05f)
+#define CTRL_STEER_LIMIT        (0.08f)
+#define CTRL_STEER_SMOOTH       (0.50f) /* low-pass on the error: less jerk */
+#define CTRL_STEER_KD           (0.0005f) /* per (error/s): damps zig-zag */
 #define CTRL_LINE_DT_S          ((float) ROBOT_LINE_PERIOD_MS / 1000.0f)
 /* Ramp handling (S4 pitch: negative = nose up, positive = nose down). */
 #define CTRL_RAMP_ENTER_DEG     (6.0f)
@@ -495,6 +496,19 @@ ctrl_handle_imu (ctrl_state_t * p_ctrl, imu_event_t const * p_imu)
                                         (float) (int) p_ctrl->pitch_deg) * 10.0f));
         }
 
+        if (p_imu->b_hump_height_valid || p_imu->estimated_hump_height_m > 0.001f)
+        {
+            tm_printf((UB *) "[S4] height: hump=%d.%03d m, rise=%d.%03d m, peak=%d.%03d m, valid=%u active=%u\n",
+                      (int) p_imu->estimated_hump_height_m,
+                      (int) ((p_imu->estimated_hump_height_m * 1000.0f) - (int) p_imu->estimated_hump_height_m * 1000),
+                      (int) p_imu->terrain_rise_m,
+                      (int) ((p_imu->terrain_rise_m * 1000.0f) - (int) p_imu->terrain_rise_m * 1000),
+                      (int) p_imu->terrain_peak_m,
+                      (int) ((p_imu->terrain_peak_m * 1000.0f) - (int) p_imu->terrain_peak_m * 1000),
+                      (unsigned int) p_imu->b_hump_height_valid,
+                      (unsigned int) p_imu->b_hump_active);
+        }
+
         /* A transient IMU timing gap (e.g. motor noise or a blocked I2C
          * read) is not fatal; only an uncalibrated IMU stops the car. */
         if ((!p_imu->b_calibrated) &&
@@ -708,6 +722,13 @@ ctrl_handle_event (ctrl_state_t * p_ctrl, system_event_t const * p_event)
                                                   p_event->timestamp_ms,
                                                   interval_ms);
                     ctrl_report_height_wheels(&p_event->data.motion);
+                    tm_printf((UB *) "S4: [diagnostic] rise=%d.%03d m peak=%d.%03d m\n",
+                              (int) p_ctrl->height.rise_m,
+                              (int) ((p_ctrl->height.rise_m * 1000.0f) - 
+                                     (int) p_ctrl->height.rise_m * 1000),
+                              (int) p_ctrl->height.peak_m,
+                              (int) ((p_ctrl->height.peak_m * 1000.0f) - 
+                                     (int) p_ctrl->height.peak_m * 1000));
                 }
                 if (p_ctrl->height.gap_count != gap_count)
                 {
@@ -941,6 +962,24 @@ ctrl_publish_telemetry (ctrl_state_t * p_ctrl, uint32_t now_ms)
             tm_printf((UB *) "S1: telemetry snapshot queue full t_ms=%u\n",
                       (unsigned int) now_ms);
         }
+
+        if (p_ctrl->height.b_active || p_ctrl->height.b_valid || 
+            p_ctrl->height.b_complete)
+        {
+            tm_printf((UB *) "[S4] height: rise=%d.%03d m peak=%d.%03d m "
+                      "valid=%u active=%u complete=%u gap=%u\n",
+                      (int) p_ctrl->height.rise_m,
+                      (int) ((p_ctrl->height.rise_m * 1000.0f) - 
+                             (int) p_ctrl->height.rise_m * 1000),
+                      (int) p_ctrl->height.peak_m,
+                      (int) ((p_ctrl->height.peak_m * 1000.0f) - 
+                             (int) p_ctrl->height.peak_m * 1000),
+                      (unsigned int) p_ctrl->height.b_valid,
+                      (unsigned int) p_ctrl->height.b_active,
+                      (unsigned int) p_ctrl->height.b_complete,
+                      (unsigned int) p_ctrl->height.gap_count);
+        }
+
         p_ctrl->last_telemetry_ms = now_ms;
     }
 }
@@ -975,15 +1014,44 @@ controller_task (INT stacd, void * p_exinf)
     ctrl.last_telemetry_ms = board_millis();
     imu_height_init(&ctrl.height);
 
-    /* Dashboard-only startup: ignore CTRL_AUTO_START_MS in this build. */
+    /* Diagnostic LED: show boot status */
+    diag_led_init();
+    diag_led_set_state(DIAG_LED_BOOT);
+
+    /* Bench-test autostart (AUTO_START_MS build option); 0 = dashboard only. */
     ctrl_set_bits(SYSTEM_BIT_READY);
+#if (CTRL_AUTO_START_MS > 0U)
+    bool b_auto_started = false;
+#endif
 
     for (;;)
     {
+#if (CTRL_AUTO_START_MS > 0U)
+        if (!b_auto_started && (MISSION_IDLE == ctrl.state) &&
+            ctrl.b_imu_healthy && (board_millis() >= CTRL_AUTO_START_MS))
+        {
+            control_command_t const auto_cmd = { .type = CONTROL_START };
+
+            b_auto_started = true;
+            ctrl_handle_command(&ctrl, &auto_cmd);
+        }
+#endif
         if (tk_rcv_mbf(gh_control_mbf, &command, TMO_POL) > 0)
         {
             ctrl_handle_command(&ctrl, &command);
         }
+
+        /* Update LED diagnostic based on IMU health */
+        if (ctrl.b_imu_healthy) {
+            diag_led_set_state(DIAG_LED_IMU_HEALTHY);
+        } else if (!ctrl.imu.b_sensor_valid) {
+            /* I2C/sensor failure: blink error pattern */
+            diag_led_set_state(DIAG_LED_I2C_FAIL);
+        } else {
+            /* Still booting/calibrating */
+            diag_led_set_state(DIAG_LED_BOOT);
+        }
+        diag_led_poll(board_millis());
 
         /* Nonblocking 3-second START countdown. STOP clears the pending flag. */
         if (ctrl.b_start_pending &&

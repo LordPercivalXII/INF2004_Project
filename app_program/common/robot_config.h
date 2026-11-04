@@ -31,10 +31,10 @@
 #define ROBOT_CONTROLLER_WAIT_MS        (10U)   /* was 2 ms at 1 kHz tick */
 
 #ifndef ROBOT_BASE_SPEED
-#define ROBOT_BASE_SPEED                (0.35f)
+#define ROBOT_BASE_SPEED                (0.05f)
 #endif
 #define ROBOT_MAX_SPEED                 (0.70f)
-#define ROBOT_MIN_SPEED                 (0.10f)
+#define ROBOT_MIN_SPEED                 (0.05f)
 
 /* ---- Cytron Robo Pico pin map (Group 19 Design Review) ----
  * Measured on the car: motor channel GP10/GP11 drives the physical left
