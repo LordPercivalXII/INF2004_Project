@@ -27,6 +27,12 @@
 #define CTRL_STEER_SMOOTH       (0.70f)
 #define CTRL_STEER_KD           (0.002f)
 #define CTRL_STEER_DEADBAND     (0.05f)
+#define CTRL_LOST_PIVOT_SPEED   (0.18f) /* m/s per wheel, spin to find line */
+#define CTRL_LOST_SIDE_LEVEL    (0.20f) /* |error| that counts as a side  */
+#define CTRL_CENTRED_LEVEL      (0.12f) /* |error| below this = centred   */
+#define CTRL_CENTRED_CYCLES     (10U)   /* centred this long: forget side */
+#define CTRL_LOST_CYCLES        (3U)    /* x 10 ms lost before pivoting   */
+#define CTRL_LOST_PIVOT_MAX_MS  (3000U) /* give up pivoting after this    */
 #define CTRL_LINE_DT_S          ((float) ROBOT_LINE_PERIOD_MS / 1000.0f)
 /* Ramp handling (S4 pitch: negative = nose up, positive = nose down). */
 #define CTRL_RAMP_ENTER_DEG     (6.0f)
@@ -82,6 +88,10 @@ typedef struct
     bool                b_line_detected;
     float               prev_line_error;    /* for the D term           */
     bool                b_steer_primed;     /* prev_line_error is valid */
+    uint32_t            lost_cycles;
+    uint32_t            centred_cycles;
+    uint32_t            lost_start_ms;
+    float               last_side;          /* +1/-1: side line was last off-centre */
     avoid_t             avoid;
     avoid_phase_t       avoid_phase_shown;  /* last phase printed */
     uint32_t            last_telemetry_ms;
@@ -460,6 +470,39 @@ ctrl_handle_line (ctrl_state_t * p_ctrl, line_event_t const * p_line)
     p_ctrl->line_error      = p_line->line_error;
     p_ctrl->b_line_detected = p_line->b_line_detected;
 
+    if (p_line->b_line_detected)
+    {
+        p_ctrl->lost_cycles = 0U;
+        float const abs_error = rmath_absf(p_line->line_error);
+
+        /* The last sample before a sharp corner often reads near centre,
+           so the side is remembered until the line has stayed centred. */
+        if (abs_error >= CTRL_LOST_SIDE_LEVEL)
+        {
+            p_ctrl->last_side = (p_line->line_error > 0.0f) ? 1.0f : -1.0f;
+            p_ctrl->centred_cycles = 0U;
+        }
+        else if (abs_error < CTRL_CENTRED_LEVEL)
+        {
+            if (++p_ctrl->centred_cycles >= CTRL_CENTRED_CYCLES)
+            {
+                p_ctrl->last_side = 0.0f;
+            }
+        }
+        else
+        {
+            /* In between: keep the remembered side. */
+        }
+    }
+    else
+    {
+        if (0U == p_ctrl->lost_cycles)
+        {
+            p_ctrl->lost_start_ms = board_millis();
+        }
+        p_ctrl->lost_cycles++;
+    }
+
     if (p_line->b_barcode_valid)
     {
         /* Decoded character (ASCII), for telemetry.  It is only an
@@ -504,6 +547,20 @@ ctrl_handle_line (ctrl_state_t * p_ctrl, line_event_t const * p_line)
         ((MISSION_AVOIDING == p_ctrl->state) &&
          avoid_is_following(&p_ctrl->avoid)))
     {
+        if ((!p_line->b_line_detected) && (0.0f != p_ctrl->last_side) &&
+            (p_ctrl->lost_cycles >= CTRL_LOST_CYCLES) &&
+            ((board_millis() - p_ctrl->lost_start_ms) < CTRL_LOST_PIVOT_MAX_MS) &&
+            (MISSION_FOLLOWING == p_ctrl->state))
+        {
+            /* Line lost (sharp or 90 degree corner): the gentle PD
+               correction cannot turn that tight, so pivot on the spot
+               towards the side the line was last seen until found. */
+            ctrl_set_motion(CTRL_LOST_PIVOT_SPEED * p_ctrl->last_side,
+                            -CTRL_LOST_PIVOT_SPEED * p_ctrl->last_side);
+            p_ctrl->b_steer_primed = false;
+            return;
+        }
+
         /* PD steering.  With the line sensors on the line edges the
            error is continuous near the centre; the D term damps the
            zig-zag.  Deadband reduces jitter near the line centre. */
@@ -1125,6 +1182,11 @@ controller_task (INT stacd, void * p_exinf)
 
             b_auto_started = true;
             ctrl_handle_command(&ctrl, &auto_cmd);
+            /* Bench autostart: skip the 3 s dashboard countdown. */
+            if (ctrl.b_start_pending)
+            {
+                ctrl.start_requested_ms = board_millis() - CTRL_START_DELAY_MS;
+            }
         }
 #endif
         if (tk_rcv_mbf(gh_control_mbf, &command, TMO_POL) > 0)
