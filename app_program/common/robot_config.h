@@ -147,8 +147,8 @@
 #define IR_CALIBRATION_MS               (1000U)
 #define IR_CALIBRATION_STEP_MS          (10U)    /* was 5 ms; 10 ms tick  */
 #define IR_MIN_CONTRAST_COUNTS          (400U)
-#define IR_DEFAULT_WHITE_COUNTS         (600U)
-#define IR_DEFAULT_BLACK_COUNTS         (3000U)
+#define IR_DEFAULT_WHITE_COUNTS         (230U)
+#define IR_DEFAULT_BLACK_COUNTS         (2200U)
 
 /* Line position with TWO analog sensors, left (GP26) and middle (GP27),
  * each sitting over one EDGE of the ~18 mm line (sensors ~18-20 mm
@@ -158,7 +158,7 @@
  *   lost     both white        steer towards the side last seen
  *   junction both black        a crossing line covers both sensors
  * The right sensor (GP28) is for barcodes only. */
-#define LINE_LOST_LEVEL                 (0.15f)  /* both below: lost      */
+#define LINE_LOST_LEVEL                 (0.06f)  /* both below: lost      */
 #define LINE_JUNCTION_LEVEL             (0.80f)  /* both above: junction  */
 #define LINE_JUNCTION_RELEASE           (0.65f)  /* re-arm when one below:
                                                     > 0.5 so a centred car
@@ -190,7 +190,7 @@
 #ifndef S3_LINE_DEBUG
 #define S3_LINE_DEBUG                   (0)
 #endif
-#define LINE_DEBUG_PERIOD_MS            (500U)
+#define LINE_DEBUG_PERIOD_MS            (100U)
 #if (!ROBOT_SIMULATION) && (!S3_LINE_HW)
 #error "SIM=0 needs the real line sensors (S3_LINE_HW = 1)"
 #endif

@@ -25,18 +25,25 @@
 /* Steering is a fraction of the drive speed, so a given line error gives
  * the same path curvature at any speed: 1.0 = inner wheel stopped (pivot
  * on it), above 1.0 = inner wheel backwards. */
-#define CTRL_STEER_GAIN         (1.00f)  /* steer per unit line error    */
-#define CTRL_STEER_LIMIT        (1.50f)
-#define CTRL_STEER_SMOOTH       (0.70f)
-#define CTRL_STEER_KD           (0.015f) /* steer per (error/s)          */
+#define CTRL_STEER_GAIN         (0.70f) /* steer per unit line error    */
+#define CTRL_STEER_LIMIT        (1.20f)
+#define CTRL_STEER_SMOOTH       (0.55f) /* weight of newest sample      */
+#define CTRL_STEER_KD           (0.0f)   /* steer per (error/s)          */
 #define CTRL_CURVE_SLOW         (0.50f)  /* speed cut at full steer      */
-#define CTRL_STEER_DEADBAND     (0.05f)
-#define CTRL_LOST_PIVOT_SPEED   (0.18f) /* m/s per wheel, spin to find line */
+#define CTRL_STEER_DEADBAND     (0.10f)
+#define CTRL_LOST_PIVOT_SPEED   (0.15f) /* m/s outer wheel while searching */
+#define CTRL_LOST_FIRST_MS      (500U)  /* arc towards last side this long */
+#define CTRL_LOST_SWEEP_MS      (1000U) /* then alternate sides every this long */
+#define CTRL_LOST_GIVEUP_MS     (8000U) /* stop searching after this       */
+#define CTRL_WHEEL_MIN          (0.08f) /* m/s: slowest wheel that turns   */
+#define CTRL_WHEEL_ZERO         (0.03f) /* below this the wheel is stopped */
+#define CTRL_SLEW_PER_CYCLE     (0.02f) /* max wheel target change / 10 ms */
 #define CTRL_LOST_SIDE_LEVEL    (0.20f) /* |error| that counts as a side  */
 #define CTRL_CENTRED_LEVEL      (0.12f) /* |error| below this = centred   */
 #define CTRL_CENTRED_CYCLES     (10U)   /* centred this long: forget side */
-#define CTRL_LOST_CYCLES        (3U)    /* x 10 ms lost before pivoting   */
-#define CTRL_LOST_PIVOT_MAX_MS  (3000U) /* give up pivoting after this    */
+#define CTRL_CENTRE_LEVEL       (0.60f) /* last |error| below this: line is between the sensors */
+#define CTRL_CENTRE_HOLD_CYCLES (40U)   /* x 10 ms to drive straight on both-white */
+#define CTRL_LOST_CYCLES        (8U)    /* x 10 ms lost before pivoting   */
 #define CTRL_LINE_DT_S          ((float) ROBOT_LINE_PERIOD_MS / 1000.0f)
 /* Ramp handling (S4 pitch: negative = nose up, positive = nose down). */
 #define CTRL_RAMP_ENTER_DEG     (6.0f)
@@ -49,6 +56,9 @@
 #define CTRL_START_DELAY_MS     (3000U)
 #define CTRL_BARCODE_SLOW_SIDE  (0.55f)
 #define CTRL_SHOCK_FACTOR       (0.7f)
+
+#define CTRL_IMU_BAD_MS         (1000U) /* IMU must be bad this long to fault */
+#define CTRL_FAULT_RETRY_MS     (1500U) /* auto-resume after a fault       */
 
 #define FAULT_EXTERNAL          (1U)
 #define FAULT_IMU               (2U)
@@ -93,8 +103,12 @@ typedef struct
     float               prev_line_error;    /* for the D term           */
     bool                b_steer_primed;     /* prev_line_error is valid */
     uint32_t            lost_cycles;
+    float               last_seen_error;
+    uint32_t            imu_bad_since_ms;
+    uint32_t            fault_since_ms;
     uint32_t            centred_cycles;
     uint32_t            lost_start_ms;
+    float               last_side_any;      /* last side seen, never cleared */
     float               last_side;          /* +1/-1: side line was last off-centre */
     avoid_t             avoid;
     avoid_phase_t       avoid_phase_shown;  /* last phase printed */
@@ -218,6 +232,35 @@ ctrl_set_motion (float left_speed, float right_speed)
     (void) motion_send_command(&command);
 }
 
+static float s_cmd_left  = 0.0f;
+static float s_cmd_right = 0.0f;
+
+/* A wheel commanded this slowly barely turns, so the encoder watchdog in
+   motion.c trips and brakes the car for good.  Never command a wheel
+   inside the band: push it out to the minimum, or stop it. */
+static float
+ctrl_wheel_floor (float speed, bool b_allow_stop)
+{
+    if (b_allow_stop && (rmath_absf(speed) < CTRL_WHEEL_ZERO))
+    {
+        return 0.0f;
+    }
+    return (speed < CTRL_WHEEL_MIN) ? CTRL_WHEEL_MIN : speed;
+}
+
+/* Line-following drive: rate-limited so the wheels ramp instead of jerk. */
+static void
+ctrl_set_motion_slewed (float left_speed, float right_speed,
+                        bool b_allow_stop)
+{
+    s_cmd_left  += rmath_clampf(left_speed - s_cmd_left,
+                                -CTRL_SLEW_PER_CYCLE, CTRL_SLEW_PER_CYCLE);
+    s_cmd_right += rmath_clampf(right_speed - s_cmd_right,
+                                -CTRL_SLEW_PER_CYCLE, CTRL_SLEW_PER_CYCLE);
+    ctrl_set_motion(ctrl_wheel_floor(s_cmd_left, b_allow_stop),
+                    ctrl_wheel_floor(s_cmd_right, b_allow_stop));
+}
+
 /*!
  * @brief Heading since power-up from the wheel encoder counts, + = left
  *        (as MOTION_TURN).  Counts, not speeds, so no error builds up
@@ -262,6 +305,8 @@ static void
 ctrl_enter_fault (ctrl_state_t * p_ctrl, uint32_t code)
 {
     p_ctrl->fault_code = code;
+    p_ctrl->fault_since_ms = board_millis();
+    tm_printf((UB *) "CTRL: FAULT code %u\n", (unsigned int) code);
     p_ctrl->b_start_pending = false;
     p_ctrl->start_requested_ms = 0U;
     p_ctrl->state      = MISSION_FAULT;
@@ -477,6 +522,7 @@ ctrl_handle_line (ctrl_state_t * p_ctrl, line_event_t const * p_line)
     if (p_line->b_line_detected)
     {
         p_ctrl->lost_cycles = 0U;
+        p_ctrl->last_seen_error = p_line->line_error;
         float const abs_error = rmath_absf(p_line->line_error);
 
         /* The last sample before a sharp corner often reads near centre,
@@ -484,6 +530,7 @@ ctrl_handle_line (ctrl_state_t * p_ctrl, line_event_t const * p_line)
         if (abs_error >= CTRL_LOST_SIDE_LEVEL)
         {
             p_ctrl->last_side = (p_line->line_error > 0.0f) ? 1.0f : -1.0f;
+            p_ctrl->last_side_any = p_ctrl->last_side;
             p_ctrl->centred_cycles = 0U;
         }
         else if (abs_error < CTRL_CENTRED_LEVEL)
@@ -551,16 +598,34 @@ ctrl_handle_line (ctrl_state_t * p_ctrl, line_event_t const * p_line)
         ((MISSION_AVOIDING == p_ctrl->state) &&
          avoid_is_following(&p_ctrl->avoid)))
     {
-        if ((!p_line->b_line_detected) && (0.0f != p_ctrl->last_side) &&
+        uint32_t const lost_ms = board_millis() - p_ctrl->lost_start_ms;
+        /* The sensors sit just outside the line edges, so a centred car
+           sees white on both.  If the line was last seen near centre,
+           that is "between the sensors": drive straight, not "lost". */
+        bool const b_between = (!p_line->b_line_detected) &&
+            (rmath_absf(p_ctrl->last_seen_error) < CTRL_CENTRE_LEVEL) &&
+            (p_ctrl->lost_cycles < CTRL_CENTRE_HOLD_CYCLES);
+
+        if ((!p_line->b_line_detected) && (0.0f != p_ctrl->last_side_any) &&
             (p_ctrl->lost_cycles >= CTRL_LOST_CYCLES) &&
-            ((board_millis() - p_ctrl->lost_start_ms) < CTRL_LOST_PIVOT_MAX_MS) &&
+            (!b_between) &&
+            (lost_ms < CTRL_LOST_GIVEUP_MS) &&
             (MISSION_FOLLOWING == p_ctrl->state))
         {
-            /* Line lost (sharp or 90 degree corner): the gentle PD
-               correction cannot turn that tight, so pivot on the spot
-               towards the side the line was last seen until found. */
-            ctrl_set_motion(CTRL_LOST_PIVOT_SPEED * p_ctrl->last_side,
-                            -CTRL_LOST_PIVOT_SPEED * p_ctrl->last_side);
+            /* Line lost at a sharp corner: arc towards the side it was
+               last seen.  If that does not find it, sweep the other way
+               instead of spinning round, then fall back to steering. */
+            /* Arc towards the last side first, then alternate sides so a
+               wrong guess is corrected and the car never circles. */
+            uint32_t const phase = (lost_ms < CTRL_LOST_FIRST_MS) ? 0U :
+                (1U + ((lost_ms - CTRL_LOST_FIRST_MS) / CTRL_LOST_SWEEP_MS));
+            float const side = (0U == (phase & 1U))
+                ? p_ctrl->last_side_any : -p_ctrl->last_side_any;
+            float const outer = CTRL_LOST_PIVOT_SPEED;
+            float const inner = 0.0f;
+
+            ctrl_set_motion_slewed((side > 0.0f) ? outer : inner,
+                                   (side > 0.0f) ? inner : outer, true);
             p_ctrl->b_steer_primed = false;
             return;
         }
@@ -569,10 +634,15 @@ ctrl_handle_line (ctrl_state_t * p_ctrl, line_event_t const * p_line)
            error is continuous near the centre; the D term damps the
            zig-zag.  Deadband reduces jitter near the line centre. */
         static float smooth_error = 0.0f;
+        /* A short sensor dropout reads as full-scale error; hold the
+           smoothed value instead of letting it kick the steering. */
+        float const raw_error =
+            ((!p_line->b_line_detected) &&
+             (b_between || (p_ctrl->lost_cycles < CTRL_LOST_CYCLES)))
+            ? (b_between ? 0.0f : smooth_error) : p_ctrl->line_error;
         smooth_error = p_ctrl->b_steer_primed
-            ? (smooth_error +
-               (CTRL_STEER_SMOOTH * (p_ctrl->line_error - smooth_error)))
-            : p_ctrl->line_error;
+            ? (smooth_error + (CTRL_STEER_SMOOTH * (raw_error - smooth_error)))
+            : raw_error;
         p_ctrl->line_error = smooth_error;
         float const derivative = p_ctrl->b_steer_primed
             ? ((p_ctrl->line_error - p_ctrl->prev_line_error) /
@@ -597,7 +667,8 @@ ctrl_handle_line (ctrl_state_t * p_ctrl, line_event_t const * p_line)
                          rmath_minf(rmath_absf(steer), 1.0f))),
             ROBOT_MIN_SPEED);
 
-        ctrl_set_motion(speed * (1.0f + steer), speed * (1.0f - steer));
+        ctrl_set_motion_slewed(speed * (1.0f + steer), speed * (1.0f - steer),
+                               false);
     }
     else
     {
@@ -671,18 +742,42 @@ ctrl_handle_imu (ctrl_state_t * p_ctrl, imu_event_t const * p_imu)
             ((MISSION_FOLLOWING == p_ctrl->state) ||
              (MISSION_AVOIDING == p_ctrl->state)))
         {
-            ctrl_enter_fault(p_ctrl, FAULT_IMU);
+            if (0U == p_ctrl->imu_bad_since_ms)
+            {
+                p_ctrl->imu_bad_since_ms = board_millis() | 1U;
+            }
+            if ((board_millis() - p_ctrl->imu_bad_since_ms) >= CTRL_IMU_BAD_MS)
+            {
+                ctrl_enter_fault(p_ctrl, FAULT_IMU);
+            }
         }
         else if (p_imu->b_calibrated &&
                  (p_imu->b_shock_detected || b_new_shock))
         {
             p_ctrl->shock_until_ms = board_millis() + CTRL_SHOCK_HOLD_MS;
         }
+        else
+        {
+            p_ctrl->imu_bad_since_ms = 0U;
+        }
+        if (p_imu->b_calibrated)
+        {
+            p_ctrl->imu_bad_since_ms = 0U;
+        }
     }
     else
     {
+        /* Brief I2C glitches (motor noise) are ridden out; the car keeps
+           its last drive command and only faults if it persists. */
         p_ctrl->b_imu_healthy = false;
-        ctrl_enter_fault(p_ctrl, FAULT_IMU);
+        if (0U == p_ctrl->imu_bad_since_ms)
+        {
+            p_ctrl->imu_bad_since_ms = board_millis() | 1U;
+        }
+        if ((board_millis() - p_ctrl->imu_bad_since_ms) >= CTRL_IMU_BAD_MS)
+        {
+            ctrl_enter_fault(p_ctrl, FAULT_IMU);
+        }
     }
 }
 
@@ -955,7 +1050,21 @@ ctrl_handle_event (ctrl_state_t * p_ctrl, system_event_t const * p_event)
             break;
 
         case SYSTEM_EVENT_FAULT:
-            ctrl_enter_fault(p_ctrl, FAULT_EXTERNAL);
+            if ((MISSION_FOLLOWING == p_ctrl->state) &&
+                (!p_ctrl->b_turn_in_progress))
+            {
+                /* Encoder watchdog braked the car (a wheel stalled).
+                   Restart from standstill on the next line cycle instead
+                   of staying stopped. */
+                s_cmd_left  = 0.0f;
+                s_cmd_right = 0.0f;
+                p_ctrl->b_steer_primed = false;
+                tm_printf((UB *) "CTRL: wheel stall, restarting\n");
+            }
+            else
+            {
+                ctrl_enter_fault(p_ctrl, FAULT_EXTERNAL);
+            }
             break;
 
         default:
@@ -1216,6 +1325,22 @@ controller_task (INT stacd, void * p_exinf)
             diag_led_set_state(DIAG_LED_BOOT);
         }
         diag_led_poll(board_millis());
+
+        /* Auto-resume after a recoverable fault once the IMU is healthy. */
+        if ((MISSION_FAULT == ctrl.state) && ctrl.b_imu_healthy &&
+            (FAULT_MOTION_COMMAND != ctrl.fault_code) &&
+            ((board_millis() - ctrl.fault_since_ms) >= CTRL_FAULT_RETRY_MS))
+        {
+            ctrl.fault_code        = 0U;
+            ctrl.imu_bad_since_ms  = 0U;
+            ctrl.b_steer_primed    = false;
+            s_cmd_left             = 0.0f;
+            s_cmd_right            = 0.0f;
+            ctrl.state             = MISSION_FOLLOWING;
+            ctrl_clear_bits(SYSTEM_BIT_FAULT);
+            ctrl_set_bits(SYSTEM_BIT_MISSION_RUN);
+            tm_printf((UB *) "CTRL: fault cleared, resuming\n");
+        }
 
         /* Nonblocking 3-second START countdown. STOP clears the pending flag. */
         if (ctrl.b_start_pending &&
