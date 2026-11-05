@@ -39,6 +39,7 @@
 #define ROUTE_TOKEN_MAX         (16U)
 #define ROUTE_WILDCARD          ('*')
 #define ROUTE_ASCII_MASK        (0x7FU)
+#define MQTT_ROUTE_TOPIC_TEXT   "the MQTT route topic"
 
 ID gh_route_cfg_mbf = E_ID;
 ID gh_route_mtx     = E_ID;
@@ -496,7 +497,15 @@ route_take_junction_action (char * p_symbol)
         (void) tk_unl_mtx(gh_route_mtx);
     }
 
-    if ('\0' != *p_symbol)
+    if (('\0' != *p_symbol) && (0U == g_status.mapped_count))
+    {
+        /* A barcode is stored but no route table has arrived, so every
+           character means "straight": say so, or it looks like a bug. */
+        tm_printf((UB *) "S3: junction: '%c' -> %s (route table empty:"
+                  " publish one to " MQTT_ROUTE_TOPIC_TEXT ")\n",
+                  *p_symbol, route_action_name(action));
+    }
+    else if ('\0' != *p_symbol)
     {
         tm_printf((UB *) "S3: junction: '%c' -> %s\n", *p_symbol,
                   route_action_name(action));

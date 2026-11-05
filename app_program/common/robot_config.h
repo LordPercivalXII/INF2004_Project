@@ -169,6 +169,17 @@
 #define LINE_ERROR_SIGN                 (1.0f)   /* -1.0f if the car steers
                                                     away from the line  */
 
+/* Junction turns (controller.c).  A junction is detected when the LINE
+ * SENSORS reach the crossing line, but the car pivots about its WHEEL
+ * AXLE.  Before a left/right/U-turn it drives straight this far, so the
+ * pivot lands on the centre of the crossing line:
+ *     JUNCTION_APPROACH_M = (sensor-to-axle distance) + ~10 mm
+ * Measure the sensor-to-axle distance along the driving direction on the
+ * car (the sensors look close to the axle in the photos: ~0 mm). */
+#define JUNCTION_APPROACH_M             (0.010f)
+#define JUNCTION_APPROACH_SPEED         (0.20f)  /* m/s, slow = accurate  */
+#define JUNCTION_APPROACH_TIMEOUT_MS    (2000U)  /* turn anyway if stuck  */
+
 /* 1 = read the REAL line sensors (ADC, boot calibration) even in a
  * SIM=1 build, to check polarity and steering sign by hand while the
  * motors stay simulated.  Default: real sensors only in SIM=0 builds. */
