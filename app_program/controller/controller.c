@@ -22,10 +22,14 @@
 #include "../subsystem4/imu_height.h"
 #include "../subsystem4/imu_processing.h"
 
-#define CTRL_STEER_GAIN         (0.02f)
-#define CTRL_STEER_LIMIT        (0.08f)
+/* Steering is a fraction of the drive speed, so a given line error gives
+ * the same path curvature at any speed: 1.0 = inner wheel stopped (pivot
+ * on it), above 1.0 = inner wheel backwards. */
+#define CTRL_STEER_GAIN         (1.00f)  /* steer per unit line error    */
+#define CTRL_STEER_LIMIT        (1.50f)
 #define CTRL_STEER_SMOOTH       (0.70f)
-#define CTRL_STEER_KD           (0.002f)
+#define CTRL_STEER_KD           (0.015f) /* steer per (error/s)          */
+#define CTRL_CURVE_SLOW         (0.50f)  /* speed cut at full steer      */
 #define CTRL_STEER_DEADBAND     (0.05f)
 #define CTRL_LOST_PIVOT_SPEED   (0.18f) /* m/s per wheel, spin to find line */
 #define CTRL_LOST_SIDE_LEVEL    (0.20f) /* |error| that counts as a side  */
@@ -577,16 +581,23 @@ ctrl_handle_line (ctrl_state_t * p_ctrl, line_event_t const * p_line)
         float error_deadband = p_ctrl->line_error;
         if (rmath_absf(error_deadband) < CTRL_STEER_DEADBAND)
             error_deadband = 0.0f;
-        float const correction =
+        float const steer =
             rmath_clampf((error_deadband * CTRL_STEER_GAIN) +
                          (derivative * CTRL_STEER_KD),
                          -CTRL_STEER_LIMIT, CTRL_STEER_LIMIT);
 
         p_ctrl->prev_line_error = p_ctrl->line_error;
         p_ctrl->b_steer_primed  = true;
-        float const speed = ctrl_drive_speed(p_ctrl);
 
-        ctrl_set_motion(speed + correction, speed - correction);
+        /* Slow down while steering hard, so the sensors keep up with
+           tight curves at high speed; full speed again on straights. */
+        float const speed = rmath_maxf(
+            ctrl_drive_speed(p_ctrl) *
+                (1.0f - (CTRL_CURVE_SLOW *
+                         rmath_minf(rmath_absf(steer), 1.0f))),
+            ROBOT_MIN_SPEED);
+
+        ctrl_set_motion(speed * (1.0f + steer), speed * (1.0f - steer));
     }
     else
     {
