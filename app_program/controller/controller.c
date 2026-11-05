@@ -469,6 +469,7 @@ ctrl_junction_begin (ctrl_state_t * p_ctrl, float angle_deg)
     p_ctrl->junction_start_m    = p_ctrl->distance_m;
     p_ctrl->junction_start_ms   = board_millis();
     ctrl_set_motion(speed, speed);
+    obstacle_set_lead(0.0f);
     tm_printf((UB *) "CTRL: junction -> turn %d deg after %d mm\n",
               (int) angle_deg, (int) (JUNCTION_APPROACH_M * 1000.0f));
 }
@@ -505,6 +506,9 @@ ctrl_junction_step (ctrl_state_t * p_ctrl)
         if (ctrl_turn_motion(p_ctrl->junction_turn_deg, p_ctrl->next_turn_id))
         {
             p_ctrl->active_turn_id = p_ctrl->next_turn_id;
+            /* S5 looks into the turn (+ angle = left). */
+            obstacle_set_lead((p_ctrl->junction_turn_deg > 0.0f) ? -1.0f
+                                                                 : 1.0f);
         }
         else
         {
@@ -626,6 +630,7 @@ ctrl_handle_line (ctrl_state_t * p_ctrl, line_event_t const * p_line)
 
             ctrl_set_motion_slewed((side > 0.0f) ? outer : inner,
                                    (side > 0.0f) ? inner : outer, true);
+            obstacle_set_lead(side);    /* + = right, as the servo */
             p_ctrl->b_steer_primed = false;
             return;
         }
@@ -669,11 +674,17 @@ ctrl_handle_line (ctrl_state_t * p_ctrl, line_event_t const * p_line)
 
         ctrl_set_motion_slewed(speed * (1.0f + steer), speed * (1.0f - steer),
                                false);
+        obstacle_set_lead(steer);   /* + = right, as the servo */
     }
     else
     {
         /* Not steering in this state. */
         p_ctrl->b_steer_primed = false;
+
+        if (!p_ctrl->b_turn_in_progress)
+        {
+            obstacle_set_lead(0.0f);
+        }
     }
 }
 

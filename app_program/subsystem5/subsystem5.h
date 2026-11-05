@@ -3,8 +3,9 @@
  * @brief Subsystem 5 -- Buddy 5: ultrasonic obstacle scanner on a servo.
  *        Student ID: <student ID>.  Port of src/buddy5_obstacle/.
  *
- * While driving, the sensor faces straight ahead with the servo still; 3
- * readings in a row within 25 cm post OBSTACLE_ACTION_STOP at once, because
+ * While driving, the sensor looks the way the car is turning (straight
+ * ahead on a straight); 3 readings in a row within 25 cm ahead post
+ * OBSTACLE_ACTION_STOP at once, because
  * a sweep takes too long at driving speed.  Once stopped: coarse scan at
  * 60/75/90/105/120 deg, then a 5 deg fine scan around any hit; builds an
  * obstacle profile (location, width, closest point, clearances), decides
@@ -32,6 +33,11 @@
 /* Controller -> S5: where to point the scanner while avoiding (only read
  * while SYSTEM_BIT_OBSTACLE is set). */
 void   obstacle_set_look(avoid_look_t look);
+
+/* Controller -> S5: which way the car is turning while it follows the
+ * line, -1 (hard left) .. +1 (hard right), 0 straight.  The sensor looks
+ * up to 30 deg that way, so it sees what is round a curve sooner. */
+void   obstacle_set_lead(float lead);
 
 /* Private to subsystem 5: echo widths from the interrupt to the task. */
 extern ID gh_echo_mbf;

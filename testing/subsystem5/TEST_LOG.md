@@ -28,6 +28,8 @@ See `testing/README.md` for how to run tests and record results.
 | S5-U18 | passing: side readings measure the obstacle's thickness | Stage 3, 5 | auto | `subsystem5_test.c` | PASS (~26 cm) |
 | S5-U19 | turns aim at a heading: a short turn-out is undone exactly | Stage 5 | auto | `subsystem5_test.c` | PASS |
 | S5-U20 | something close ahead while going round: stop, carry on when clear, else give up | Stage 5 | auto | `subsystem5_test.c` | PASS |
+| S5-U21 | driving: servo angle follows the steering (5 deg steps, 60..120 limits); a reading to the side counts by its distance along the heading | Stage 1 | auto | `subsystem5_test.c` | PASS |
+| S5-M10 | following a curve, the sensor looks into it; a box round the bend stops the car | Stage 1, IF-01 | manual | SIM=0, track with a curve, box placed just past the bend | servo turns toward the curve and back to centre on the straight; `S5: STOP obstacle in path at x cm, y deg` with y toward the curve |
 | S5-M08 | while driving past, the sensor stays on the obstacle's side and the thickness is printed | Stage 3, 5 | manual | SIM=0, floor, boxes of known depth; save the console output | `S5: side …` lines while passing, then `S5: obstacle thickness x cm` within ±3 cm, or `not measured` for a box too shallow to see from the side |
 | S5-M09 | a second box placed in the car's path while it goes round the first | Stage 5 | manual | SIM=0, floor | car stops short of it (`S5: avoid BLOCKED`); carries on when it is removed; gives up after 8 s if not |
 | S5-M07 | servo stays still until something is within 25 cm, then scans once and repeats only if still close | Stage 1 | manual | bench build, hand or box moved in from far away | `S5: STOP` near 25 cm, then a scan; no sweeping with a clear path |

@@ -59,6 +59,8 @@ void   obstacle_profile_build(obstacle_scan_t const * p_scan,
                               obstacle_profile_t * p_profile);
 int8_t obstacle_choose_bypass(float left_clearance, float right_clearance);
 bool   obstacle_watch_update(uint32_t * p_close_count, float distance_cm);
+uint32_t obstacle_lead_angle(float lead);
+float  obstacle_ahead_cm(uint32_t angle_deg, float distance_cm);
 void   obstacle_plan_build(obstacle_profile_t const * p_profile,
                            obstacle_plan_t * p_plan);
 

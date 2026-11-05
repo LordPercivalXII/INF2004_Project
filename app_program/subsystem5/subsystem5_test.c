@@ -136,6 +136,21 @@ subsystem5_test (void)
     TEST_CHECK("S5-U17", b_ok,
                "driving: three close readings in a row stop the car");
 
+    /* Looking into a turn: steering sets the servo angle in 5 deg steps,
+       capped at the 60..120 deg cable limits; a reading at 30 deg is
+       counted by its part along the heading (cos 30 = 0.866). */
+    b_ok = (90U == obstacle_lead_angle(0.0f)) &&
+           (90U == obstacle_lead_angle(0.05f)) &&
+           (105U == obstacle_lead_angle(0.5f)) &&
+           (75U == obstacle_lead_angle(-0.5f)) &&
+           (120U == obstacle_lead_angle(1.5f)) &&
+           (60U == obstacle_lead_angle(-1.0f)) &&
+           (obstacle_ahead_cm(90U, 20.0f) > 19.99f) &&
+           (obstacle_ahead_cm(60U, 20.0f) > 17.2f) &&
+           (obstacle_ahead_cm(60U, 20.0f) < 17.4f);
+    TEST_CHECK("S5-U21", b_ok,
+               "driving: the sensor looks the way the car is turning");
+
     /* Stage 5: walk the manoeuvre through every phase, passing right.
        The obstacle's front face is 20 cm ahead; heading is + to the left. */
     avoid = (avoid_t) {0};

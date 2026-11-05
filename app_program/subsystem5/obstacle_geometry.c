@@ -21,6 +21,7 @@
 #define OBSTACLE_ROOMY_CM       (50.0f)
 #define OBSTACLE_OFFSET_MIN_CM  (10.0f)
 #define OBSTACLE_OFFSET_MAX_CM  (30.0f) /* stays on the tile mat */
+#define OBSTACLE_LEAD_STEP_DEG  (5U)    /* look-into-turn aiming steps */
 
 static bool
 obstacle_is_hit (obstacle_point_t const * p_point)
@@ -279,6 +280,40 @@ obstacle_watch_update (uint32_t * p_close_count, float distance_cm)
     }
 
     return (b_stop);
+}
+
+/*!
+ * @brief Servo angle that looks the way the car is turning.
+ *
+ * @param[in] lead  -1 (turning hard left) .. +1 (hard right), 0 straight.
+ *
+ * @return 60..120 deg in OBSTACLE_LEAD_STEP_DEG steps, so small steering
+ *         changes do not keep the servo moving.
+ */
+uint32_t
+obstacle_lead_angle (float lead)
+{
+    float const half_deg = (float) (ULTRASONIC_COARSE_RIGHT_DEG -
+                                    ULTRASONIC_COARSE_CENTER_DEG);
+    float const steps = (rmath_clampf(lead, -1.0f, 1.0f) * half_deg) /
+                        (float) OBSTACLE_LEAD_STEP_DEG;
+    int32_t const whole = (int32_t) ((steps >= 0.0f) ? (steps + 0.5f)
+                                                     : (steps - 0.5f));
+
+    return ((uint32_t) ((int32_t) ULTRASONIC_COARSE_CENTER_DEG +
+                        (whole * (int32_t) OBSTACLE_LEAD_STEP_DEG)));
+}
+
+/*!
+ * @brief How far ahead a reading taken at a servo angle is: the part of
+ *        it along the car's heading.  The car is turning that way, so the
+ *        reading counts as in its path.
+ */
+float
+obstacle_ahead_cm (uint32_t angle_deg, float distance_cm)
+{
+    return (distance_cm *
+            rmath_cosf(obstacle_relative_deg(angle_deg) * RMATH_DEG_TO_RAD));
 }
 
 /*!

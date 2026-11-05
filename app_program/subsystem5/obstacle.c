@@ -1,7 +1,8 @@
 /** @file obstacle.c
  *
- * @brief Obstacle scanner task.  While driving, the sensor faces straight
- *        ahead and the servo stays still; something close stops the car.
+ * @brief Obstacle scanner task.  While driving, the sensor looks the way
+ *        the car is turning (straight ahead on a straight); something
+ *        close stops the car.
  *        Then: coarse scan, fine scan around hits, and one
  *        SYSTEM_EVENT_OBSTACLE per scan.  Free-running; paced by the servo
  *        settle delays and the minimum ping interval.
@@ -36,6 +37,10 @@
 /* Set by the controller (obstacle_set_look()); a single aligned word, so
  * the write from the other core is seen whole. */
 static volatile avoid_look_t g_look = AVOID_LOOK_SCAN;
+
+/* Set by the controller (obstacle_set_lead()): which way the car is
+ * turning while it follows the line, -1 left .. +1 right. */
+static volatile float g_lead = 0.0f;
 
 /* 60 / 75 / 90 / 105 / 120 deg: edges, centre and the midpoints. */
 static uint32_t const g_coarse_angles[OBSTACLE_COARSE_COUNT] =
@@ -129,6 +134,16 @@ obstacle_set_look (avoid_look_t look)
 }
 
 /*!
+ * @brief Controller -> S5: which way the car is turning while it follows
+ *        the line; the sensor looks that way.
+ */
+void
+obstacle_set_lead (float lead)
+{
+    g_lead = lead;
+}
+
+/*!
  * @brief True while the controller still wants full scans: always, unless
  *        it is going round an obstacle and has pointed the sensor.
  */
@@ -152,7 +167,7 @@ obstacle_round (float value)
  *        caused it; the profile comes later.
  */
 static void
-obstacle_post_stop (float distance_cm)
+obstacle_post_stop (float distance_cm, int angle_deg)
 {
     system_event_t event = {0};
     char           line[OBSTACLE_STOP_LINE_MAX];
@@ -168,8 +183,8 @@ obstacle_post_stop (float distance_cm)
     obstacle_publish(&event);
 
     (void) tm_sprintf((UB *) line,
-                      (UB *) "S5: STOP obstacle in path at %d cm, 0 deg\n",
-                      obstacle_round(distance_cm));
+                      (UB *) "S5: STOP obstacle in path at %d cm, %d deg\n",
+                      obstacle_round(distance_cm), angle_deg);
     (void) tm_putstring((UB *) line);
 }
 
@@ -508,11 +523,13 @@ obstacle_task (INT stacd, void * p_exinf)
 
         if (!obstacle_car_is_avoiding())
         {
-            /* Driving: look straight ahead, no sweeping, until something
-               is close.  The simulated sensor changes with scan_number,
-               which must hold still for several readings to give a stop. */
-            center_cm = obstacle_measure_at(ULTRASONIC_COARSE_CENTER_DEG,
-                                            scan_number);
+            /* Driving: look the way the car is turning (straight ahead on
+               a straight), no sweeping, until something is close.  The
+               simulated sensor changes with scan_number, which must hold
+               still for several readings to give a stop. */
+            look_angle = obstacle_lead_angle(g_lead);
+            center_cm  = obstacle_ahead_cm(look_angle,
+                             obstacle_measure_at(look_angle, scan_number));
 
             if (!obstacle_watch_update(&close_count, center_cm))
             {
@@ -528,7 +545,8 @@ obstacle_task (INT stacd, void * p_exinf)
             }
 
             /* Let the car come to rest, then profile from where it is. */
-            obstacle_post_stop(center_cm);
+            obstacle_post_stop(center_cm, (int) look_angle -
+                                          (int) ULTRASONIC_COARSE_CENTER_DEG);
             (void) tk_dly_tsk(OBSTACLE_STOP_SETTLE_MS);
         }
 
