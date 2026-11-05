@@ -70,7 +70,12 @@ typedef struct
     imu_height_t        height;
     uint32_t            imu_ms;
     bool                b_have_imu;
-    bool                b_turn_in_progress;
+    bool                b_turn_in_progress;  /* also set while
+                                                approaching a junction */
+    bool                b_junction_approach; /* driving to the pivot   */
+    float               junction_start_m;    /* odometer at detection  */
+    float               junction_turn_deg;   /* turn to make there     */
+    uint32_t            junction_start_ms;
     uint16_t            pending_turn;
     uint32_t            next_turn_id;
     uint32_t            active_turn_id;
@@ -247,6 +252,7 @@ ctrl_enter_fault (ctrl_state_t * p_ctrl, uint32_t code)
     p_ctrl->start_requested_ms = 0U;
     p_ctrl->state      = MISSION_FAULT;
     p_ctrl->b_turn_in_progress = false;
+    p_ctrl->b_junction_approach = false;
     p_ctrl->active_turn_id = 0U;
     p_ctrl->pending_turn = (uint16_t) BARCODE_CMD_NONE;
     ctrl_set_bits(SYSTEM_BIT_FAULT);
@@ -286,6 +292,7 @@ ctrl_handle_command (ctrl_state_t * p_ctrl,
             p_ctrl->start_requested_ms = 0U;
             p_ctrl->state = MISSION_IDLE;
             p_ctrl->b_turn_in_progress = false;
+            p_ctrl->b_junction_approach = false;
             p_ctrl->active_turn_id = 0U;
             p_ctrl->pending_turn = (uint16_t) BARCODE_CMD_NONE;
             ctrl_clear_bits(SYSTEM_BIT_MISSION_RUN | SYSTEM_BIT_OBSTACLE);
@@ -349,6 +356,104 @@ ctrl_drive_speed (ctrl_state_t * p_ctrl)
     return rmath_clampf(speed, ROBOT_MIN_SPEED, ROBOT_MAX_SPEED);
 }
 
+/* ------------------------------------------------------------------ */
+/* Junction turns                                                      */
+/* ------------------------------------------------------------------ */
+
+/*!
+ * @brief Turn angle for a junction action (+ = left, as MOTION_TURN).
+ *
+ * @return 0 for straight on (BARCODE_CMD_NONE) or anything unknown.
+ */
+static float
+ctrl_junction_angle (uint16_t action)
+{
+    float angle_deg = 0.0f;
+
+    switch (action)
+    {
+        case BARCODE_CMD_LEFT:
+            angle_deg = 90.0f;
+            break;
+
+        case BARCODE_CMD_RIGHT:
+            angle_deg = -90.0f;
+            break;
+
+        case BARCODE_CMD_UTURN:
+            angle_deg = 180.0f;
+            break;
+
+        default:
+            angle_deg = 0.0f;   /* BARCODE_CMD_NONE: straight on */
+            break;
+    }
+
+    return (angle_deg);
+}
+
+/*!
+ * @brief Start a junction turn: drive straight to the junction centre
+ *        (JUNCTION_APPROACH_M on the odometer), then turn (see
+ *        ctrl_junction_step).  Line steering is suspended meanwhile.
+ */
+static void
+ctrl_junction_begin (ctrl_state_t * p_ctrl, float angle_deg)
+{
+    float const speed = rmath_minf(JUNCTION_APPROACH_SPEED,
+                                   ctrl_drive_speed(p_ctrl));
+
+    p_ctrl->b_junction_approach = true;
+    p_ctrl->b_turn_in_progress  = true;     /* suspends line steering */
+    p_ctrl->active_turn_id      = 0U;
+    p_ctrl->junction_turn_deg   = angle_deg;
+    p_ctrl->junction_start_m    = p_ctrl->distance_m;
+    p_ctrl->junction_start_ms   = board_millis();
+    ctrl_set_motion(speed, speed);
+    tm_printf((UB *) "CTRL: junction -> turn %d deg after %d mm\n",
+              (int) angle_deg, (int) (JUNCTION_APPROACH_M * 1000.0f));
+}
+
+/*!
+ * @brief While approaching: once the odometer has advanced
+ *        JUNCTION_APPROACH_M (or the approach takes too long), make the
+ *        closed-loop turn.  Called on every motion event.
+ */
+static void
+ctrl_junction_step (ctrl_state_t * p_ctrl)
+{
+    bool const b_arrived = ((p_ctrl->distance_m - p_ctrl->junction_start_m)
+                            >= JUNCTION_APPROACH_M);
+    bool const b_timeout = ((board_millis() - p_ctrl->junction_start_ms)
+                            >= JUNCTION_APPROACH_TIMEOUT_MS);
+
+    if (p_ctrl->b_junction_approach && (b_arrived || b_timeout))
+    {
+        p_ctrl->b_junction_approach = false;
+        p_ctrl->next_turn_id++;
+
+        if (0U == p_ctrl->next_turn_id)
+        {
+            p_ctrl->next_turn_id++;
+        }
+
+        if (b_timeout && !b_arrived)
+        {
+            tm_printf((UB *) "CTRL: junction approach timed out, "
+                      "turning here\n");
+        }
+
+        if (ctrl_turn_motion(p_ctrl->junction_turn_deg, p_ctrl->next_turn_id))
+        {
+            p_ctrl->active_turn_id = p_ctrl->next_turn_id;
+        }
+        else
+        {
+            ctrl_enter_fault(p_ctrl, FAULT_MOTION_COMMAND);
+        }
+    }
+}
+
 static void
 ctrl_handle_line (ctrl_state_t * p_ctrl, line_event_t const * p_line)
 {
@@ -373,45 +478,24 @@ ctrl_handle_line (ctrl_state_t * p_ctrl, line_event_t const * p_line)
     }
 
     if ((MISSION_FOLLOWING == p_ctrl->state) && p_line->b_junction &&
-        (!p_ctrl->b_turn_in_progress) &&
-        ((uint16_t) BARCODE_CMD_NONE != p_ctrl->pending_turn))
+        (!p_ctrl->b_turn_in_progress))
     {
-        float angle_deg = 0.0f;
+        /* The stored barcode decides (S3 resolved it; none stored or
+           "straight" = BARCODE_CMD_NONE): straight carries on following
+           the line, a turn first drives to the junction centre. */
+        float const angle_deg = ctrl_junction_angle(p_ctrl->pending_turn);
 
-        if ((uint16_t) BARCODE_CMD_LEFT == p_ctrl->pending_turn)
+        p_ctrl->pending_turn = (uint16_t) BARCODE_CMD_NONE;
+
+        if (0.0f == angle_deg)
         {
-            angle_deg = 90.0f;
-        }
-        else if ((uint16_t) BARCODE_CMD_RIGHT == p_ctrl->pending_turn)
-        {
-            angle_deg = -90.0f;
-        }
-        else if ((uint16_t) BARCODE_CMD_UTURN == p_ctrl->pending_turn)
-        {
-            angle_deg = 180.0f;
+            tm_printf((UB *) "CTRL: junction -> STRAIGHT (%s)\n",
+                      ('\0' != p_line->junction_char) ? "barcode"
+                                                       : "no barcode stored");
         }
         else
         {
-            /* Unknown commands are discarded below. */
-        }
-
-        p_ctrl->next_turn_id++;
-        if (0U == p_ctrl->next_turn_id)
-        {
-            p_ctrl->next_turn_id++;
-        }
-
-        if ((0.0f != angle_deg) &&
-            ctrl_turn_motion(angle_deg, p_ctrl->next_turn_id))
-        {
-            p_ctrl->active_turn_id = p_ctrl->next_turn_id;
-            p_ctrl->b_turn_in_progress = true;
-            p_ctrl->pending_turn = (uint16_t) BARCODE_CMD_NONE;
-        }
-        else
-        {
-            p_ctrl->pending_turn = (uint16_t) BARCODE_CMD_NONE;
-            ctrl_enter_fault(p_ctrl, FAULT_MOTION_COMMAND);
+            ctrl_junction_begin(p_ctrl, angle_deg);
         }
     }
 
@@ -623,6 +707,7 @@ ctrl_handle_obstacle (ctrl_state_t * p_ctrl,
         ctrl_set_bits(SYSTEM_BIT_OBSTACLE);
         p_ctrl->state = MISSION_AVOIDING;
         p_ctrl->b_turn_in_progress = false;
+        p_ctrl->b_junction_approach = false;
         p_ctrl->active_turn_id = 0U;
         p_ctrl->pending_turn = (uint16_t) BARCODE_CMD_NONE;
         avoid_start(&p_ctrl->avoid, board_millis(), p_ctrl->distance_m);
@@ -751,6 +836,8 @@ ctrl_handle_event (ctrl_state_t * p_ctrl, system_event_t const * p_event)
                 (void) ds;
 #endif
             }
+            ctrl_junction_step(p_ctrl);
+
             if (p_ctrl->b_turn_in_progress &&
                 p_event->data.motion.turn_complete &&
                 (p_event->data.motion.turn_id == p_ctrl->active_turn_id))
