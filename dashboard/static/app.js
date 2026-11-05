@@ -481,8 +481,11 @@ async function poll() {
     $("travelled").textContent =
       `${number(t.distance, 2)} m`;
 
+    // Firmware sends the decoded character as its ASCII code.
     $("barcode").textContent =
-      t.barcode ?? "--";
+      hasNumber(t.barcode) && t.barcode >= 33 && t.barcode < 127
+        ? String.fromCharCode(t.barcode)
+        : "--";
 
     $("fault").textContent =
       t.fault ?? "--";

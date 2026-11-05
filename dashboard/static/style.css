@@ -638,3 +638,24 @@ input[type=range] {
         padding: 10px 12px;
     }
 }
+
+.barcode-card {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    background: #0f1a1f;
+    border: 1px solid #294047;
+    border-radius: 12px;
+    padding: 14px 18px;
+    margin-bottom: 14px;
+}
+
+.barcode-card span {
+    color: #9fb4ba;
+}
+
+.barcode-card strong {
+    font-size: 44px;
+    line-height: 1;
+    color: #64d7ad;
+}
