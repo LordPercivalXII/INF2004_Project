@@ -463,6 +463,10 @@ uint32_t mqtt_utk_telemetry_read(char *buffer, uint32_t buffer_size)
     char dist[S1_FIXED_TEXT_MAX];
     char hump[S1_FIXED_TEXT_MAX];
     char obst[S1_FIXED_TEXT_MAX];
+    char roll[S1_FIXED_TEXT_MAX];
+    char pitch[S1_FIXED_TEXT_MAX];
+    char rise[S1_FIXED_TEXT_MAX];
+    char peak[S1_FIXED_TEXT_MAX];
     int len;
 
     if ((buffer == NULL) ||
@@ -483,11 +487,23 @@ uint32_t mqtt_utk_telemetry_read(char *buffer, uint32_t buffer_size)
     telemetry_format_fixed(hump, message.hump_height_m, 3U);
     telemetry_format_fixed(obst, message.obstacle_distance_cm, 1U);
 
+    telemetry_format_fixed(roll, message.imu.tilt_roll_deg, 1U);
+    telemetry_format_fixed(pitch, message.imu.tilt_pitch_deg, 1U);
+    telemetry_format_fixed(rise, message.imu.terrain_rise_m, 3U);
+    telemetry_format_fixed(peak, message.imu.terrain_peak_m, 3U);
+
     len = tm_sprintf(
         (UB *)buffer,
         (UB *)"{\"t_ms\":%u,\"mission\":%u,\"speed\":%s,"
               "\"line\":%s,\"distance\":%s,\"hump_m\":%s,"
-              "\"obstacle_cm\":%s,\"barcode\":%u,\"fault\":%u}",
+              "\"obstacle_cm\":%s,\"barcode\":%u,\"fault\":%u,"
+              "\"imu_valid\":%u,\"imu_calibrated\":%u,"
+              "\"motion\":%u,\"roll_deg\":%s,\"pitch_deg\":%s,"
+              "\"hump_active\":%u,\"hump_valid\":%u,"
+              "\"hump_count\":%u,\"tilt_valid\":%u,"
+              "\"height_approx\":%u,\"rise_m\":%s,"
+              "\"terrain_peak_m\":%s,\"height_tracking_valid\":%u,"
+              "\"height_gap_pending\":%u}",
         (unsigned int)message.timestamp_ms,
         (unsigned int)message.mission_state,
         speed,
@@ -496,7 +512,19 @@ uint32_t mqtt_utk_telemetry_read(char *buffer, uint32_t buffer_size)
         hump,
         obst,
         (unsigned int)message.last_barcode,
-        (unsigned int)message.fault_code);
+        (unsigned int)message.fault_code,
+        (unsigned int)message.imu.b_sensor_valid,
+        (unsigned int)message.imu.b_calibrated,
+        (unsigned int)message.imu.motion_state,
+        roll, pitch,
+        (unsigned int)message.imu.b_hump_active,
+        (unsigned int)message.imu.b_hump_height_valid,
+        (unsigned int)message.imu.hump_count,
+        (unsigned int)message.imu.b_tilt_valid,
+        (unsigned int)message.imu.b_height_approximate,
+        rise, peak,
+        (unsigned int)message.imu.b_height_tracking_valid,
+        (unsigned int)message.imu.b_height_gap_pending);
 
     return (len > 0) ? (uint32_t)len : 0U;
 }
