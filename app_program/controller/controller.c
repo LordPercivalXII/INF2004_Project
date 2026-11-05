@@ -339,6 +339,7 @@ ctrl_handle_command (ctrl_state_t * p_ctrl,
                 (!p_ctrl->b_start_pending))
             {
                 p_ctrl->b_start_pending = true;
+                p_ctrl->barcode = 0U;   /* telemetry copy only */
                 p_ctrl->start_requested_ms = board_millis();
                 ctrl_clear_bits(SYSTEM_BIT_MISSION_RUN);
                 ctrl_stop_motion();

@@ -15,6 +15,9 @@ CONTROL = 'inf2004/car/control'
 lock = threading.Lock()
 state = {'connected': False, 'latest': None, 'received_at': None, 'error': None}
 history = deque(maxlen=120)
+# The robot keeps its last barcode until reboot, so after a reset the first
+# value seen is treated as old and hidden until a different one arrives.
+barcode_baseline = {'value': None, 'pending': False}
 client = mqtt.Client(mqtt.CallbackAPIVersion.VERSION2, client_id='buddy1-dashboard')
 
 def on_connect(c, userdata, flags, reason_code, properties):
@@ -37,6 +40,11 @@ def on_message(c, userdata, msg):
     except (UnicodeDecodeError, ValueError):
         return
     with lock:
+        if barcode_baseline['pending']:
+            barcode_baseline['value'] = value.get('barcode')
+            barcode_baseline['pending'] = False
+        if barcode_baseline['value'] and value.get('barcode') == barcode_baseline['value']:
+            value['barcode'] = 0
         state['latest'] = value
         state['received_at'] = time.time()
         history.append(value)
@@ -66,6 +74,21 @@ def index():
 def status():
     with lock:
         return jsonify({**state, 'history': list(history)})
+
+@app.post('/api/reset')
+def reset():
+    with lock:
+        state['latest'] = None
+        state['received_at'] = None
+        history.clear()
+        barcode_baseline['value'] = None
+        barcode_baseline['pending'] = True
+    return jsonify({'ok': True})
+
+@app.after_request
+def no_cache(response):
+    response.headers['Cache-Control'] = 'no-store'
+    return response
 
 def publish(topic, payload, retain=False):
     with lock:

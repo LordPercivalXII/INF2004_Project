@@ -532,5 +532,10 @@ async function poll() {
 // Start polling
 // --------------------------------------------------
 
-poll();
-setInterval(poll, 1000);
+// Clear server-side cached telemetry so a refresh starts from a clean state.
+fetch("/api/reset", { method: "POST" })
+  .catch(() => {})
+  .finally(() => {
+    poll();
+    setInterval(poll, 1000);
+  });
