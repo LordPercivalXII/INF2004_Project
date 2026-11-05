@@ -25,23 +25,25 @@
 /* Steering is a fraction of the drive speed, so a given line error gives
  * the same path curvature at any speed: 1.0 = inner wheel stopped (pivot
  * on it), above 1.0 = inner wheel backwards. */
-#define CTRL_STEER_GAIN         (0.70f) /* steer per unit line error    */
+#define CTRL_STEER_GAIN         (0.40f) /* steer per unit line error    */
 #define CTRL_STEER_LIMIT        (1.20f)
-#define CTRL_STEER_SMOOTH       (0.55f) /* weight of newest sample      */
+#define CTRL_STEER_SMOOTH       (0.35f) /* weight of newest sample      */
 #define CTRL_STEER_KD           (0.0f)   /* steer per (error/s)          */
 #define CTRL_CURVE_SLOW         (0.50f)  /* speed cut at full steer      */
 #define CTRL_STEER_DEADBAND     (0.10f)
 #define CTRL_LOST_PIVOT_SPEED   (0.15f) /* m/s outer wheel while searching */
-#define CTRL_LOST_FIRST_MS      (500U)  /* arc towards last side this long */
+#define CTRL_LOST_FIRST_MS      (1300U)  /* arc towards last side this long */
 #define CTRL_LOST_SWEEP_MS      (1000U) /* then alternate sides every this long */
-#define CTRL_LOST_GIVEUP_MS     (8000U) /* stop searching after this       */
-#define CTRL_WHEEL_MIN          (0.08f) /* m/s: slowest wheel that turns   */
+#define CTRL_LOST_GIVEUP_MS     (10000U) /* stop searching after this       */
+#define CTRL_WHEEL_MIN          (0.04f) /* m/s: slowest wheel that turns   */
 #define CTRL_WHEEL_ZERO         (0.03f) /* below this the wheel is stopped */
 #define CTRL_SLEW_PER_CYCLE     (0.02f) /* max wheel target change / 10 ms */
 #define CTRL_LOST_SIDE_LEVEL    (0.20f) /* |error| that counts as a side  */
 #define CTRL_CENTRED_LEVEL      (0.12f) /* |error| below this = centred   */
 #define CTRL_CENTRED_CYCLES     (10U)   /* centred this long: forget side */
 #define CTRL_CENTRE_LEVEL       (0.60f) /* last |error| below this: line is between the sensors */
+#define CTRL_SEARCH_SPIN_SPEED  (0.22f) /* m/s per wheel, in-place search */
+#define CTRL_BETWEEN_STEER      (0.55f) /* steer while line is between sensors */
 #define CTRL_CENTRE_HOLD_CYCLES (40U)   /* x 10 ms to drive straight on both-white */
 #define CTRL_LOST_CYCLES        (8U)    /* x 10 ms lost before pivoting   */
 #define CTRL_LINE_DT_S          ((float) ROBOT_LINE_PERIOD_MS / 1000.0f)
@@ -244,6 +246,10 @@ ctrl_wheel_floor (float speed, bool b_allow_stop)
     if (b_allow_stop && (rmath_absf(speed) < CTRL_WHEEL_ZERO))
     {
         return 0.0f;
+    }
+    if (speed <= -CTRL_WHEEL_MIN)
+    {
+        return speed;       /* deliberate reverse: in-place search turn */
     }
     return (speed < CTRL_WHEEL_MIN) ? CTRL_WHEEL_MIN : speed;
 }
@@ -607,7 +613,6 @@ ctrl_handle_line (ctrl_state_t * p_ctrl, line_event_t const * p_line)
            sees white on both.  If the line was last seen near centre,
            that is "between the sensors": drive straight, not "lost". */
         bool const b_between = (!p_line->b_line_detected) &&
-            (rmath_absf(p_ctrl->last_seen_error) < CTRL_CENTRE_LEVEL) &&
             (p_ctrl->lost_cycles < CTRL_CENTRE_HOLD_CYCLES);
 
         if ((!p_line->b_line_detected) && (0.0f != p_ctrl->last_side_any) &&
@@ -621,12 +626,23 @@ ctrl_handle_line (ctrl_state_t * p_ctrl, line_event_t const * p_line)
                instead of spinning round, then fall back to steering. */
             /* Arc towards the last side first, then alternate sides so a
                wrong guess is corrected and the car never circles. */
-            uint32_t const phase = (lost_ms < CTRL_LOST_FIRST_MS) ? 0U :
-                (1U + ((lost_ms - CTRL_LOST_FIRST_MS) / CTRL_LOST_SWEEP_MS));
+            /* Each sweep is longer than the last (1x, 2x, 3x...), so the
+               search widens until it reaches the line. */
+            uint32_t phase = 0U;
+            uint32_t span  = CTRL_LOST_FIRST_MS;
+            uint32_t t     = lost_ms;
+            while (t >= span)
+            {
+                t -= span;
+                phase++;
+                span = CTRL_LOST_FIRST_MS * (phase + 1U);
+            }
             float const side = (0U == (phase & 1U))
                 ? p_ctrl->last_side_any : -p_ctrl->last_side_any;
-            float const outer = CTRL_LOST_PIVOT_SPEED;
-            float const inner = 0.0f;
+            /* Rotate on the spot so the car stays over the lost corner
+               instead of driving across to a different part of the track. */
+            float const outer =  CTRL_SEARCH_SPIN_SPEED;
+            float const inner = -CTRL_SEARCH_SPIN_SPEED;
 
             ctrl_set_motion_slewed((side > 0.0f) ? outer : inner,
                                    (side > 0.0f) ? inner : outer, true);
@@ -644,7 +660,8 @@ ctrl_handle_line (ctrl_state_t * p_ctrl, line_event_t const * p_line)
         float const raw_error =
             ((!p_line->b_line_detected) &&
              (b_between || (p_ctrl->lost_cycles < CTRL_LOST_CYCLES)))
-            ? (b_between ? 0.0f : smooth_error) : p_ctrl->line_error;
+            ? (b_between ? (0.5f * p_ctrl->last_seen_error) : smooth_error)
+            : p_ctrl->line_error;
         smooth_error = p_ctrl->b_steer_primed
             ? (smooth_error + (CTRL_STEER_SMOOTH * (raw_error - smooth_error)))
             : raw_error;
@@ -653,13 +670,27 @@ ctrl_handle_line (ctrl_state_t * p_ctrl, line_event_t const * p_line)
             ? ((p_ctrl->line_error - p_ctrl->prev_line_error) /
                CTRL_LINE_DT_S)
             : 0.0f;
-        float error_deadband = p_ctrl->line_error;
-        if (rmath_absf(error_deadband) < CTRL_STEER_DEADBAND)
-            error_deadband = 0.0f;
-        float const steer =
+        /* Shifted deadband: no step in steering at the band edge. */
+        float const abs_err = rmath_absf(p_ctrl->line_error);
+        float const error_deadband = (abs_err < CTRL_STEER_DEADBAND) ? 0.0f
+            : ((p_ctrl->line_error > 0.0f) ? (abs_err - CTRL_STEER_DEADBAND)
+                                           : -(abs_err - CTRL_STEER_DEADBAND));
+        float const pd_steer =
             rmath_clampf((error_deadband * CTRL_STEER_GAIN) +
                          (derivative * CTRL_STEER_KD),
                          -CTRL_STEER_LIMIT, CTRL_STEER_LIMIT);
+
+        /* Line dropped out between the sensors (long curve, S-bend): keep
+           turning decisively towards the side it was last seen, so the
+           car follows the bend instead of drifting straight on. */
+        float const steer = (b_between &&
+                             (rmath_absf(p_ctrl->last_seen_error) >=
+                              CTRL_LOST_SIDE_LEVEL))
+            ? ((p_ctrl->last_seen_error > 0.0f ? 1.0f : -1.0f) *
+               rmath_minf(CTRL_BETWEEN_STEER *
+                          (1.0f + ((float)p_ctrl->lost_cycles / 15.0f)),
+                          CTRL_STEER_LIMIT))
+            : pd_steer;
 
         p_ctrl->prev_line_error = p_ctrl->line_error;
         p_ctrl->b_steer_primed  = true;
@@ -672,8 +703,9 @@ ctrl_handle_line (ctrl_state_t * p_ctrl, line_event_t const * p_line)
                          rmath_minf(rmath_absf(steer), 1.0f))),
             ROBOT_MIN_SPEED);
 
-        ctrl_set_motion_slewed(speed * (1.0f + steer), speed * (1.0f - steer),
-                               false);
+        float const left_cmd  = speed * (1.0f + steer);
+        float const right_cmd = speed * (1.0f - steer);
+        ctrl_set_motion_slewed(left_cmd, right_cmd, false);
         obstacle_set_lead(steer);   /* + = right, as the servo */
     }
     else
