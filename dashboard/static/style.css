@@ -1,21 +1,22 @@
+
 :root {
     font-family: Inter, system-ui, -apple-system, Segoe UI, sans-serif;
     color: #edf4f2;
-    background: #0d1419
+    background: #0d1419;
 }
 
 * {
-    box-sizing: border-box
+    box-sizing: border-box;
 }
 
 body {
-    margin: 0
+    margin: 0;
 }
 
 .shell {
     max-width: 1120px;
     margin: auto;
-    padding: 36px 24px
+    padding: 36px 24px;
 }
 
 header {
@@ -23,52 +24,56 @@ header {
     justify-content: space-between;
     align-items: center;
     gap: 16px;
-    margin-bottom: 28px
+    margin-bottom: 28px;
 }
 
 .eyebrow {
     color: #64d7ad;
     font-size: 12px;
     letter-spacing: 2px;
-    font-weight: 700
+    font-weight: 700;
 }
 
 h1 {
     font-size: 32px;
-    margin: 6px 0
+    margin: 6px 0;
 }
 
 h2 {
     font-size: 19px;
-    margin: 0 0 10px
+    margin: 0 0 10px;
 }
 
 p {
     color: #a6b7b9;
-    line-height: 1.55
+    line-height: 1.55;
 }
 
 .status {
     border: 1px solid #344d52;
     border-radius: 30px;
     padding: 9px 14px;
-    white-space: nowrap
+    white-space: nowrap;
 }
 
 .status.online {
     color: #64d7ad;
-    border-color: #39785e
+    border-color: #39785e;
 }
 
 .status.offline {
     color: #f0a3a3;
-    border-color: #8a4141
+    border-color: #8a4141;
 }
+
+/* ==========================================
+   Main Robot Metrics
+   ========================================== */
 
 .metrics {
     display: grid;
     grid-template-columns: repeat(4, minmax(0, 1fr));
-    gap: 16px
+    gap: 16px;
 }
 
 .metrics article,
@@ -76,40 +81,44 @@ p {
     background: #162229;
     border: 1px solid #294047;
     border-radius: 16px;
-    padding: 22px
+    padding: 22px;
 }
 
 .metrics article {
     display: flex;
     flex-direction: column;
-    gap: 10px
+    gap: 10px;
 }
 
 .metrics small {
-    color: #9eafb3
+    color: #9eafb3;
 }
 
 .metrics strong {
     font-size: 28px;
-    overflow-wrap: anywhere
+    overflow-wrap: anywhere;
 }
 
 .metrics span {
     color: #9eafb3;
-    font-size: 13px
+    font-size: 13px;
 }
+
+/* ==========================================
+   Dashboard Columns
+   ========================================== */
 
 .columns {
     display: grid;
     grid-template-columns: 1fr 1fr;
     gap: 16px;
-    margin: 16px 0
+    margin: 16px 0;
 }
 
 .fields {
     display: grid;
     grid-template-columns: 1fr 1fr;
-    gap: 14px
+    gap: 14px;
 }
 
 .fields label {
@@ -117,7 +126,7 @@ p {
     font-size: 13px;
     display: flex;
     flex-direction: column;
-    gap: 7px
+    gap: 7px;
 }
 
 input:not([type=range]) {
@@ -127,8 +136,12 @@ input:not([type=range]) {
     background: #0e1a20;
     color: white;
     font-size: 18px;
-    text-transform: uppercase
+    text-transform: uppercase;
 }
+
+/* ==========================================
+   Buttons
+   ========================================== */
 
 button {
     background: #64d7ad;
@@ -138,30 +151,34 @@ button {
     padding: 13px 18px;
     font-size: 14px;
     font-weight: 750;
-    cursor: pointer
+    cursor: pointer;
 }
 
 button:disabled {
-    opacity: .45;
-    cursor: not-allowed
+    opacity: 0.45;
+    cursor: not-allowed;
 }
 
 .fields button {
-    grid-column: 1/-1
+    grid-column: 1 / -1;
 }
+
+/* ==========================================
+   Speed Control
+   ========================================== */
 
 .speed-display {
     font-size: 19px;
-    margin: 28px 0 16px
+    margin: 28px 0 16px;
 }
 
 .speed-display strong {
-    font-size: 36px
+    font-size: 36px;
 }
 
 input[type=range] {
     width: 100%;
-    accent-color: #64d7ad
+    accent-color: #64d7ad;
 }
 
 .range {
@@ -169,17 +186,21 @@ input[type=range] {
     justify-content: space-between;
     color: #a6b7b9;
     font-size: 12px;
-    margin: 7px 0 24px
+    margin: 7px 0 24px;
 }
 
 .hint {
-    font-size: 12px
+    font-size: 12px;
 }
+
+/* ==========================================
+   Live Telemetry Details
+   ========================================== */
 
 .details {
     display: grid;
     grid-template-columns: repeat(2, 1fr);
-    gap: 12px
+    gap: 12px;
 }
 
 .details div {
@@ -189,82 +210,431 @@ input[type=range] {
     display: flex;
     justify-content: space-between;
     gap: 12px;
-    color: #a6b7b9
+    color: #a6b7b9;
 }
 
 .details b {
-    color: #fff
+    color: #fff;
 }
 
 #feedback {
     min-height: 24px;
-    color: #64d7ad
+    color: #64d7ad;
 }
 
+/* ==========================================
+   Robot Mission Control
+   ========================================== */
+
 .mission-panel {
-    margin-top: 16px
+    margin-top: 16px;
 }
 
 .mission-buttons {
     display: grid;
     grid-template-columns: 1fr 1fr;
     gap: 14px;
-    margin-top: 18px
+    margin-top: 18px;
 }
 
 .start-button {
     background: #64d7ad;
     color: #092018;
-    font-size: 16px
+    font-size: 16px;
 }
 
 .stop-button {
     background: #e76f70;
     color: #240c0c;
-    font-size: 16px
+    font-size: 16px;
 }
 
 .start-button:not(:disabled):hover {
-    background: #8be8c3
+    background: #8be8c3;
 }
 
 .stop-button:not(:disabled):hover {
-    background: #f38e8f
+    background: #f38e8f;
 }
 
-@media(max-width:850px) {
+/* ==========================================
+   Ramp Detection & Height
+   ========================================== */
+
+.ramp-panel {
+    margin-top: 16px;
+}
+
+.ramp-header {
+    display: flex;
+    align-items: flex-start;
+    justify-content: space-between;
+    flex-wrap: wrap;
+    gap: 16px;
+    margin-bottom: 24px;
+}
+
+.ramp-header h2 {
+    margin: 0 0 8px;
+}
+
+.ramp-header p {
+    margin: 0;
+    color: #a6b7b9;
+    font-size: 13px;
+    line-height: 1.6;
+}
+
+/* Ramp Status Badge */
+
+.ramp-badge {
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    padding: 9px 14px;
+    border-radius: 30px;
+    background: rgba(100, 215, 173, 0.08);
+    border: 1px solid #39785e;
+    color: #64d7ad;
+    font-size: 12px;
+    font-weight: 700;
+    text-align: center;
+    max-width: 100%;
+}
+
+/* Ramp Measurement Cards */
+
+.ramp-metrics {
+    display: grid;
+    grid-template-columns: repeat(4, minmax(0, 1fr));
+    gap: 16px;
+    margin-bottom: 20px;
+}
+
+.ramp-metrics article {
+    display: flex;
+    flex-direction: column;
+    gap: 10px;
+    min-width: 0;
+    padding: 20px;
+    background: #101c22;
+    border: 1px solid #294047;
+    border-radius: 12px;
+    transition:
+        border-color 0.2s ease,
+        background 0.2s ease;
+}
+
+.ramp-metrics article:hover {
+    border-color: #39785e;
+    background: #14252a;
+}
+
+.ramp-metrics small {
+    color: #9eafb3;
+    font-size: 12px;
+    font-weight: 500;
+}
+
+.ramp-metrics strong {
+    color: #edf4f2;
+    font-size: clamp(20px, 2.2vw, 27px);
+    font-weight: 750;
+    overflow-wrap: anywhere;
+    font-variant-numeric: tabular-nums;
+}
+
+.ramp-metrics article span {
+    color: #9eafb3;
+    font-size: 12px;
+    line-height: 1.5;
+}
+
+/* Additional Height and IMU Information */
+
+.ramp-details {
+    display: grid;
+    grid-template-columns: repeat(3, minmax(0, 1fr));
+    gap: 12px;
+    margin-bottom: 20px;
+}
+
+.ramp-details > div {
+    display: flex;
+    flex-direction: column;
+    gap: 8px;
+    min-width: 0;
+    padding: 15px 16px;
+    background: #101c22;
+    border: 1px solid #294047;
+    border-radius: 10px;
+}
+
+.ramp-details span {
+    color: #9eafb3;
+    font-size: 12px;
+    line-height: 1.5;
+}
+
+.ramp-details b {
+    color: #edf4f2;
+    font-size: 15px;
+    font-weight: 650;
+    overflow-wrap: anywhere;
+}
+
+/* Measurement Explanation */
+
+.ramp-panel > .hint {
+    margin: 0;
+    padding: 12px 14px;
+    border-left: 3px solid #64d7ad;
+    border-radius: 0 8px 8px 0;
+    background: rgba(100, 215, 173, 0.06);
+    color: #a6b7b9;
+    font-size: 12px;
+    line-height: 1.6;
+}
+
+/* ==========================================
+   Responsive Layout: Tablet
+   ========================================== */
+
+@media (max-width: 1000px) {
+    .ramp-metrics {
+        grid-template-columns: repeat(2, minmax(0, 1fr));
+    }
+
+    .ramp-details {
+        grid-template-columns: repeat(2, minmax(0, 1fr));
+    }
+}
+
+@media (max-width: 850px) {
     .metrics {
-        grid-template-columns: repeat(2, 1fr)
+        grid-template-columns: repeat(2, 1fr);
     }
 
     .columns {
-        grid-template-columns: 1fr
+        grid-template-columns: 1fr;
     }
 }
 
-@media(max-width:520px) {
+/* ==========================================
+   Responsive Layout: Mobile
+   ========================================== */
+
+@media (max-width: 600px) {
+    .ramp-header {
+        flex-direction: column;
+        align-items: flex-start;
+    }
+
+    .ramp-metrics {
+        grid-template-columns: 1fr;
+        gap: 12px;
+    }
+
+    .ramp-details {
+        grid-template-columns: 1fr;
+    }
+
+    .ramp-metrics article {
+        padding: 16px;
+    }
+
+    .ramp-metrics strong {
+        font-size: 24px;
+    }
+}
+
+@media (max-width: 520px) {
     header {
         align-items: flex-start;
-        flex-direction: column
+        flex-direction: column;
     }
 
     .metrics {
-        grid-template-columns: 1fr 1fr
+        grid-template-columns: 1fr 1fr;
     }
 
     .metrics strong {
-        font-size: 21px
+        font-size: 21px;
     }
 
     .details {
-        grid-template-columns: 1fr
+        grid-template-columns: 1fr;
     }
 
     .shell {
-        padding: 20px 14px
+        padding: 20px 14px;
     }
 
     .mission-buttons {
-        grid-template-columns: 1fr
+        grid-template-columns: 1fr;
+    }
+}
+
+
+/* ==========================================
+   Wide Desktop Dashboard Layout
+   ========================================== */
+
+@media (min-width: 1100px) {
+
+    /* Use more of the available screen width */
+    .shell {
+        max-width: 1680px;
+        width: 96%;
+        padding: 20px 24px;
+    }
+
+    header {
+        margin-bottom: 16px;
+    }
+
+    /* Make the shell a two-column dashboard */
+    .shell {
+        display: grid;
+        grid-template-columns:
+            minmax(0, 1.1fr)
+            minmax(0, 0.9fr);
+        gap: 14px 18px;
+        align-items: start;
+    }
+
+    /* Header and summary metrics span both columns */
+    .shell > header,
+    .shell > .metrics {
+        grid-column: 1 / -1;
+    }
+
+    .metrics {
+        gap: 12px;
+    }
+
+    .metrics article {
+        padding: 14px 18px;
+    }
+
+    .metrics strong {
+        font-size: 25px;
+    }
+
+    /* Left: ramp monitoring */
+    .shell > .ramp-panel {
+        grid-column: 1;
+        grid-row: 3 / span 3;
+        margin-top: 0;
+    }
+
+    /* Right: mission controls */
+    .shell > .mission-panel {
+        grid-column: 2;
+        grid-row: 3;
+        margin-top: 0;
+    }
+
+    /* Right: route and speed controls */
+    .shell > .columns {
+        grid-column: 2;
+        grid-row: 4;
+        grid-template-columns: 1fr 1fr;
+        margin: 0;
+        gap: 12px;
+    }
+
+    /* Right: live telemetry */
+    .shell > .panel:not(.ramp-panel):not(.mission-panel) {
+        grid-column: 2;
+        grid-row: 5;
+    }
+
+    /* Compact panel spacing */
+    .panel {
+        padding: 16px;
+    }
+
+    .panel h2 {
+        font-size: 17px;
+    }
+
+    /* Ramp cards use two columns */
+    .ramp-header {
+        margin-bottom: 14px;
+    }
+
+    .ramp-metrics {
+        grid-template-columns: repeat(2, minmax(0, 1fr));
+        gap: 10px;
+        margin-bottom: 12px;
+    }
+
+    .ramp-metrics article {
+        padding: 14px;
+    }
+
+    .ramp-metrics strong {
+        font-size: 23px;
+    }
+
+    /* Height details use two columns */
+    .ramp-details {
+        grid-template-columns: repeat(2, minmax(0, 1fr));
+        gap: 10px;
+        margin-bottom: 12px;
+    }
+
+    .ramp-details > div {
+        padding: 11px 12px;
+    }
+
+    /* Compact mission controls */
+    .mission-buttons {
+        margin-top: 12px;
+        gap: 10px;
+    }
+
+    .mission-buttons button {
+        padding: 11px;
+    }
+
+    /* Compact route and speed sections */
+    .columns .panel {
+        padding: 14px;
+    }
+
+    .fields {
+        gap: 9px;
+    }
+
+    .fields input {
+        padding: 9px;
+        font-size: 14px;
+    }
+
+    .fields button {
+        padding: 10px;
+    }
+
+    .speed-display {
+        margin: 16px 0 10px;
+    }
+
+    .speed-display strong {
+        font-size: 28px;
+    }
+
+    .range {
+        margin-bottom: 14px;
+    }
+
+    /* Compact live telemetry */
+    .details {
+        gap: 8px;
+    }
+
+    .details div {
+        padding: 10px 12px;
     }
 }
