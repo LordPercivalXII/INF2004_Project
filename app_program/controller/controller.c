@@ -15,7 +15,6 @@
 #include "../common/robot_config.h"
 #include "../common/drv_board.h"
 #include "../common/rmath.h"
-#include "../common/diag_led.h"
 #include "../subsystem1/subsystem1.h"
 #include "../subsystem2/subsystem2.h"
 #include "../subsystem5/subsystem5.h"
@@ -337,18 +336,20 @@ ctrl_handle_command (ctrl_state_t * p_ctrl,
     {
         case CONTROL_START:
             if ((MISSION_IDLE == p_ctrl->state) &&
-                (!p_ctrl->b_start_pending) && p_ctrl->b_imu_healthy)
+                (!p_ctrl->b_start_pending))
             {
                 p_ctrl->b_start_pending = true;
                 p_ctrl->start_requested_ms = board_millis();
                 ctrl_clear_bits(SYSTEM_BIT_MISSION_RUN);
                 ctrl_stop_motion();
-                tm_printf((UB *) "CTRL: START received, waiting 3 seconds\n");
+                tm_printf((UB *) "CTRL: START received, waiting 3 seconds%s\n",
+                          p_ctrl->b_imu_healthy ? "" : " (IMU not ready yet)");
             }
             else
             {
-                tm_printf((UB *) "CTRL: START ignored: not idle, "
-                          "already pending, or IMU not ready\n");
+                tm_printf((UB *) "CTRL: START ignored: state=%d pending=%d\n",
+                          (int) p_ctrl->state,
+                          (int) p_ctrl->b_start_pending);
             }
             break;
 
@@ -1325,10 +1326,6 @@ controller_task (INT stacd, void * p_exinf)
     ctrl.last_telemetry_ms = board_millis();
     imu_height_init(&ctrl.height);
 
-    /* Diagnostic LED: show boot status */
-    diag_led_init();
-    diag_led_set_state(DIAG_LED_BOOT);
-
     /* Bench-test autostart (AUTO_START_MS build option); 0 = dashboard only. */
     ctrl_set_bits(SYSTEM_BIT_READY);
 #if (CTRL_AUTO_START_MS > 0U)
@@ -1357,18 +1354,6 @@ controller_task (INT stacd, void * p_exinf)
             ctrl_handle_command(&ctrl, &command);
         }
 
-        /* Update LED diagnostic based on IMU health */
-        if (ctrl.b_imu_healthy) {
-            diag_led_set_state(DIAG_LED_IMU_HEALTHY);
-        } else if (!ctrl.imu.b_sensor_valid) {
-            /* I2C/sensor failure: blink error pattern */
-            diag_led_set_state(DIAG_LED_I2C_FAIL);
-        } else {
-            /* Still booting/calibrating */
-            diag_led_set_state(DIAG_LED_BOOT);
-        }
-        diag_led_poll(board_millis());
-
         /* Auto-resume after a recoverable fault once the IMU is healthy. */
         if ((MISSION_FAULT == ctrl.state) && ctrl.b_imu_healthy &&
             (FAULT_MOTION_COMMAND != ctrl.fault_code) &&
@@ -1385,23 +1370,27 @@ controller_task (INT stacd, void * p_exinf)
             tm_printf((UB *) "CTRL: fault cleared, resuming\n");
         }
 
-        /* Nonblocking 3-second START countdown. STOP clears the pending flag. */
+        /* Nonblocking 3-second START countdown. STOP clears the pending flag.
+         * A START that arrives before the IMU has calibrated stays pending
+         * and runs as soon as the IMU is healthy. */
         if (ctrl.b_start_pending &&
             ((uint32_t) (board_millis() - ctrl.start_requested_ms) >=
              CTRL_START_DELAY_MS))
         {
-            ctrl.b_start_pending = false;
-            ctrl.start_requested_ms = 0U;
-            if ((MISSION_IDLE == ctrl.state) && ctrl.b_imu_healthy)
+            if (MISSION_IDLE != ctrl.state)
             {
+                ctrl.b_start_pending = false;
+                ctrl.start_requested_ms = 0U;
+                ctrl_stop_motion();
+                tm_printf((UB *) "CTRL: START cancelled, robot not ready\n");
+            }
+            else if (ctrl.b_imu_healthy)
+            {
+                ctrl.b_start_pending = false;
+                ctrl.start_requested_ms = 0U;
                 ctrl.state = MISSION_FOLLOWING;
                 ctrl_set_bits(SYSTEM_BIT_MISSION_RUN);
                 tm_printf((UB *) "CTRL: Countdown complete, mission STARTED\n");
-            }
-            else
-            {
-                ctrl_stop_motion();
-                tm_printf((UB *) "CTRL: START cancelled, robot not ready\n");
             }
         }
 
