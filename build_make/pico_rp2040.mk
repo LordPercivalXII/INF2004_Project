@@ -54,7 +54,7 @@ endif
 # sys_check_timeouts(), and any application tcp_*/udp_*/dns_* call -- runs
 # on the same processor-1-owned task that already services the radio, per
 # docs/RELEASE.md safety rule 6. See lib/liblwip/sysdepend/pico_rp2040/.
-NET ?= none
+NET ?= lwip
 ifneq ($(filter $(NET),none lwip),$(NET))
 $(error Unknown NET '$(NET)'; use none or lwip)
 endif
@@ -70,7 +70,7 @@ endif
 # lib/liblwip/sysdepend/pico_rp2040/mqtt_utk.c. Broker address and topic
 # come from config/wifi_secrets.h (gitignored; copy from
 # config/wifi_secrets.example.h), same as the WiFi credentials.
-MQTT ?= 0
+MQTT ?= 1
 ifneq ($(filter $(MQTT),0 1),$(MQTT))
 $(error Unknown MQTT '$(MQTT)'; use 0 or 1)
 endif

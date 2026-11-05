@@ -49,6 +49,7 @@
 static mqtt_client_t *client;
 static ip_addr_t broker_addr;
 static u8_t connecting;
+static u8_t was_connected;
 
 static char rx_topic[MQTT_UTK_RX_TOPIC_MAX];
 static UB rx_data[MQTT_UTK_RX_DATA_MAX];
@@ -370,6 +371,7 @@ static void connection_cb(mqtt_client_t *c,
         err_t err;
 
         connecting = 0;
+        was_connected = 1;
 
         tm_printf(
             (UB *)"mqtt: connected to " MQTT_BROKER_IP "\n"
@@ -453,7 +455,13 @@ static void connection_cb(mqtt_client_t *c,
     }
     else
     {
-        mqtt_utk_disconnected();
+        /* Only a lost established session stops the robot; failed retries
+         * (no broker reachable) must not. */
+        if (was_connected)
+        {
+            was_connected = 0;
+            mqtt_utk_disconnected();
+        }
 
         tm_printf(
             (UB *)"mqtt: connection status %d, retrying in %ds\n",

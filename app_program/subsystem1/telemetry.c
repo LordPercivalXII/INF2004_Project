@@ -72,6 +72,11 @@ void mqtt_utk_disconnected(void)
 {
     control_command_t command = {0};
 
+#if (CTRL_AUTO_START_MS > 0U)
+    /* Autonomous run: losing the dashboard must not stop the robot. */
+    return;
+#endif
+
     command.type = CONTROL_STOP;
     command.value = 0.0f;
 
