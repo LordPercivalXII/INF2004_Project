@@ -33,6 +33,87 @@
           ><span id="timestamp">No data</span>
         </article>
       </section>
+      
+<!-- Ramp Detection & Height -->
+<section class="panel ramp-panel">
+  <div class="ramp-header">
+    <div>
+      <h2>Ramp Detection &amp; Height</h2>
+      <p>
+        Live IMU readings and estimated terrain height
+        from the robot.
+      </p>
+    </div>
+    <span id="ramp-status" class="ramp-badge">
+      Waiting for telemetry
+    </span>
+  </div>
+
+  <div class="ramp-metrics">
+    <article>
+      <small>IMU motion classification</small>
+      <strong id="ramp-direction">--</strong>
+      <span>Climbing, descending, or other motion</span>
+    </article>
+
+    <article>
+      <small>Pitch angle</small>
+      <strong id="ramp-pitch">--</strong>
+      <span>degrees (°)</span>
+    </article>
+
+    <article>
+      <small>Current terrain rise</small>
+      <strong id="ramp-rise">--</strong>
+      <span>cm, estimated</span>
+    </article>
+
+    <article>
+      <small>Terrain peak height</small>
+      <strong id="ramp-peak">--</strong>
+      <span>cm, estimated</span>
+    </article>
+  </div>
+
+  <div class="ramp-details">
+    <div>
+      <span>Last estimated hump height</span>
+      <b id="ramp-height">--</b>
+    </div>
+
+    <div>
+      <span>Height measurement</span>
+      <b id="ramp-validity">Waiting</b>
+    </div>
+
+    <div>
+      <span>Height tracking</span>
+      <b id="ramp-tracking">Waiting</b>
+    </div>
+
+    <div>
+      <span>IMU calibration</span>
+      <b id="ramp-calibration">Waiting</b>
+    </div>
+
+    <div>
+      <span>Completed humps</span>
+      <b id="ramp-count">--</b>
+    </div>
+
+    <div>
+      <span>Measurement quality</span>
+      <b id="ramp-quality">Waiting</b>
+    </div>
+  </div>
+
+  <p class="hint">
+    Heights are estimates based on IMU and motion data.
+    A completed height measurement is only confirmed when
+    the firmware reports it as valid.
+  </p>
+</section>
+
       <section class="panel mission-panel">
         <h2>Robot mission control</h2>
         <p>
