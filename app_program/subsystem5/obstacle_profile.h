@@ -61,6 +61,8 @@ int8_t obstacle_choose_bypass(float left_clearance, float right_clearance);
 bool   obstacle_watch_update(uint32_t * p_close_count, float distance_cm);
 uint32_t obstacle_lead_angle(float lead);
 float  obstacle_ahead_cm(uint32_t angle_deg, float distance_cm);
+float  obstacle_lead_from_wheels(float left_m_s, float right_m_s);
+bool   obstacle_hard_turn_stop(float lead, float distance_cm);
 void   obstacle_plan_build(obstacle_profile_t const * p_profile,
                            obstacle_plan_t * p_plan);
 

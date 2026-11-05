@@ -12,7 +12,8 @@
  *       turn 45 deg toward d, drive out until the car is the planned
  *       distance to the side, turn back to the original heading, drive
  *       past while the sensor watches the obstacle's side (this measures
- *       its thickness), turn 45 deg toward the line, drive until a
+ *       its thickness) until the axle is past it, turn 70 deg toward the
+ *       line (steep, to rejoin it soon after the obstacle), drive until a
  *       tape-width black run is crossed, drive the wheels over the line,
  *       turn back to the original heading until a sensor finds the line,
  *       then follow it a short way to confirm before handing control back.
@@ -31,7 +32,10 @@
  * The scanner looks at the obstacle's side only while driving past it,
  * until its rear edge is found; the rest of the time it looks ahead.
  * Anything close ahead while driving stops the car (BLOCKED) until the
- * way is clear, then the interrupted step carries on.
+ * way is clear, then the interrupted step carries on.  If it is still
+ * there after a second while driving past, it is a second obstacle: past
+ * the first one already, the car turns in to the line; otherwise it scans
+ * and goes round it further out on the same side.
  */
 
 #ifndef AVOIDANCE_H
@@ -115,8 +119,6 @@ typedef struct
     float             phase_start_m;
     float             black_start_m;
     float             reverse_end_m;    /* odometer at the last reverse */
-    float             past_cm;          /* LEG_PAST end (along) if the
-                                           obstacle's side is never seen */
     float             turn_target_deg;  /* heading the turn aims at,
                                            relative to heading0_deg */
     uint32_t          black_samples;
@@ -143,6 +145,8 @@ typedef struct
     float             side_cm;
     bool              b_side_seen;      /* the obstacle's side was seen */
     bool              b_rear_found;     /* ...and then the sensor passed it */
+    bool              b_rear_bounded;   /* side never seen: rear_along_cm
+                                           and thickness_cm are maximums */
     uint32_t          side_gap_count;   /* far readings since the last hit */
     float             rear_along_cm;    /* furthest hit along the heading */
     float             thickness_cm;     /* 0 until the rear edge is found */
@@ -153,6 +157,12 @@ typedef struct
     avoid_phase_t     blocked_phase;    /* step to carry on with */
     uint32_t          blocked_start_ms;
     uint32_t          clear_count;      /* clear readings while blocked */
+
+    /* A second obstacle met while driving past the first. */
+    bool              b_second;
+    uint32_t          second_reverses;
+    float             turn_in_min_cm;   /* along: the turn in also clears
+                                           the first obstacle */
 } avoid_t;
 
 /* p_avoid must start zeroed.  Reverse attempts carry over between calls

@@ -151,6 +151,31 @@ subsystem5_test (void)
     TEST_CHECK("S5-U21", b_ok,
                "driving: the sensor looks the way the car is turning");
 
+    /* Aim from the wheel speeds: at 0.15 m/s with the right wheel 2 cm/s
+       faster, the curvature is 1.07 /m, so a point 25 cm along the curve
+       is 7.6 deg left: lead -0.25.  A 0.1 m/s difference is beyond the
+       30 deg limit; a spin on the spot looks fully toward the turn. */
+    b_ok = (obstacle_lead_from_wheels(0.15f, 0.15f) == 0.0f) &&
+           (obstacle_lead_from_wheels(0.0f, 0.0f) == 0.0f) &&
+           (obstacle_lead_from_wheels(0.14f, 0.16f) < -0.24f) &&
+           (obstacle_lead_from_wheels(0.14f, 0.16f) > -0.27f) &&
+           (obstacle_lead_from_wheels(0.16f, 0.14f) > 0.24f) &&
+           (obstacle_lead_from_wheels(0.10f, 0.20f) == -1.0f) &&
+           (obstacle_lead_from_wheels(0.18f, -0.18f) == 1.0f);
+    TEST_CHECK("S5-U26", b_ok,
+               "driving: aim from the wheel speeds, along the curve");
+
+    /* Turning hard (lead at full either way): one reading within 12 cm
+       stops the car; further away, or on a gentle curve, it still takes
+       several readings in a row. */
+    b_ok = obstacle_hard_turn_stop(1.0f, 10.0f) &&
+           obstacle_hard_turn_stop(-1.0f, 12.0f) &&
+           (!obstacle_hard_turn_stop(1.0f, 15.0f)) &&
+           (!obstacle_hard_turn_stop(0.5f, 10.0f)) &&
+           (!obstacle_hard_turn_stop(0.0f, 5.0f));
+    TEST_CHECK("S5-U25", b_ok,
+               "turning hard: one very close reading stops the car");
+
     /* Stage 5: walk the manoeuvre through every phase, passing right.
        The obstacle's front face is 20 cm ahead; heading is + to the left. */
     avoid = (avoid_t) {0};
@@ -205,11 +230,14 @@ subsystem5_test (void)
                (avoid.b_rear_found && (avoid.thickness_cm > 25.0f) &&
                 (avoid.thickness_cm < 26.5f)),
                "passing: side readings measure the thickness, ~26 cm");
-    input.distance_m = 0.75f;                       /* rear 21 cm past */
+    input.distance_m = 0.66f;                       /* 14 cm past: not yet */
+    (void) avoid_step(&avoid, &input, &output);
+    b_ok = b_ok && (AVOID_PHASE_LEG_PAST == avoid.phase);
+    input.distance_m = 0.69f;                       /* 17.3 cm past the rear */
     (void) avoid_step(&avoid, &input, &output);     /* to TURN_IN */
     (void) avoid_step(&avoid, &input, &output);
-    b_ok = b_ok && (output.turn_deg > 44.0f) && (output.turn_deg < 46.0f);
-    input.heading_deg = 45.0f;
+    b_ok = b_ok && (output.turn_deg > 69.0f) && (output.turn_deg < 71.0f);
+    input.heading_deg = 70.0f;
     (void) avoid_step(&avoid, &input, &output);     /* to SEARCH */
     (void) avoid_step(&avoid, &input, &output);
     b_ok = b_ok && (AVOID_PHASE_SEARCH == avoid.phase) &&
@@ -274,8 +302,8 @@ subsystem5_test (void)
                "turns aim at a heading: a 35 deg turn-out is undone by 35");
 
     /* Driving past, something 10 cm ahead: stop, wait for three clear
-       readings, carry on with the same step.  If it never clears, give
-       up after 8 s. */
+       readings, carry on with the same step.  If it is still there after
+       a second, it is a second obstacle: scan it (S5-U27 goes on). */
     input.heading_deg = 0.0f;
     (void) avoid_step(&avoid, &input, &output);     /* to LEG_PAST */
     (void) avoid_step(&avoid, &input, &output);
@@ -296,12 +324,87 @@ subsystem5_test (void)
            (AVOID_OUT_DRIVE == output.type);
     avoid_on_ahead_reading(&avoid, 10.0f);
     (void) avoid_step(&avoid, &input, &output);
-    input.now_ms += 8000U;
+    input.now_ms += 1000U;
+    (void) avoid_step(&avoid, &input, &output);     /* to WAIT_SCAN */
     TEST_CHECK("S5-U20",
-               (b_ok && (AVOID_FAILED_BLOCKED ==
-                         avoid_step(&avoid, &input, &output))),
+               (b_ok && avoid.b_second &&
+                (AVOID_PHASE_WAIT_SCAN == avoid.phase) &&
+                (AVOID_OUT_STOP == output.type) &&
+                (AVOID_LOOK_SCAN == avoid_look(&avoid))),
                "something close ahead: stop, carry on when clear, else "
-               "give up");
+               "scan it as a second obstacle");
+
+    /* The second obstacle's scan, taken 25 cm along and ~14 cm out (left).
+       Same side: go round it further out, measured from the original
+       line (12 + 14 cm out, front face 10 + 25 cm along).  The other side
+       would cut back across the first obstacle: give up. */
+    {
+        avoid_t const    before = avoid;
+        float const      lateral = avoid.lateral_cm;
+        float const      along   = avoid.along_cm;
+        obstacle_event_t second  = obstacle;
+
+        second.action              = OBSTACLE_ACTION_TURN_LEFT;
+        second.bypass_offset_cm    = 12.0f;
+        second.closest_distance_cm = 10.0f;
+        second.scan_start_ms       = input.now_ms;
+        avoid_on_scan(&avoid, &second);
+        (void) avoid_step(&avoid, &input, &output);
+        b_ok = (AVOID_PHASE_TURN_OUT == avoid.phase) &&
+               (avoid.decision_offset_cm > (lateral + 11.9f)) &&
+               (avoid.decision_offset_cm < (lateral + 12.1f)) &&
+               (avoid.decision_closest_cm > (along + 9.9f)) &&
+               (avoid.decision_closest_cm < (along + 10.1f)) &&
+               (avoid.lateral_cm == lateral);   /* line still at 0 */
+        (void) avoid_step(&avoid, &input, &output);
+        b_ok = b_ok && (AVOID_OUT_TURN == output.type);
+
+        avoid = before;
+        second.action = OBSTACLE_ACTION_TURN_RIGHT;
+        avoid_on_scan(&avoid, &second);
+        TEST_CHECK("S5-U27",
+                   (b_ok && (AVOID_FAILED_BLOCKED ==
+                             avoid_step(&avoid, &input, &output))),
+                   "second obstacle: further out on the same side, else "
+                   "give up");
+    }
+
+    /* Passing left a box too shallow to see from the side: two misses
+       while driving past bound its rear where the beam crosses its near
+       edge.  Offset 15 puts the edge 5.5 cm out (offset = edge + half the
+       13 cm car + 3); 22 cm at 45 deg puts the car 15.6 cm out and along,
+       so the beam (30 deg) crosses the edge 10.1 / tan 30 = 17.4 cm
+       further: rear <= 33.0, depth <= 20.0. */
+    avoid = (avoid_t) {0};
+    avoid_start(&avoid, 0U, 0.0f);
+    input = (avoid_input_t) {0U, 0.0f, 0.0f, false, true};
+    (void) avoid_step(&avoid, &input, &output);
+    obstacle.action              = OBSTACLE_ACTION_TURN_LEFT;
+    obstacle.bypass_offset_cm    = 15.0f;
+    obstacle.closest_distance_cm = 13.0f;
+    avoid_on_scan(&avoid, &obstacle);
+    (void) avoid_step(&avoid, &input, &output);     /* to TURN_OUT */
+    (void) avoid_step(&avoid, &input, &output);
+    input.heading_deg = 45.0f;
+    (void) avoid_step(&avoid, &input, &output);     /* to LEG_OUT */
+    (void) avoid_step(&avoid, &input, &output);
+    input.distance_m = 0.22f;
+    (void) avoid_step(&avoid, &input, &output);     /* to TURN_PARALLEL */
+    (void) avoid_step(&avoid, &input, &output);
+    b_ok = (AVOID_LOOK_RIGHT == avoid_look(&avoid));    /* aimed early */
+    input.heading_deg = 0.0f;
+    (void) avoid_step(&avoid, &input, &output);     /* to LEG_PAST */
+    (void) avoid_step(&avoid, &input, &output);
+    avoid_on_side_reading(&avoid, 400.0f);
+    (void) avoid_step(&avoid, &input, &output);
+    input.distance_m = 0.23f;
+    avoid_on_side_reading(&avoid, 400.0f);
+    (void) avoid_step(&avoid, &input, &output);
+    TEST_CHECK("S5-U24",
+               (b_ok && avoid.b_rear_found && avoid.b_rear_bounded &&
+                (avoid.thickness_cm > 19.5f) && (avoid.thickness_cm < 20.5f) &&
+                (AVOID_PHASE_LEG_PAST == avoid.phase)),
+               "shallow box: side never seen, rear bounded at ~20 cm");
 
     /* A dead end: reversing and driving back must not loop forever. */
     avoid = (avoid_t) {0};

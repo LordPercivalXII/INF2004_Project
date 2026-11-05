@@ -21,6 +21,7 @@
 #define OBSTACLE_STOP_LINE_MAX  (64U)
 #define OBSTACLE_WATCH_REPORT_COUNT (5U)    /* readings per distance report */
 #define OBSTACLE_GLANCE_EVERY   (3U)    /* off the side: every 3rd ahead */
+#define OBSTACLE_LEAD_SMOOTH    (0.2f)  /* weight of each new lead value */
 
 /* Servo test, requested by testing/subsystem5/scan_recorder.ps1 pulsing
  * the USB DTR line.  Bench build only (real scanner, simulated motors):
@@ -39,8 +40,10 @@
 static volatile avoid_look_t g_look = AVOID_LOOK_SCAN;
 
 /* Set by the controller (obstacle_set_lead()): which way the car is
- * turning while it follows the line, -1 left .. +1 right. */
-static volatile float g_lead = 0.0f;
+ * turning while it follows the line, -1 left .. +1 right.  g_lead is
+ * smoothed, for aiming; g_lead_now is the latest, for the hard-turn stop. */
+static volatile float g_lead     = 0.0f;
+static volatile float g_lead_now = 0.0f;
 
 /* 60 / 75 / 90 / 105 / 120 deg: edges, centre and the midpoints. */
 static uint32_t const g_coarse_angles[OBSTACLE_COARSE_COUNT] =
@@ -135,12 +138,16 @@ obstacle_set_look (avoid_look_t look)
 
 /*!
  * @brief Controller -> S5: which way the car is turning while it follows
- *        the line; the sensor looks that way.
+ *        the line; the sensor looks that way.  Called every 20 ms from
+ *        the wheel speeds, whose tick counts jitter, so it is smoothed
+ *        (~0.1 s); a return to straight ahead is not delayed.
  */
 void
 obstacle_set_lead (float lead)
 {
-    g_lead = lead;
+    g_lead_now = lead;
+    g_lead     = (0.0f == lead) ? 0.0f
+                 : (g_lead + (OBSTACLE_LEAD_SMOOTH * (lead - g_lead)));
 }
 
 /*!
@@ -531,7 +538,10 @@ obstacle_task (INT stacd, void * p_exinf)
             center_cm  = obstacle_ahead_cm(look_angle,
                              obstacle_measure_at(look_angle, scan_number));
 
-            if (!obstacle_watch_update(&close_count, center_cm))
+            /* Turning hard, one very close reading is enough: the beam
+               sweeps past too fast for several in a row. */
+            if ((!obstacle_watch_update(&close_count, center_cm)) &&
+                (!obstacle_hard_turn_stop(g_lead_now, center_cm)))
             {
                 watch_count++;
 
@@ -545,6 +555,7 @@ obstacle_task (INT stacd, void * p_exinf)
             }
 
             /* Let the car come to rest, then profile from where it is. */
+            close_count = 0U;
             obstacle_post_stop(center_cm, (int) look_angle -
                                           (int) ULTRASONIC_COARSE_CENTER_DEG);
             (void) tk_dly_tsk(OBSTACLE_STOP_SETTLE_MS);

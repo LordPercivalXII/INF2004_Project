@@ -476,7 +476,6 @@ ctrl_junction_begin (ctrl_state_t * p_ctrl, float angle_deg)
     p_ctrl->junction_start_m    = p_ctrl->distance_m;
     p_ctrl->junction_start_ms   = board_millis();
     ctrl_set_motion(speed, speed);
-    obstacle_set_lead(0.0f);
     tm_printf((UB *) "CTRL: junction -> turn %d deg after %d mm\n",
               (int) angle_deg, (int) (JUNCTION_APPROACH_M * 1000.0f));
 }
@@ -513,9 +512,6 @@ ctrl_junction_step (ctrl_state_t * p_ctrl)
         if (ctrl_turn_motion(p_ctrl->junction_turn_deg, p_ctrl->next_turn_id))
         {
             p_ctrl->active_turn_id = p_ctrl->next_turn_id;
-            /* S5 looks into the turn (+ angle = left). */
-            obstacle_set_lead((p_ctrl->junction_turn_deg > 0.0f) ? -1.0f
-                                                                 : 1.0f);
         }
         else
         {
@@ -647,7 +643,6 @@ ctrl_handle_line (ctrl_state_t * p_ctrl, line_event_t const * p_line)
 
             ctrl_set_motion_slewed((side > 0.0f) ? outer : inner,
                                    (side > 0.0f) ? inner : outer, true);
-            obstacle_set_lead(side);    /* + = right, as the servo */
             p_ctrl->b_steer_primed = false;
             return;
         }
@@ -707,17 +702,11 @@ ctrl_handle_line (ctrl_state_t * p_ctrl, line_event_t const * p_line)
         float const left_cmd  = speed * (1.0f + steer);
         float const right_cmd = speed * (1.0f - steer);
         ctrl_set_motion_slewed(left_cmd, right_cmd, false);
-        obstacle_set_lead(steer);   /* + = right, as the servo */
     }
     else
     {
         /* Not steering in this state. */
         p_ctrl->b_steer_primed = false;
-
-        if (!p_ctrl->b_turn_in_progress)
-        {
-            obstacle_set_lead(0.0f);
-        }
     }
 }
 
@@ -1005,6 +994,14 @@ ctrl_handle_event (ctrl_state_t * p_ctrl, system_event_t const * p_event)
             float const ds = p_event->data.motion.distance_m - p_ctrl->distance_m;
             p_ctrl->distance_m = p_event->data.motion.distance_m;
             p_ctrl->heading_deg = ctrl_heading_deg(&p_event->data.motion);
+            /* S5 looks where the car is going: from how tightly the
+               wheels say it is turning (curves, junction spins, line
+               searches alike).  Straight ahead when not following. */
+            obstacle_set_lead((MISSION_FOLLOWING == p_ctrl->state)
+                ? obstacle_lead_from_wheels(
+                      p_event->data.motion.left_speed_m_s,
+                      p_event->data.motion.right_speed_m_s)
+                : 0.0f);
             if (p_ctrl->b_have_imu)
             {
                 imu_height_update(&p_ctrl->height, &p_event->data.motion,
@@ -1140,7 +1137,13 @@ ctrl_show_avoidance (ctrl_state_t * p_ctrl, avoid_status_t status)
         if ((AVOID_PHASE_TURN_IN == p_avoid->phase) &&
             (AVOID_PHASE_LEG_PAST == p_ctrl->avoid_phase_shown))
         {
-            if (p_avoid->b_rear_found)
+            if (p_avoid->b_rear_bounded)
+            {
+                tm_printf((UB *) "S5: obstacle thickness at most %d cm "
+                          "(too shallow to see from the side)\n",
+                          (int) (p_avoid->thickness_cm + 0.5f));
+            }
+            else if (p_avoid->b_rear_found)
             {
                 tm_printf((UB *) "S5: obstacle thickness %d cm\n",
                           (int) (p_avoid->thickness_cm + 0.5f));

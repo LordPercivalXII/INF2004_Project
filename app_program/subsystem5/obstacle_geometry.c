@@ -14,14 +14,22 @@
 
 #define OBSTACLE_HALF_STEP_DEG  ((float) ULTRASONIC_FINE_STEP_DEG * 0.5f)
 #define OBSTACLE_HALF_BEAM_DEG  ((float) ULTRASONIC_BEAM_WIDTH_DEG * 0.5f)
-#define OBSTACLE_PATH_HALF_CM   (10.5f) /* half the car (7.5) + 3 margin */
+#define OBSTACLE_PATH_HALF_CM   (9.5f)  /* half the 13 cm car + 3 margin */
 #define OBSTACLE_TOO_CLOSE_CM   (12.0f) /* no room to spin */
-#define OBSTACLE_STOP_CM        (25.0f) /* car still rolls after the check */
+#define OBSTACLE_STOP_CM        (20.0f) /* car still rolls after the check */
 #define OBSTACLE_STOP_READINGS  (3U)    /* close readings in a row */
 #define OBSTACLE_ROOMY_CM       (50.0f)
 #define OBSTACLE_OFFSET_MIN_CM  (10.0f)
 #define OBSTACLE_OFFSET_MAX_CM  (30.0f) /* stays on the tile mat */
 #define OBSTACLE_LEAD_STEP_DEG  (5U)    /* look-into-turn aiming steps */
+#define OBSTACLE_LOOK_AHEAD_CM  (25.0f) /* aim at the car's path this far
+                                           ahead: the stop distance plus
+                                           the 5 cm the nose is ahead of
+                                           the sensor */
+#define OBSTACLE_SPEED_MIN_M_S  (0.03f) /* slower: treated as a spin      */
+#define OBSTACLE_HARD_TURN_LEAD (0.99f) /* lead this high: turning hard   */
+#define OBSTACLE_HARD_TURN_CM   (12.0f) /* one reading this close stops a
+                                           hard turn                      */
 
 static bool
 obstacle_is_hit (obstacle_point_t const * p_point)
@@ -314,6 +322,48 @@ obstacle_ahead_cm (uint32_t angle_deg, float distance_cm)
 {
     return (distance_cm *
             rmath_cosf(obstacle_relative_deg(angle_deg) * RMATH_DEG_TO_RAD));
+}
+
+/*!
+ * @brief Which way to look, from the measured wheel speeds: toward the
+ *        point OBSTACLE_LOOK_AHEAD_CM along the curve the car is on.
+ *
+ * On a circle, a point a distance L along it is L / (2 R) to the side of
+ * the heading, with curvature 1 / R = turn rate / speed.  A spin on the
+ * spot (speed near 0) looks fully toward the turn.
+ *
+ * @return -1 (look fully left) .. +1 (fully right), as obstacle_lead_angle().
+ */
+float
+obstacle_lead_from_wheels (float left_m_s, float right_m_s)
+{
+    float const speed_m_s = rmath_maxf(rmath_absf(0.5f * (left_m_s +
+                                                          right_m_s)),
+                                       OBSTACLE_SPEED_MIN_M_S);
+    float const turn_rad_s = (right_m_s - left_m_s) / MOTOR_TRACK_WIDTH_M;
+    float const look_deg = 0.5f * (OBSTACLE_LOOK_AHEAD_CM * 0.01f) *
+                           (turn_rad_s / speed_m_s) * RMATH_RAD_TO_DEG;
+    float const max_deg = (float) (ULTRASONIC_COARSE_RIGHT_DEG -
+                                   ULTRASONIC_COARSE_CENTER_DEG);
+
+    /* Turning left (right wheel faster) looks left: lead below 0. */
+    return (rmath_clampf(-look_deg / max_deg, -1.0f, 1.0f));
+}
+
+/*!
+ * @brief While turning hard (lead at full: a tight curve, a junction spin,
+ *        a line search), the beam sweeps past an obstacle too fast for
+ *        obstacle_watch_update()'s readings in a row: one reading this
+ *        close stops the car at once.
+ *
+ * @param[in] lead         As obstacle_lead_angle().
+ * @param[in] distance_cm  Distance ahead (obstacle_ahead_cm()).
+ */
+bool
+obstacle_hard_turn_stop (float lead, float distance_cm)
+{
+    return ((rmath_absf(lead) >= OBSTACLE_HARD_TURN_LEAD) &&
+            (distance_cm <= OBSTACLE_HARD_TURN_CM));
 }
 
 /*!

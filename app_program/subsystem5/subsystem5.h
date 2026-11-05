@@ -4,7 +4,7 @@
  *        Student ID: <student ID>.  Port of src/buddy5_obstacle/.
  *
  * While driving, the sensor looks the way the car is turning (straight
- * ahead on a straight); 3 readings in a row within 25 cm ahead post
+ * ahead on a straight); 3 readings in a row within 20 cm ahead post
  * OBSTACLE_ACTION_STOP at once, because
  * a sweep takes too long at driving speed.  Once stopped: coarse scan at
  * 60/75/90/105/120 deg, then a 5 deg fine scan around any hit; builds an
@@ -35,8 +35,10 @@
 void   obstacle_set_look(avoid_look_t look);
 
 /* Controller -> S5: which way the car is turning while it follows the
- * line, -1 (hard left) .. +1 (hard right), 0 straight.  The sensor looks
- * up to 30 deg that way, so it sees what is round a curve sooner. */
+ * line, -1 (hard left) .. +1 (hard right), 0 straight; normally
+ * obstacle_lead_from_wheels() of every motion event.  The sensor looks up
+ * to 30 deg that way, so it sees what is round a curve sooner, and at full
+ * lead one very close reading stops the car. */
 void   obstacle_set_lead(float lead);
 
 /* Private to subsystem 5: echo widths from the interrupt to the task. */

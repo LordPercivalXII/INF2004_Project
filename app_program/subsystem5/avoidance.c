@@ -15,7 +15,10 @@
  * (S2-M03), so no step runs slow enough to stall the motors. */
 #define AVOID_LEG_SPEED_M_S         (0.20f)
 #define AVOID_SEARCH_SPEED_M_S      (0.20f)
-#define AVOID_TURN_DEG              (45.0f)
+#define AVOID_TURN_DEG              (45.0f) /* out, away from the line */
+#define AVOID_TURN_IN_DEG           (70.0f) /* back in: steep, so the car
+                                               reaches the line in little
+                                               forward distance */
 #define AVOID_ALIGN_OVERSHOOT_DEG   (45.0f) /* past the original heading */
 #define AVOID_SWEEP_DEG             (360.0f)    /* MOTION_TURN maximum */
 #define AVOID_HEADING_TOL_DEG       (4.0f)  /* a turn this close is done */
@@ -23,10 +26,21 @@
 #define AVOID_REVERSE_CM            (12.0f)
 #define AVOID_REVERSE_MAX           (3U)
 #define AVOID_RETRY_FORGET_CM       (40.0f) /* drove clear of that spot */
-#define AVOID_OBSTACLE_DEPTH_CM     (15.0f) /* if its side is never seen */
 #define AVOID_DEPTH_MAX_CM          (60.0f) /* stop waiting for the rear */
 #define AVOID_CAR_LENGTH_CM         (16.0f)
-#define AVOID_PAST_MARGIN_CM        (5.0f)
+#define AVOID_PAST_CM               (17.0f) /* sensor past the rear edge
+                                               when turning in.  Spinning
+                                               70 deg on the spot swings
+                                               the near front corner back
+                                               to 3.6 cm behind the axle
+                                               (9 cm behind the sensor),
+                                               so the axle must be ~4 cm
+                                               past the edge, plus 3 cm
+                                               for readings ~2 cm apart
+                                               along the side            */
+#define AVOID_PATH_HALF_CM          (9.5f)  /* planned offset = near edge +
+                                               this (obstacle_geometry.c) */
+#define AVOID_TAN_MIN               (0.2f)  /* beam this flat: no bound   */
 #define AVOID_OUT_SLACK             (1.5f)  /* LEG_OUT path limit factor */
 #define AVOID_SIDE_LOOK_DEG         ((float) (ULTRASONIC_COARSE_RIGHT_DEG - \
                                               ULTRASONIC_COARSE_CENTER_DEG))
@@ -34,6 +48,10 @@
 #define AVOID_AHEAD_STOP_CM         (12.0f) /* this close ahead: stop */
 #define AVOID_AHEAD_CLEAR_READINGS  (3U)    /* clear readings to carry on */
 #define AVOID_BLOCKED_TIMEOUT_MS    (8000U)
+#define AVOID_BLOCKED_DECIDE_MS     (1000U) /* still there: not a hand or
+                                               a person moving away, a
+                                               second obstacle */
+#define AVOID_SECOND_REVERSE_MAX    (2U)    /* back-ups to see round it */
 #define AVOID_SIDE_GAP_READINGS     (2U)    /* far readings = rear passed */
 #define AVOID_SEARCH_OVERSHOOT_CM   (10.0f) /* past the line, not seen */
 #define AVOID_SEARCH_MAX_CM         (60.0f) /* stays on the tile mat */
@@ -133,6 +151,12 @@ avoid_track_position (avoid_t * p_avoid, avoid_input_t const * p_input)
  * The sensor looks AVOID_SIDE_LOOK_DEG toward the obstacle.  The beam is
  * wider than a ray, so the rear edge is found a little late; that errs
  * toward a thicker obstacle and a wider berth.
+ *
+ * The beam looks forward as well as sideways, so it lands some way
+ * ahead of the car.  If it misses before the side was ever seen, the
+ * obstacle ends before the point where the beam crosses its near edge:
+ * that point bounds the rear edge (b_rear_bounded), so a box too shallow
+ * to see from the side is still passed safely.
  */
 static void
 avoid_track_side (avoid_t * p_avoid, avoid_input_t const * p_input)
@@ -140,6 +164,8 @@ avoid_track_side (avoid_t * p_avoid, avoid_input_t const * p_input)
     float const look_rad = (avoid_relative_deg(p_avoid, p_input) +
                             ((float) p_avoid->direction *
                              AVOID_SIDE_LOOK_DEG)) * RMATH_DEG_TO_RAD;
+    float const look_tan = rmath_absf(rmath_tanf(look_rad));
+    float const edge_cm  = p_avoid->decision_offset_cm - AVOID_PATH_HALF_CM;
     float hit_along;
 
     if (p_avoid->b_side_fresh && (AVOID_PHASE_LEG_PAST != p_avoid->phase))
@@ -174,22 +200,99 @@ avoid_track_side (avoid_t * p_avoid, avoid_input_t const * p_input)
                                      p_avoid->decision_closest_cm);
             }
         }
+        else if ((!p_avoid->b_side_seen) && (!p_avoid->b_rear_found) &&
+                 (look_tan >= AVOID_TAN_MIN))
+        {
+            /* Missed while it should have hit: the rear is nearer than
+               where the beam crosses the obstacle's near edge.  The first
+               miss sets the bound; the next ones confirm it. */
+            p_avoid->side_gap_count++;
+
+            if (1U == p_avoid->side_gap_count)
+            {
+                p_avoid->rear_along_cm =
+                    p_avoid->along_cm +
+                    (rmath_maxf(0.0f, p_avoid->lateral_cm - edge_cm) /
+                     look_tan);
+            }
+
+            if (p_avoid->side_gap_count >= AVOID_SIDE_GAP_READINGS)
+            {
+                p_avoid->b_rear_found   = true;
+                p_avoid->b_rear_bounded = true;
+                p_avoid->thickness_cm   =
+                    rmath_maxf(0.0f, p_avoid->rear_along_cm -
+                                     p_avoid->decision_closest_cm);
+            }
+        }
         else
         {
-            /* Nothing there yet, or the rear is already known. */
+            /* The rear is already known. */
         }
     }
 }
 
 /*!
- * @brief Turn the decision from a fresh scan into the next phase.
+ * @brief The scan of a second obstacle met while driving past the first.
+ *
+ * The bypass carries on from where the car is, without resetting the
+ * position, so the line stays at lateral 0: further out on the same side
+ * by the new planned offset, then past the second obstacle (turning in
+ * also clears the first, turn_in_min_cm).  Too close to turn: back up the
+ * way the car came and scan again (AVOID_SECOND_REVERSE_MAX times).  The
+ * other side would cut back across the first obstacle: give up
+ * (FAILED_BLOCKED).  Clear after all: carry on past.
  */
 static avoid_status_t
-avoid_apply_decision (avoid_t * p_avoid, avoid_input_t const * p_input)
+avoid_apply_second (avoid_t * p_avoid, avoid_input_t const * p_input)
 {
     avoid_status_t status = AVOID_RUNNING;
+    int8_t const   side   = (OBSTACLE_ACTION_TURN_LEFT == p_avoid->decision)
+                            ? -1 : 1;
 
-    p_avoid->b_decision = false;
+    if (OBSTACLE_ACTION_CONTINUE == p_avoid->decision)
+    {
+        avoid_enter(p_avoid, AVOID_PHASE_LEG_PAST, p_input);
+    }
+    else if ((OBSTACLE_ACTION_REVERSE_RETRY == p_avoid->decision) &&
+             (p_avoid->second_reverses < AVOID_SECOND_REVERSE_MAX))
+    {
+        /* Too close to turn: back up the way the car came (clear), then
+           scan again.  The position keeps counting, backwards. */
+        p_avoid->second_reverses++;
+        avoid_enter(p_avoid, AVOID_PHASE_REVERSE, p_input);
+    }
+    else if (((OBSTACLE_ACTION_TURN_LEFT == p_avoid->decision) ||
+              (OBSTACLE_ACTION_TURN_RIGHT == p_avoid->decision)) &&
+             (side == p_avoid->direction))
+    {
+        /* Positions of the new obstacle, from here, as distances from
+           the line and along the original heading. */
+        p_avoid->decision_offset_cm  += p_avoid->lateral_cm;
+        p_avoid->decision_closest_cm += p_avoid->along_cm;
+        p_avoid->b_side_seen          = false;
+        p_avoid->b_rear_found         = false;
+        p_avoid->b_rear_bounded       = false;
+        p_avoid->side_gap_count       = 0U;
+        p_avoid->rear_along_cm        = 0.0f;
+        p_avoid->thickness_cm         = 0.0f;
+        avoid_enter(p_avoid, AVOID_PHASE_TURN_OUT, p_input);
+    }
+    else
+    {
+        status = AVOID_FAILED_BLOCKED;
+    }
+
+    return (status);
+}
+
+/*!
+ * @brief The scan of the first obstacle, from where the car stopped.
+ */
+static avoid_status_t
+avoid_apply_first (avoid_t * p_avoid, avoid_input_t const * p_input)
+{
+    avoid_status_t status = AVOID_RUNNING;
 
     switch (p_avoid->decision)
     {
@@ -201,9 +304,6 @@ avoid_apply_decision (avoid_t * p_avoid, avoid_input_t const * p_input)
             p_avoid->last_m       = p_input->distance_m;
             p_avoid->along_cm     = 0.0f;
             p_avoid->lateral_cm   = 0.0f;
-            p_avoid->past_cm      = p_avoid->decision_closest_cm +
-                                    AVOID_OBSTACLE_DEPTH_CM +
-                                    AVOID_CAR_LENGTH_CM;
             avoid_enter(p_avoid, AVOID_PHASE_TURN_OUT, p_input);
             break;
 
@@ -231,6 +331,18 @@ avoid_apply_decision (avoid_t * p_avoid, avoid_input_t const * p_input)
     }
 
     return (status);
+}
+
+/*!
+ * @brief Turn the decision from a fresh scan into the next phase.
+ */
+static avoid_status_t
+avoid_apply_decision (avoid_t * p_avoid, avoid_input_t const * p_input)
+{
+    p_avoid->b_decision = false;
+
+    return (p_avoid->b_second ? avoid_apply_second(p_avoid, p_input)
+                              : avoid_apply_first(p_avoid, p_input));
 }
 
 /*!
@@ -408,9 +520,21 @@ avoid_step_leg (avoid_t * p_avoid, avoid_input_t const * p_input,
 }
 
 /*!
+ * @brief True once the car is far enough past the rear edge of the
+ *        obstacle being passed to turn in (measured or bounded).
+ */
+static bool
+avoid_past_rear (avoid_t const * p_avoid)
+{
+    return (p_avoid->b_rear_found &&
+            (p_avoid->along_cm >= (p_avoid->rear_along_cm + AVOID_PAST_CM)));
+}
+
+/*!
  * @brief Drive past the obstacle while the sensor watches its side.
- *        Done when the car's rear has cleared the obstacle's rear edge;
- *        if the side was never seen, after the assumed depth.
+ *        Done when the axle has cleared the obstacle's rear edge
+ *        (measured, or bounded when the side was too short to see);
+ *        without side readings, after the deepest obstacle expected.
  */
 static avoid_status_t
 avoid_step_past (avoid_t * p_avoid, avoid_input_t const * p_input,
@@ -425,12 +549,8 @@ avoid_step_past (avoid_t * p_avoid, avoid_input_t const * p_input,
         p_avoid->b_entered = true;
         avoid_drive(p_output, AVOID_LEG_SPEED_M_S, AVOID_LEG_SPEED_M_S);
     }
-    else if ((p_avoid->b_rear_found &&
-              (p_avoid->along_cm >= (p_avoid->rear_along_cm +
-                                     AVOID_CAR_LENGTH_CM +
-                                     AVOID_PAST_MARGIN_CM))) ||
-             ((!p_avoid->b_side_seen) &&
-              (p_avoid->along_cm >= p_avoid->past_cm)) ||
+    else if ((avoid_past_rear(p_avoid) &&
+              (p_avoid->along_cm >= p_avoid->turn_in_min_cm)) ||
              (p_avoid->along_cm >= max_along))
     {
         avoid_enter(p_avoid, AVOID_PHASE_TURN_IN, p_input);
@@ -464,9 +584,48 @@ avoid_is_driving_forward (avoid_phase_t phase)
 }
 
 /*!
+ * @brief Something in the bypass did not move away: deal with it as a
+ *        second obstacle.
+ *
+ * Past the first obstacle already: turn in to the line now (away from the
+ * second one).  Still beside it: scan again from here; a bypass further
+ * out on the same side keeps the original line as its reference
+ * (avoid_apply_decision()).  Only one second obstacle is handled.
+ */
+static avoid_status_t
+avoid_second_obstacle (avoid_t * p_avoid, avoid_input_t const * p_input)
+{
+    avoid_status_t status = AVOID_RUNNING;
+
+    if (avoid_past_rear(p_avoid) &&
+        (p_avoid->along_cm >= p_avoid->turn_in_min_cm))
+    {
+        avoid_enter(p_avoid, AVOID_PHASE_TURN_IN, p_input);
+    }
+    else if (!p_avoid->b_second)
+    {
+        /* Where the first obstacle is known to end, the turn in must
+           still clear it. */
+        p_avoid->b_second       = true;
+        p_avoid->turn_in_min_cm = (p_avoid->b_rear_found ||
+                                   p_avoid->b_side_seen)
+                                  ? (p_avoid->rear_along_cm + AVOID_PAST_CM)
+                                  : 0.0f;
+        avoid_enter(p_avoid, AVOID_PHASE_WAIT_SCAN, p_input);
+    }
+    else
+    {
+        status = AVOID_FAILED_BLOCKED;
+    }
+
+    return (status);
+}
+
+/*!
  * @brief Stop for anything close ahead while driving (phase BLOCKED);
  *        carry on with the same step once the way has been clear for a
- *        few readings.
+ *        few readings.  If it is still there after AVOID_BLOCKED_DECIDE_MS
+ *        while going round, treat it as a second obstacle.
  */
 static void
 avoid_check_ahead (avoid_t * p_avoid, avoid_input_t const * p_input,
@@ -493,6 +652,14 @@ avoid_check_ahead (avoid_t * p_avoid, avoid_input_t const * p_input,
             p_avoid->b_entered       = false;
             p_avoid->phase_start_ms += held_ms;
             p_avoid->white_since_ms += held_ms;
+        }
+        else if ((held_ms >= AVOID_BLOCKED_DECIDE_MS) &&
+                 (AVOID_PHASE_LEG_PAST == p_avoid->blocked_phase))
+        {
+            /* Not moving away: a second obstacle in the bypass.  Only
+               while driving past, heading as it started, so a new scan
+               lines up with the original line. */
+            *p_status = avoid_second_obstacle(p_avoid, p_input);
         }
         else if (held_ms >= AVOID_BLOCKED_TIMEOUT_MS)
         {
@@ -604,7 +771,11 @@ avoid_look (avoid_t const * p_avoid)
             look = AVOID_LOOK_SCAN;
             break;
 
+        case AVOID_PHASE_TURN_PARALLEL:
         case AVOID_PHASE_LEG_PAST:
+            /* Aimed during the turn back to parallel, so the first counted
+               reading comes as soon as the car drives past (the servo
+               takes ~0.3 s); readings during the turn are not used. */
             if (!p_avoid->b_rear_found)
             {
                 /* Passing on the left puts the obstacle on the right. */
@@ -724,7 +895,7 @@ avoid_step (avoid_t * p_avoid, avoid_input_t const * p_input,
 
         case AVOID_PHASE_TURN_IN:
             avoid_step_turn(p_avoid, p_input, p_output,
-                            side * AVOID_TURN_DEG, AVOID_PHASE_SEARCH);
+                            side * AVOID_TURN_IN_DEG, AVOID_PHASE_SEARCH);
             break;
 
         case AVOID_PHASE_SEARCH:
