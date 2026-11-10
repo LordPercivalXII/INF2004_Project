@@ -34,6 +34,7 @@ See `testing/README.md` for how to run tests and record results.
 | S5-U25 | turning hard (lead at full): one reading within 12 cm stops the car; not when further, or on a gentle curve | Stage 1 | auto | `subsystem5_test.c` | PASS |
 | S5-U26 | sensor aim from the wheel speeds: toward the point 25 cm along the curve, up to the 30 deg limit; fully into a spin | Stage 1 | auto | `subsystem5_test.c` | PASS |
 | S5-U27 | second obstacle scanned while driving past: go round it further out on the same side (position still measured from the original line), else give up | Stage 4, 5 | auto | `subsystem5_test.c` | PASS |
+| S5-U29 | two fine sweeps (there and back) keep the nearer reading at each angle: an edge echo missed in one sweep does not shrink the box; width and centre match a clean sweep | Stage 3 | auto | `subsystem5_test.c` | PASS |
 | S5-M11 | box at the end of a tight curve, and on the new line just past a junction turn | Stage 1, IF-01 | manual | SIM=0, track; box 10, 20 and 30 cm past the end of the curve / the junction centre; save the console output | servo turns well into the curve (most of the 30 deg on a tight one); `S5: STOP obstacle in path` before contact |
 | S5-M08 | while driving past, the sensor stays on the obstacle's side and the thickness is printed | Stage 3, 5 | manual | SIM=0, floor, boxes of known depth; save the console output | `S5: side …` lines while passing, then `S5: obstacle thickness x cm` within ±3 cm, or `thickness at most x cm` (x above the real depth) for a box too shallow to see from the side |
 | S5-M09 | a second box placed in the car's path while it goes round the first | Stage 5 | manual | SIM=0, floor | car stops short of it (`S5: avoid BLOCKED`); carries on if it is removed within 1 s; otherwise scans it (backs up first if too close) and goes round it further out, then rejoins the line; no contact |
@@ -41,7 +42,7 @@ See `testing/README.md` for how to run tests and record results.
 | S5-M01 | box on a straight: car goes round it and rejoins the line going the same way | Stage 4, 5, IF-01, IF-03 | manual | SIM=0, floor; tune the distances in `avoidance.c` | mission 1 → 2 → 1, no contact |
 | S5-M02 | box placed on the line, car at driving speed | Stage 4 | manual | SIM=0, floor, save the console output | car stops short of the box; `S5: STOP obstacle in path at x cm` is printed |
 | S5-M03 | box beside the line, outside the car's path | Stage 4 | manual | SIM=0, floor | car keeps following |
-| S5-M04 | dead end: both sides blocked | Stage 4 | manual | SIM=0, floor, clear space behind | up to 3 reverses, then mission 3, fault 4 |
+| S5-M04 | dead end: both sides blocked | Stage 4 | manual | SIM=0, floor, clear space behind | no back-up unless closer than 12 cm; tries the side with more room at the widest offset (30 cm), then stops when blocked (`S5: avoid BLOCKED`, then mission 3, fault 4); no contact |
 | S5-M05 | box on a curve of the competition track | Stage 5 | manual | SIM=0, track | car rejoins the line, or stops with fault 3 |
 | S5-M06 | servo swings on request | IF-01 | manual | `S5_ULTRASONIC_HW` = 1, SIM=1, run `scan_recorder.ps1`, click **Test servo** | sensor swings left and right twice, then returns to centre |
 

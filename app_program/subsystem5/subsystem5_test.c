@@ -80,6 +80,39 @@ subsystem5_test (void)
                 (50.0f == scan.points[6].distance_cm)),
                "repeat angle replaces the reading, no new point");
 
+    /* Two sweeps of a box at 80-100 deg; the first misses the 100 deg
+       edge (no echo), the second misses 80 deg.  Keeping the nearer
+       reading, the width matches a clean sweep. */
+    {
+        obstacle_profile_t clean;
+        uint32_t           angle;
+
+        s5_test_sweep(&scan, 80U, 100U);
+        obstacle_profile_build(&scan, &clean);
+        s5_test_sweep(&scan, 80U, 95U);
+        obstacle_profile_build(&scan, &profile);
+        b_ok = (profile.width_cm < (clean.width_cm - 1.0f));   /* shrank */
+
+        for (angle = ULTRASONIC_COARSE_RIGHT_DEG;
+             angle >= ULTRASONIC_COARSE_LEFT_DEG;
+             angle -= ULTRASONIC_FINE_STEP_DEG)
+        {
+            obstacle_scan_add_nearer(&scan, angle,
+                                     ((angle >= 85U) && (angle <= 100U))
+                                     ? S5_TEST_NEAR_CM : S5_TEST_FAR_CM);
+        }
+
+        obstacle_profile_build(&scan, &profile);
+        b_ok = b_ok && (13U == scan.count) &&
+               (profile.width_cm > (clean.width_cm - 0.1f)) &&
+               (profile.width_cm < (clean.width_cm + 0.1f)) &&
+               (profile.center_angle_deg > (clean.center_angle_deg - 0.1f)) &&
+               (profile.center_angle_deg < (clean.center_angle_deg + 0.1f));
+        TEST_CHECK("S5-U29", b_ok,
+                   "two sweeps keep the nearer reading: a missed edge echo "
+                   "does not shrink the box");
+    }
+
     /* Obstacle to the right, hits 100-115 deg. */
     s5_test_sweep(&scan, 100U, 115U);
     obstacle_profile_build(&scan, &profile);
@@ -118,7 +151,26 @@ subsystem5_test (void)
     obstacle_profile_build(&scan, &profile);
     obstacle_plan_build(&profile, &plan);
     b_ok = b_ok && (OBSTACLE_ACTION_TURN_RIGHT == plan.action);
-    s5_test_sweep(&scan, 60U, 120U);    /* wall: no side is clear */
+    s5_test_sweep(&scan, 60U, 120U);    /* wider than the scan: no edge */
+    obstacle_profile_build(&scan, &profile);
+    obstacle_plan_build(&profile, &plan);
+    b_ok = b_ok && ((OBSTACLE_ACTION_TURN_LEFT == plan.action) ||
+                    (OBSTACLE_ACTION_TURN_RIGHT == plan.action)) &&
+           (plan.bypass_offset_cm >= 29.9f);
+    {
+        uint32_t angle;                 /* box 10 cm away: too close */
+
+        obstacle_scan_reset(&scan);
+
+        for (angle = ULTRASONIC_COARSE_LEFT_DEG;
+             angle <= ULTRASONIC_COARSE_RIGHT_DEG;
+             angle += ULTRASONIC_FINE_STEP_DEG)
+        {
+            obstacle_scan_add(&scan, angle,
+                              ((angle >= 80U) && (angle <= 100U))
+                              ? 10.0f : S5_TEST_FAR_CM);
+        }
+    }
     obstacle_profile_build(&scan, &profile);
     obstacle_plan_build(&profile, &plan);
     b_ok = b_ok && (OBSTACLE_ACTION_REVERSE_RETRY == plan.action);

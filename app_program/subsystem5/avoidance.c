@@ -13,8 +13,9 @@
 /* Every straight move uses the speed subsystem 2 has tested on the floor
  * (S2-M02), and every rotation is subsystem 2's closed-loop MOTION_TURN
  * (S2-M03), so no step runs slow enough to stall the motors. */
-#define AVOID_LEG_SPEED_M_S         (0.20f)
-#define AVOID_SEARCH_SPEED_M_S      (0.20f)
+#define AVOID_LEG_SPEED_M_S         (0.12f) /* slow: more time for each
+                                               side and ahead reading */
+#define AVOID_SEARCH_SPEED_M_S      (0.12f)
 #define AVOID_TURN_DEG              (45.0f) /* out, away from the line */
 #define AVOID_TURN_IN_DEG           (70.0f) /* back in: steep, so the car
                                                reaches the line in little
@@ -22,7 +23,6 @@
 #define AVOID_ALIGN_OVERSHOOT_DEG   (45.0f) /* past the original heading */
 #define AVOID_SWEEP_DEG             (360.0f)    /* MOTION_TURN maximum */
 #define AVOID_HEADING_TOL_DEG       (4.0f)  /* a turn this close is done */
-#define AVOID_SIN_45                (0.7071f)
 #define AVOID_REVERSE_CM            (12.0f)
 #define AVOID_REVERSE_MAX           (3U)
 #define AVOID_RETRY_FORGET_CM       (40.0f) /* drove clear of that spot */
@@ -41,6 +41,10 @@
 #define AVOID_PATH_HALF_CM          (9.5f)  /* planned offset = near edge +
                                                this (obstacle_geometry.c) */
 #define AVOID_TAN_MIN               (0.2f)  /* beam this flat: no bound   */
+#define AVOID_SMALL_DEPTH_CM        (20.0f) /* fixed depth for a box too
+                                               short to see from the side
+                                               (deeper boxes are seen and
+                                               measured); tune per track */
 #define AVOID_OUT_SLACK             (1.5f)  /* LEG_OUT path limit factor */
 #define AVOID_SIDE_LOOK_DEG         ((float) (ULTRASONIC_COARSE_RIGHT_DEG - \
                                               ULTRASONIC_COARSE_CENTER_DEG))
@@ -65,7 +69,8 @@
 #define AVOID_SCAN_TIMEOUT_MS       (8000U)
 #define AVOID_TURN_TIMEOUT_MS       (4000U)
 #define AVOID_SWEEP_TIMEOUT_MS      (8000U)
-#define AVOID_DRIVE_TIMEOUT_MS      (8000U)
+#define AVOID_DRIVE_TIMEOUT_MS      (12000U) /* longest leg ~90 cm at
+                                               the leg speed */
 #define AVOID_CM_PER_M              (100.0f)
 
 /* The simulated line never leaves the sensors, so a black run never ends. */
@@ -90,6 +95,20 @@ avoid_enter (avoid_t * p_avoid, avoid_phase_t phase,
         /* The beam swung during the turn: judge the rear edge only on
            readings taken while driving past. */
         p_avoid->side_gap_count = 0U;
+    }
+    else if (AVOID_PHASE_TURN_OUT == phase)
+    {
+        /* At 45 deg the car moves as far forward as sideways.  If it must
+           go further sideways than the obstacle is ahead (a box wider
+           than the scan, seen from the stop point), turn out steeply. */
+        p_avoid->out_deg =
+            ((p_avoid->decision_offset_cm - p_avoid->lateral_cm) >
+             (p_avoid->decision_closest_cm - p_avoid->along_cm))
+            ? AVOID_TURN_IN_DEG : AVOID_TURN_DEG;
+    }
+    else
+    {
+        /* Nothing else to set up. */
     }
 }
 
@@ -210,10 +229,14 @@ avoid_track_side (avoid_t * p_avoid, avoid_input_t const * p_input)
 
             if (1U == p_avoid->side_gap_count)
             {
+                /* A box too short to see from the side is taken as at
+                   most AVOID_SMALL_DEPTH_CM deep, if that is nearer. */
                 p_avoid->rear_along_cm =
-                    p_avoid->along_cm +
-                    (rmath_maxf(0.0f, p_avoid->lateral_cm - edge_cm) /
-                     look_tan);
+                    rmath_minf(p_avoid->along_cm +
+                               (rmath_maxf(0.0f, p_avoid->lateral_cm -
+                                                 edge_cm) / look_tan),
+                               p_avoid->decision_closest_cm +
+                               AVOID_SMALL_DEPTH_CM);
             }
 
             if (p_avoid->side_gap_count >= AVOID_SIDE_GAP_READINGS)
@@ -864,7 +887,7 @@ avoid_step (avoid_t * p_avoid, avoid_input_t const * p_input,
 
         case AVOID_PHASE_TURN_OUT:
             avoid_step_turn(p_avoid, p_input, p_output,
-                            -side * AVOID_TURN_DEG, AVOID_PHASE_LEG_OUT);
+                            -side * p_avoid->out_deg, AVOID_PHASE_LEG_OUT);
             break;
 
         case AVOID_PHASE_LEG_OUT:
@@ -879,7 +902,8 @@ avoid_step (avoid_t * p_avoid, avoid_input_t const * p_input,
                                         AVOID_LEG_SPEED_M_S,
                                         AVOID_OUT_SLACK *
                                         (p_avoid->decision_offset_cm /
-                                         AVOID_SIN_45),
+                                         rmath_sinf(p_avoid->out_deg *
+                                                    RMATH_DEG_TO_RAD)),
                                         AVOID_PHASE_TURN_PARALLEL);
             }
             break;

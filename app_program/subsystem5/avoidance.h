@@ -131,6 +131,9 @@ typedef struct
     obstacle_action_t decision;
     float             decision_offset_cm;
     float             decision_closest_cm;
+    float             out_deg;      /* turn-out angle: 45, or 70 when the
+                                       car must go further sideways than
+                                       the obstacle is ahead */
 
     /* Position since the decision: along = the original heading, lateral
      * = + toward the bypass side.  The sensor started at (0, 0) and the

@@ -300,6 +300,19 @@ obstacle_scan (obstacle_scan_t * p_scan, uint32_t scan_number,
             obstacle_scan_add(p_scan, angle,
                               obstacle_measure_at(angle, scan_number));
         }
+
+        /* Second fine sweep, back the other way (no swing back): each
+           angle keeps the nearer of its two readings, for a width that
+           does not change with one missed echo. */
+        for (idx = 0U;
+             (idx <= ((fine_end - fine_start) / ULTRASONIC_FINE_STEP_DEG)) &&
+             obstacle_wants_scan();
+             idx++)
+        {
+            angle = fine_end - (idx * ULTRASONIC_FINE_STEP_DEG);
+            obstacle_scan_add_nearer(p_scan, angle,
+                                     obstacle_measure_at(angle, scan_number));
+        }
     }
 
     *p_complete = obstacle_wants_scan();

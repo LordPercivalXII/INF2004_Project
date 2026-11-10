@@ -115,6 +115,30 @@ obstacle_scan_add (obstacle_scan_t * p_scan, uint32_t angle_deg,
 }
 
 /*!
+ * @brief Add a repeat reading: an angle already read keeps the nearer of
+ *        the two.  With two sweeps, an echo missed once (a far reading at
+ *        the box's edge) no longer makes the box narrower, so the width is
+ *        the same from scan to scan.
+ */
+void
+obstacle_scan_add_nearer (obstacle_scan_t * p_scan, uint32_t angle_deg,
+                          float distance_cm)
+{
+    uint32_t idx;
+
+    for (idx = 0U; idx < p_scan->count; idx++)
+    {
+        if (p_scan->points[idx].angle_deg == angle_deg)
+        {
+            distance_cm = rmath_minf(distance_cm,
+                                     p_scan->points[idx].distance_cm);
+        }
+    }
+
+    obstacle_scan_add(p_scan, angle_deg, distance_cm);
+}
+
+/*!
  * @brief Build the obstacle profile from one scan.
  *
  * The obstacle is the unbroken run of hits around the nearest hit.  Each
@@ -370,8 +394,9 @@ obstacle_hard_turn_stop (float lead, float distance_cm)
  * @brief Decide what to do about a profile (stage 4).
  *
  * CONTINUE        nothing there, or it is entirely beside the car's path.
- * REVERSE_RETRY   in the path, and too close to spin or no side is clear.
- * TURN_LEFT/RIGHT in the path with room on that side.
+ * REVERSE_RETRY   in the path, and too close to spin (under 12 cm).
+ * TURN_LEFT/RIGHT in the path: the side with room; if neither edge is
+ *                 seen, the side with more room, at the widest offset.
  *
  * STOP is never chosen here: obstacle.c sends it while driving, when
  * obstacle_watch_update() says so, before the profile exists.
@@ -403,9 +428,29 @@ obstacle_plan_build (obstacle_profile_t const * p_profile,
             side = ((-left_cm) <= right_cm) ? -1 : 1;
         }
 
-        if ((0 == side) || (p_profile->closest_cm < OBSTACLE_TOO_CLOSE_CM))
+        if (p_profile->closest_cm < OBSTACLE_TOO_CLOSE_CM)
         {
             p_plan->action = OBSTACLE_ACTION_REVERSE_RETRY;
+        }
+        else if (0 == side)
+        {
+            /* Neither edge seen: the box is wider than the +/-30 deg scan
+               covers.  Backing up would not help, so go round the side
+               with more room (else away from its nearest point) as far
+               out as allowed. */
+            if (p_profile->left_clearance_cm != p_profile->right_clearance_cm)
+            {
+                side = (p_profile->left_clearance_cm >
+                        p_profile->right_clearance_cm) ? -1 : 1;
+            }
+            else
+            {
+                side = (p_profile->closest_angle_deg <= 0.0f) ? 1 : -1;
+            }
+
+            p_plan->action = (side < 0) ? OBSTACLE_ACTION_TURN_LEFT
+                                        : OBSTACLE_ACTION_TURN_RIGHT;
+            p_plan->bypass_offset_cm = OBSTACLE_OFFSET_MAX_CM;
         }
         else
         {

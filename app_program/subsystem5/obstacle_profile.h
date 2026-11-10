@@ -55,6 +55,8 @@ typedef struct
 void   obstacle_scan_reset(obstacle_scan_t * p_scan);
 void   obstacle_scan_add(obstacle_scan_t * p_scan, uint32_t angle_deg,
                          float distance_cm);
+void   obstacle_scan_add_nearer(obstacle_scan_t * p_scan, uint32_t angle_deg,
+                                float distance_cm);
 void   obstacle_profile_build(obstacle_scan_t const * p_scan,
                               obstacle_profile_t * p_profile);
 int8_t obstacle_choose_bypass(float left_clearance, float right_clearance);
