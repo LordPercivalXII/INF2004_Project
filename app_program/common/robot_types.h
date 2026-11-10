@@ -239,6 +239,9 @@ typedef struct
 #define SYSTEM_BIT_OBSTACLE     (1UL << 2)
 #define SYSTEM_BIT_FAULT        (1UL << 3)
 #define SYSTEM_BIT_WIFI_UP      (1UL << 4)
+#define SYSTEM_BIT_JUNCTION_BUSY (1UL << 5) /* controller still acting on
+                                               the last junction: S3 must
+                                               not consume a waypoint */
 
 #endif /* ROBOT_TYPES_H */
 

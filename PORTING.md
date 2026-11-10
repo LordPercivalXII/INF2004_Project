@@ -183,3 +183,37 @@ cd app_program/subsystem1 && gcc -std=c99 -Wall -Wextra test_telemetry_codec.c \
 3. Full scan time with the 100 ms settle stays under 3 s (NFR8).
 4. Dashboard shows mission, speed, line, hump, obstacle and fault from
    the binary packet.
+
+## Barcode-routed junctions (turn on detection)
+
+Flow, end to end:
+
+1. **Store.** S3 decodes a Code 39 barcode and stores its character as the
+   pending waypoint (`route_store_waypoint()`); a newer barcode replaces an
+   unused one.
+2. **Match.** At the next junction S3 looks the character up in the route
+   table received over MQTT (`inf2004/car/route`, e.g. `A:L,B:R,C:S,D:U`)
+   and consumes the waypoint (`route_take_junction_action()`).
+3. **Default straight.** No barcode decoded, or a character the MQTT table
+   does not map (and no `*:` default sent) -> STRAIGHT: the car keeps
+   following the line.
+4. **Execute at once.** The action travels with that same junction event.
+   The controller commands the closed-loop pivot (left +90, right -90,
+   U-turn 180) on that event; the old 10 mm drive to a pivot point
+   (`JUNCTION_APPROACH_*`) is removed. A TURN also wakes the motion task,
+   which zeroes the motors at once so the car does not roll past the
+   junction; the pivot itself starts on the next 20 ms PID cycle.
+
+`SYSTEM_BIT_JUNCTION_BUSY` (IF-05) is set while the controller's junction
+lock is held (the turn, then 5 cm of travel). S3 does not consume a stored
+barcode on a junction seen while it is set, so a repeat detection of the
+same tape after the pivot cannot use up the barcode meant for the next
+junction.
+
+Console evidence: `[S3 route] barcode ... stored`, `S3: junction: 'A' -> LEFT`,
+`CTRL: junction -> barcode 'A' -> turn 90 deg now t_us=...`.
+
+Check on hardware: the barcode must finish decoding before the junction.
+Decoding ends after the 150 ms end gap, so leave at least ~25 mm of white
+between the last bar and the junction at 0.15 m/s; otherwise the
+character is stored after the junction and used at the next one.

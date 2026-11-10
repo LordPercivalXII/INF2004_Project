@@ -404,6 +404,20 @@ line_debug (line_ctx_t * p_ctx, uint32_t now_ms, uint16_t raw_left,
 #endif /* S3_LINE_DEBUG */
 
 /*!
+ * @brief true while the controller is still acting on the last junction
+ *        (IF-05 SYSTEM_BIT_JUNCTION_BUSY).
+ */
+static bool
+line_junction_busy (void)
+{
+    T_RFLG status = {0};
+
+    return ((gh_system_flg > 0) &&
+            (E_OK == tk_ref_flg(gh_system_flg, &status)) &&
+            (0U != (status.flgptn & SYSTEM_BIT_JUNCTION_BUSY)));
+}
+
+/*!
  * @brief Post this cycle's SYSTEM_EVENT_LINE.
  *
  * A newly decoded barcode is stored as the pending waypoint and reported
@@ -445,11 +459,25 @@ line_publish (line_ctx_t * p_ctx, float error, bool b_detected,
         }
     }
 
-    if (b_junction)
+    if (b_junction && line_junction_busy())
     {
+        /* The controller is still acting on the previous junction (its
+           turn, or the same tape seen again after the pivot).  Do not
+           consume the stored barcode: it belongs to the next junction. */
+        tm_printf((UB *) "[S3 route] junction ignored: controller busy "
+                  "with the last one; waypoint kept\n");
+    }
+    else if (b_junction)
+    {
+        /* Stored barcode -> MQTT route table -> action; nothing stored or
+           no mapping for the character -> straight. */
         p_ctx->retry_action     = route_take_junction_action(
                                       &p_ctx->retry_char);
         p_ctx->b_junction_retry = true;
+    }
+    else
+    {
+        /* No junction this cycle. */
     }
 
     if (p_ctx->b_junction_retry)

@@ -97,7 +97,7 @@ The receiver creates the kernel object and publishes its ID in its header.
 | IF-02 | S1 → controller | message buffer (owned by controller) | `gh_control_mbf` via `telemetry_submit_command()` | `control_command_t`, 12 deep |
 | IF-03 | controller → S2 | message buffer (owned by S2) | `gh_motion_cmd_mbf` via `motion_send_command()` | `motion_command_t`, 12 deep; S2 keeps the newest |
 | IF-04 | controller → S1 | message buffer (owned by S1) | `gh_telemetry_mbf` via `telemetry_publish()` | `telemetry_message_t`, 12 deep |
-| IF-05 | controller → any | event flag (owned by controller) | `gh_system_flg` | `SYSTEM_BIT_READY/MISSION_RUN/OBSTACLE/FAULT/WIFI_UP` |
+| IF-05 | controller → any | event flag (owned by controller) | `gh_system_flg` | `SYSTEM_BIT_READY/MISSION_RUN/OBSTACLE/FAULT/WIFI_UP/JUNCTION_BUSY` |
 | IF-07 | S4 → controller | message buffer (owned by controller), `TMO_POL`, **read before every other queue** | `gh_terrain_mbf` via `controller_post_terrain()` | `terrain_packed_t` (1 B: shock:1, height_mm:7), 8 deep |
 | IF-06 | MQTT (WiFi service task) → S3 | message buffer (owned by S3), `TMO_POL` | `gh_route_cfg_mbf` via `mqtt_utk_route_rx()` | route table text from `MQTT_ROUTE_TOPIC`, e.g. `A:L,B:R,C:S,D:U` (format in `subsystem3/route.c`) |
 

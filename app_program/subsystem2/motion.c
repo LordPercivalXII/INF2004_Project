@@ -114,10 +114,11 @@ motion_queue_command (motion_command_t const * p_command)
                                        (INT) sizeof(wire), TMO_POL));
         }
 
-        /* HALT: do not wait for the next 20 ms cycle. */
+        /* HALT or junction TURN: do not wait for the next 20 ms cycle. */
         if (b_ok && (gh_motion_tsk > 0) &&
             ((MOTION_STOP == p_command->type) ||
-             (MOTION_BRAKE == p_command->type)))
+             (MOTION_BRAKE == p_command->type) ||
+             (MOTION_TURN == p_command->type)))
         {
             (void) tk_wup_tsk(gh_motion_tsk);
         }
@@ -261,14 +262,18 @@ motion_mission_running (void)
 
 /*!
  * @brief Early wake-up (before the 20 ms period): drain commands and,
- *        for a STOP/BRAKE or a cleared mission bit, zero the motors now.
+ *        for a STOP/BRAKE, a new TURN or a cleared mission bit, zero the
+ *        motors now.  For a TURN this stops the forward roll at once, so
+ *        the car does not run past the junction while the pivot waits
+ *        (at most 20 ms) for the next PID cycle.
  */
 static void
 motion_early_halt (motion_inbox_t * p_inbox)
 {
     motion_collect(p_inbox);
 
-    if (p_inbox->b_stop || !motion_mission_running())
+    if (p_inbox->b_stop || !motion_mission_running() ||
+        (p_inbox->b_have && (MOTION_TURN == p_inbox->command.type)))
     {
 #if (!ROBOT_SIMULATION) && (!S2_ENCODER_CALIBRATION)
         motor_set(PIN_MOTOR_LEFT_PWM, PIN_MOTOR_LEFT_DIR, 0.0f);

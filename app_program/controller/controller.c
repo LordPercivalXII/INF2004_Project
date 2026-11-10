@@ -137,11 +137,8 @@ typedef struct
     bool                b_have_imu;
     bool                b_turn_in_progress;  /* also set while
                                                 approaching a junction */
-    bool                b_junction_approach; /* driving to the pivot   */
     bool                b_junction_turn;     /* junction pivot running */
-    float               junction_start_m;    /* odometer at detection  */
     float               junction_turn_deg;   /* turn to make there     */
-    uint32_t            junction_start_ms;
     uint16_t            pending_turn;
     uint32_t            next_turn_id;
     uint32_t            active_turn_id;
@@ -439,6 +436,26 @@ ctrl_clear_bits (uint32_t bits)
     (void) tk_clr_flg(gh_system_flg, (UINT) ~bits);
 }
 
+/*!
+ * @brief Take the junction lock.  SYSTEM_BIT_JUNCTION_BUSY tells S3 not
+ *        to consume a stored barcode on a repeat detection of this same
+ *        junction (the waypoint is kept for the next real junction).
+ */
+static void
+ctrl_junction_lock (ctrl_state_t * p_ctrl)
+{
+    p_ctrl->flags.b_junction_lock = 1U;
+    p_ctrl->junction_lock_m       = p_ctrl->distance_m;
+    ctrl_set_bits(SYSTEM_BIT_JUNCTION_BUSY);
+}
+
+static void
+ctrl_junction_unlock (ctrl_state_t * p_ctrl)
+{
+    p_ctrl->flags.b_junction_lock = 0U;
+    ctrl_clear_bits(SYSTEM_BIT_JUNCTION_BUSY);
+}
+
 static void
 ctrl_set_motion (float left_speed, float right_speed)
 {
@@ -550,11 +567,10 @@ ctrl_enter_fault (ctrl_state_t * p_ctrl, uint32_t code)
     p_ctrl->start_requested_ms = 0U;
     p_ctrl->state      = MISSION_FAULT;
     p_ctrl->b_turn_in_progress = false;
-    p_ctrl->b_junction_approach = false;
     p_ctrl->b_junction_turn = false;
     p_ctrl->active_turn_id = 0U;
     p_ctrl->pending_turn = (uint16_t) BARCODE_CMD_NONE;
-    p_ctrl->flags.b_junction_lock = 0U;
+    ctrl_junction_unlock(p_ctrl);
     if (FAULT_REACQUIRE == code)
     {
         fault_mask_set(FAULT_BIT_LINE);
@@ -599,11 +615,10 @@ ctrl_handle_command (ctrl_state_t * p_ctrl,
             p_ctrl->start_requested_ms = 0U;
             p_ctrl->state = MISSION_IDLE;
             p_ctrl->b_turn_in_progress = false;
-            p_ctrl->b_junction_approach = false;
             p_ctrl->b_junction_turn = false;
             p_ctrl->active_turn_id = 0U;
             p_ctrl->pending_turn = (uint16_t) BARCODE_CMD_NONE;
-            p_ctrl->flags.b_junction_lock = 0U;
+            ctrl_junction_unlock(p_ctrl);
             ctrl_clear_bits(SYSTEM_BIT_MISSION_RUN | SYSTEM_BIT_OBSTACLE);
             ctrl_stop_motion();
             tm_printf((UB *) "CTRL: STOP received, mission idle\n");
@@ -703,60 +718,34 @@ ctrl_junction_angle (uint16_t action)
 }
 
 /*!
- * @brief Start a junction turn: drive straight to the junction centre
- *        (JUNCTION_APPROACH_M on the odometer), then turn (see
- *        ctrl_junction_step).  Line steering is suspended meanwhile.
+ * @brief Start a junction turn at once, on the junction event itself:
+ *        the closed-loop pivot is commanded now, with no drive to a
+ *        pivot point first (the line sensors sit at the wheel axle, see
+ *        robot_config.h).  Line steering is suspended until it is done.
+ *
+ * @param[in] angle_deg  +90 left, -90 right, 180 U-turn.
+ * @param[in] symbol     Barcode character that chose it ('\0' if none).
  */
 static void
-ctrl_junction_begin (ctrl_state_t * p_ctrl, float angle_deg)
+ctrl_junction_begin (ctrl_state_t * p_ctrl, float angle_deg, char symbol)
 {
-    float const speed = rmath_minf(JUNCTION_APPROACH_SPEED,
-                                   ctrl_drive_speed(p_ctrl));
+    uint32_t const turn_id = ctrl_next_turn_id(p_ctrl);
 
-    p_ctrl->b_junction_approach = true;
-    p_ctrl->b_turn_in_progress  = true;     /* suspends line steering */
-    p_ctrl->active_turn_id      = 0U;
-    p_ctrl->junction_turn_deg   = angle_deg;
-    p_ctrl->junction_start_m    = p_ctrl->distance_m;
-    p_ctrl->junction_start_ms   = board_millis();
-    ctrl_set_motion(speed, speed);
-    tm_printf((UB *) "CTRL: junction -> turn %d deg after %d mm\n",
-              (int) angle_deg, (int) (JUNCTION_APPROACH_M * 1000.0f));
-}
+    p_ctrl->junction_turn_deg = angle_deg;
 
-/*!
- * @brief While approaching: once the odometer has advanced
- *        JUNCTION_APPROACH_M (or the approach takes too long), make the
- *        closed-loop turn.  Called on every motion event.
- */
-static void
-ctrl_junction_step (ctrl_state_t * p_ctrl)
-{
-    bool const b_arrived = ((p_ctrl->distance_m - p_ctrl->junction_start_m)
-                            >= JUNCTION_APPROACH_M);
-    bool const b_timeout = ((board_millis() - p_ctrl->junction_start_ms)
-                            >= JUNCTION_APPROACH_TIMEOUT_MS);
-
-    if (p_ctrl->b_junction_approach && (b_arrived || b_timeout))
+    if (ctrl_turn_motion(angle_deg, turn_id))
     {
-        p_ctrl->b_junction_approach = false;
-        (void) ctrl_next_turn_id(p_ctrl);
-
-        if (b_timeout && !b_arrived)
-        {
-            tm_printf((UB *) "CTRL: junction approach timed out, "
-                      "turning here\n");
-        }
-
-        if (ctrl_turn_motion(p_ctrl->junction_turn_deg, p_ctrl->next_turn_id))
-        {
-            p_ctrl->active_turn_id  = p_ctrl->next_turn_id;
-            p_ctrl->b_junction_turn = true;
-        }
-        else
-        {
-            ctrl_enter_fault(p_ctrl, FAULT_MOTION_COMMAND);
-        }
+        p_ctrl->active_turn_id     = turn_id;
+        p_ctrl->b_turn_in_progress = true;  /* suspends line steering */
+        p_ctrl->b_junction_turn    = true;
+        tm_printf((UB *) "CTRL: junction -> barcode '%c' -> turn %d deg "
+                  "now t_us=%u\n",
+                  ('\0' != symbol) ? symbol : '-', (int) angle_deg,
+                  (unsigned int) board_micros());
+    }
+    else
+    {
+        ctrl_enter_fault(p_ctrl, FAULT_MOTION_COMMAND);
     }
 }
 
@@ -788,7 +777,7 @@ ctrl_handle_line (ctrl_state_t * p_ctrl, line_event_t const * p_line)
     p_ctrl->b_line_detected = p_line->b_line_detected;
     p_ctrl->b_barcode_scanning = p_line->b_barcode_scanning;
 
-    if (p_ctrl->b_junction_approach || p_ctrl->b_junction_turn)
+    if (p_ctrl->b_junction_turn)
     {
         /* Junction manoeuvre: the pivot sweeps the old line across the
            sensors and off the far side (a LEFT pivot sends it off to the
@@ -845,7 +834,7 @@ ctrl_handle_line (ctrl_state_t * p_ctrl, line_event_t const * p_line)
         ((p_ctrl->distance_m - p_ctrl->junction_lock_m) >=
          CTRL_JUNCTION_LOCK_M))
     {
-        p_ctrl->flags.b_junction_lock = 0U;
+        ctrl_junction_unlock(p_ctrl);
     }
 
     if (p_line->b_junction && (0U != p_ctrl->flags.b_junction_lock))
@@ -876,18 +865,19 @@ ctrl_handle_line (ctrl_state_t * p_ctrl, line_event_t const * p_line)
         float const angle_deg = ctrl_junction_angle(p_ctrl->pending_turn);
 
         p_ctrl->pending_turn = (uint16_t) BARCODE_CMD_NONE;
-        p_ctrl->flags.b_junction_lock = 1U;
-        p_ctrl->junction_lock_m       = p_ctrl->distance_m;
+        ctrl_junction_lock(p_ctrl);
 
         if (0.0f == angle_deg)
         {
+            /* Barcode mapped to STRAIGHT, or nothing was decoded (or the
+               character has no MQTT mapping): keep following the line. */
             tm_printf((UB *) "CTRL: junction -> STRAIGHT (%s)\n",
                       ('\0' != p_line->junction_char) ? "barcode"
                                                        : "no barcode stored");
         }
         else
         {
-            ctrl_junction_begin(p_ctrl, angle_deg);
+            ctrl_junction_begin(p_ctrl, angle_deg, p_line->junction_char);
         }
     }
 
@@ -1196,11 +1186,10 @@ ctrl_handle_obstacle (ctrl_state_t * p_ctrl,
         ctrl_set_bits(SYSTEM_BIT_OBSTACLE);
         p_ctrl->state = MISSION_AVOIDING;
         p_ctrl->b_turn_in_progress = false;
-        p_ctrl->b_junction_approach = false;
         p_ctrl->b_junction_turn = false;
         p_ctrl->active_turn_id = 0U;
         p_ctrl->pending_turn = (uint16_t) BARCODE_CMD_NONE;
-        p_ctrl->flags.b_junction_lock = 0U;
+        ctrl_junction_unlock(p_ctrl);
         avoid_start(&p_ctrl->avoid, board_millis(), p_ctrl->distance_m);
         p_ctrl->avoid_phase_shown = AVOID_PHASE_IDLE;
     }
@@ -1335,8 +1324,6 @@ ctrl_handle_event (ctrl_state_t * p_ctrl, system_event_t const * p_event)
                 (void) ds;
 #endif
             }
-            ctrl_junction_step(p_ctrl);
-
             if (p_ctrl->b_turn_in_progress &&
                 p_event->data.motion.turn_complete &&
                 (p_event->data.motion.turn_id == p_ctrl->active_turn_id))
