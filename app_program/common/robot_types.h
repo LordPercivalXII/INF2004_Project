@@ -32,6 +32,8 @@ typedef enum
     SYSTEM_EVENT_FAULT
 } system_event_type_t;
 
+#define SYSTEM_FAULT_ENCODER_STALL (7U)
+
 typedef enum
 {
     CONTROL_START = 0,
@@ -183,6 +185,7 @@ typedef struct
 {
     system_event_type_t type;
     uint32_t            timestamp_ms;
+    uint32_t            fault_code; /* SYSTEM_EVENT_FAULT source/reason */
     union
     {
         line_event_t        line;

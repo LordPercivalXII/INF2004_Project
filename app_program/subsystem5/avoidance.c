@@ -20,7 +20,6 @@
 #define AVOID_TAN_OUT           (1.7321f)   /* tan 60 */
 #define AVOID_SIN_OUT           (0.8660f)   /* sin 60 */
 #define AVOID_TURN_IN_DEG       (45.0f) /* back in                     */
-#define AVOID_ALIGN_PAST_DEG    (45.0f) /* past the original heading   */
 #define AVOID_SWEEP_DEG         (360.0f)
 #define AVOID_SWEEP_MAX         (2U)
 #define AVOID_HEADING_TOL_DEG   (4.0f)  /* a turn this close is done   */
@@ -47,14 +46,14 @@
                                            line: a new obstacle        */
 
 /* Finding the line again. */
-#define AVOID_SEARCH_OVERSHOOT_CM (10.0f) /* past the line, not seen  */
+#define AVOID_SEARCH_OVERSHOOT_CM (25.0f) /* extra room to reacquire line */
 #define AVOID_SEARCH_MAX_CM     (60.0f)
-#define AVOID_SENSOR_AHEAD_CM   (8.0f)  /* line sensors ahead of axle  */
-#define AVOID_TAPE_MIN_CM       (1.0f)  /* 1.8 cm tape                 */
-#define AVOID_TAPE_MAX_CM       (5.0f)
+#define AVOID_SENSOR_AHEAD_CM   (2.0f)  /* trim forward after tape hit  */
 #define AVOID_BLACK_SAMPLES     (3U)    /* line events in a row        */
 #define AVOID_VERIFY_CM         (10.0f)
 #define AVOID_VERIFY_LOST_MS    (600U)
+#define AVOID_VERIFY_LINE_SAMPLES (5U)
+#define AVOID_VERIFY_CENTER_ERROR (0.25f)
 
 /* Time limits. */
 #define AVOID_SCAN_TIMEOUT_MS   (10000U)
@@ -63,12 +62,6 @@
 #define AVOID_DRIVE_TIMEOUT_MS  (12000U)
 
 #define AVOID_CM_PER_M          (100.0f)
-
-/* The simulated line never ends, so in simulation a few black samples
- * count as crossing it. */
-#ifndef AVOID_SIM_LINE
-#define AVOID_SIM_LINE          (ROBOT_SIMULATION)
-#endif
 
 /*!
  * @brief Start a phase.
@@ -84,6 +77,7 @@ avoid_enter (avoid_t * p_avoid, avoid_phase_t phase,
     p_avoid->b_in_black     = false;
     p_avoid->black_samples  = 0U;
     p_avoid->white_since_ms = p_input->now_ms;
+    p_avoid->verify_line_samples = 0U;
     p_avoid->b_ahead_fresh  = false;
 }
 
@@ -227,7 +221,11 @@ avoid_apply_decision (avoid_t * p_avoid, avoid_input_t const * p_input)
     switch (p_avoid->decision)
     {
         case OBSTACLE_ACTION_CONTINUE:
-            status = AVOID_DONE;
+            /* A clear scan after backing up can mean the same obstruction
+             * moved beyond the scan's detection range. Do not drive back
+             * toward it and restart the reverse loop. */
+            status = (0U == p_avoid->reverse_count)
+                     ? AVOID_DONE : AVOID_FAILED_BOXED_IN;
             break;
 
         case OBSTACLE_ACTION_REVERSE_RETRY:
@@ -278,48 +276,6 @@ avoid_apply_decision (avoid_t * p_avoid, avoid_input_t const * p_input)
 }
 
 /*!
- * @brief True once the sensors have crossed a tape-width black run (or,
- *        in simulation, seen black a few times).
- */
-static bool
-avoid_tape_crossed (avoid_t * p_avoid, avoid_input_t const * p_input)
-{
-    bool b_crossed = false;
-
-    if (p_input->b_line_detected)
-    {
-        if (!p_avoid->b_in_black)
-        {
-            p_avoid->b_in_black    = true;
-            p_avoid->black_start_m = p_input->distance_m;
-            p_avoid->black_samples = 0U;
-        }
-
-        p_avoid->black_samples++;
-#if AVOID_SIM_LINE
-        b_crossed = (p_avoid->black_samples >= AVOID_BLACK_SAMPLES);
-#endif
-    }
-    else if (p_avoid->b_in_black)
-    {
-        float const run_cm = rmath_absf(p_input->distance_m -
-                                        p_avoid->black_start_m) *
-                             AVOID_CM_PER_M;
-
-        p_avoid->b_in_black = false;
-        b_crossed = ((p_avoid->black_samples >= AVOID_BLACK_SAMPLES) &&
-                     (run_cm >= AVOID_TAPE_MIN_CM) &&
-                     (run_cm <= AVOID_TAPE_MAX_CM));
-    }
-    else
-    {
-        /* Still on white. */
-    }
-
-    return (b_crossed);
-}
-
-/*!
  * @brief True once a sensor has been on the line long enough to trust.
  */
 static bool
@@ -329,6 +285,22 @@ avoid_line_seen (avoid_t * p_avoid, avoid_input_t const * p_input)
                              ? (p_avoid->black_samples + 1U) : 0U;
 
     return (p_avoid->black_samples >= AVOID_BLACK_SAMPLES);
+}
+
+static bool
+avoid_line_candidate_phase (avoid_phase_t phase)
+{
+    return ((AVOID_PHASE_TURN_IN == phase) ||
+            (AVOID_PHASE_SEARCH == phase));
+}
+
+static void
+avoid_begin_verify (avoid_t * p_avoid, avoid_input_t const * p_input)
+{
+    /* Keep the heading and let the line controller capture the tape. A
+       fixed advance followed by an alignment turn can swing the sensors
+       back off a line that was only just detected. */
+    avoid_enter(p_avoid, AVOID_PHASE_VERIFY, p_input);
 }
 
 /*!
@@ -466,7 +438,8 @@ avoid_on_ahead_reading (avoid_t * p_avoid, float distance_cm)
 bool
 avoid_is_following (avoid_t const * p_avoid)
 {
-    return (AVOID_PHASE_VERIFY == p_avoid->phase);
+    return ((AVOID_PHASE_SEARCH == p_avoid->phase) ||
+            (AVOID_PHASE_VERIFY == p_avoid->phase));
 }
 
 /*!
@@ -525,6 +498,27 @@ avoid_step (avoid_t * p_avoid, avoid_input_t const * p_input,
 
     p_avoid->b_ahead_seen  = p_avoid->b_ahead_fresh;
     p_avoid->b_ahead_fresh = false;
+
+    /* Track line detections once the car has cleared the obstacle and starts
+     * returning. Ignore incidental tape readings during LEG_PAST. */
+    if (avoid_line_candidate_phase(p_avoid->phase))
+    {
+        if (p_input->b_line_detected)
+        {
+            if (p_avoid->line_acquire_samples < AVOID_BLACK_SAMPLES)
+            {
+                p_avoid->line_acquire_samples++;
+            }
+        }
+        else
+        {
+            p_avoid->line_acquire_samples = 0U;
+        }
+    }
+    else
+    {
+        p_avoid->line_acquire_samples = 0U;
+    }
 
     switch (p_avoid->phase)
     {
@@ -607,24 +601,28 @@ avoid_step (avoid_t * p_avoid, avoid_input_t const * p_input,
             break;
 
         case AVOID_PHASE_TURN_IN:
-            avoid_step_turn(p_avoid, p_input, p_output,
-                            side * AVOID_TURN_IN_DEG, AVOID_PHASE_SEARCH);
+            if (p_avoid->line_acquire_samples >= AVOID_BLACK_SAMPLES)
+            {
+                avoid_begin_verify(p_avoid, p_input);
+            }
+            else
+            {
+                avoid_step_turn(p_avoid, p_input, p_output,
+                                side * AVOID_TURN_IN_DEG,
+                                AVOID_PHASE_SEARCH);
+            }
             break;
 
         case AVOID_PHASE_SEARCH:
             /* Toward the line: it is where lateral_cm is 0. */
-            if (!p_avoid->b_entered)
+            if (p_avoid->line_acquire_samples >= AVOID_BLACK_SAMPLES)
+            {
+                avoid_begin_verify(p_avoid, p_input);
+            }
+            else if (!p_avoid->b_entered)
             {
                 p_avoid->b_entered = true;
                 avoid_drive(p_output, AVOID_SPEED_M_S);
-            }
-            else if (avoid_tape_crossed(p_avoid, p_input))
-            {
-                float const black_start_m = p_avoid->black_start_m;
-
-                avoid_enter(p_avoid, AVOID_PHASE_ADVANCE, p_input);
-                p_avoid->b_entered     = true;  /* still driving */
-                p_avoid->phase_start_m = black_start_m;
             }
             else if ((!p_avoid->b_in_black) &&
                      ((p_avoid->lateral_cm <= -AVOID_SEARCH_OVERSHOOT_CM) ||
@@ -658,11 +656,11 @@ avoid_step (avoid_t * p_avoid, avoid_input_t const * p_input,
             break;
 
         case AVOID_PHASE_ALIGN:
-            /* Back to the original heading and a little past it, so the
-               car joins the line going the way it was going. */
-            status = avoid_step_find(p_avoid, p_input, p_output,
-                                     -side * AVOID_ALIGN_PAST_DEG,
-                                     AVOID_TURN_TIMEOUT_MS);
+            /* Face the original direction before line following. Do not
+             * stop at the first black sample: the sensors can touch the
+             * tape while the chassis is still angled across it. */
+            avoid_step_turn(p_avoid, p_input, p_output, 0.0f,
+                            AVOID_PHASE_VERIFY);
             break;
 
         case AVOID_PHASE_SWEEP:
@@ -685,19 +683,41 @@ avoid_step (avoid_t * p_avoid, avoid_input_t const * p_input,
                 break;
             }
 
-            if (p_input->b_line_detected)
+            if (p_input->b_line_detected &&
+                (rmath_absf(p_input->line_error) <=
+                 AVOID_VERIFY_CENTER_ERROR))
             {
                 p_avoid->white_since_ms = p_input->now_ms;
+                if (p_avoid->verify_line_samples <
+                    AVOID_VERIFY_LINE_SAMPLES)
+                {
+                    p_avoid->verify_line_samples++;
+                }
+            }
+            else
+            {
+                p_avoid->verify_line_samples = 0U;
+                if (p_input->b_line_detected)
+                {
+                    /* A detected edge is still being tracked, but is not
+                       enough to hand control back to normal following. */
+                    p_avoid->white_since_ms = p_input->now_ms;
+                }
             }
 
-            if ((p_input->now_ms - p_avoid->white_since_ms) >=
+            if (p_avoid->verify_line_samples >=
+                AVOID_VERIFY_LINE_SAMPLES)
+            {
+                status = AVOID_DONE;
+            }
+            else if ((p_input->now_ms - p_avoid->white_since_ms) >=
                 AVOID_VERIFY_LOST_MS)
             {
                 status = avoid_start_sweep(p_avoid, p_input);
             }
             else if (avoid_travelled_cm(p_avoid, p_input) >= AVOID_VERIFY_CM)
             {
-                status = AVOID_DONE;
+                status = avoid_start_sweep(p_avoid, p_input);
             }
             else
             {

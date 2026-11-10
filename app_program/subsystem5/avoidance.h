@@ -104,6 +104,7 @@ typedef struct
     uint32_t now_ms;
     float    distance_m;        /* motion event: signed odometer       */
     float    heading_deg;       /* from the encoders, + = left         */
+    float    line_error;        /* normalized line position, -1..+1    */
     bool     b_line_detected;   /* latest line event                   */
     bool     b_turn_done;       /* no MOTION_TURN is still running     */
 } avoid_input_t;
@@ -141,7 +142,9 @@ typedef struct
     bool              b_in_black;
     float             black_start_m;
     uint32_t          black_samples;
+    uint32_t          line_acquire_samples;
     uint32_t          white_since_ms;
+    uint32_t          verify_line_samples;
     uint32_t          sweep_count;
 
     /* Latest straight-ahead reading while moving. */

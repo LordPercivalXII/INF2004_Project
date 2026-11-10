@@ -38,6 +38,7 @@
 
 #define OBSTACLE_OFFSET_MIN_CM  (10.0f)
 #define OBSTACLE_OFFSET_MAX_CM  (30.0f) /* stays on the track mat */
+#define OBSTACLE_CLEARANCE_MARGIN_CM (5.0f)
 
 /* The beam is about 15 deg wide, so it starts to see an edge half a beam
  * before pointing at it; each reading covers half a step either side. */
@@ -286,7 +287,8 @@ obstacle_profile_build (obstacle_scan_t const * p_scan,
  *
  * CONTINUE        nothing there, or it is beside the car's path.
  * REVERSE_RETRY   in the path, and closer than OBSTACLE_TOO_CLOSE_CM, or
- *                 neither side has room: back up and scan again.
+ *                 neither side has room for the required offset plus a
+ *                 margin: back up and scan again.
  * TURN_LEFT/RIGHT in the path: go round the side with room (both: the
  *                 side that needs the smaller sideways move).  The offset
  *                 puts the car's path just clear of that edge.
@@ -301,10 +303,18 @@ obstacle_plan_build (obstacle_profile_t const * p_profile,
                                                p_profile->closest_cm);
     float const left_offset  = OBSTACLE_PATH_HALF_CM - left_cm;
     float const right_offset = OBSTACLE_PATH_HALF_CM + right_cm;
+    float const left_need_cm = rmath_clampf(left_offset,
+                                            OBSTACLE_OFFSET_MIN_CM,
+                                            OBSTACLE_OFFSET_MAX_CM) +
+                               OBSTACLE_CLEARANCE_MARGIN_CM;
+    float const right_need_cm = rmath_clampf(right_offset,
+                                             OBSTACLE_OFFSET_MIN_CM,
+                                             OBSTACLE_OFFSET_MAX_CM) +
+                                OBSTACLE_CLEARANCE_MARGIN_CM;
     bool const  b_left_room  =
-        (p_profile->left_clearance_cm > ULTRASONIC_THRESHOLD_CM);
+        (p_profile->left_clearance_cm > left_need_cm);
     bool const  b_right_room =
-        (p_profile->right_clearance_cm > ULTRASONIC_THRESHOLD_CM);
+        (p_profile->right_clearance_cm > right_need_cm);
     bool        b_go_left;
 
     p_plan->action           = OBSTACLE_ACTION_CONTINUE;

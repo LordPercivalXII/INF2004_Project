@@ -220,7 +220,7 @@
 /* 1 = print every scan's bar/space widths and the decode result. */
 /* 1 = print every bar/space width as it is read (very verbose). */
 #ifndef S3_BARCODE_EDGE_DEBUG
-#define S3_BARCODE_EDGE_DEBUG           (0)
+#define S3_BARCODE_EDGE_DEBUG           (1)
 #endif
 #ifndef S3_BARCODE_DEBUG
 #define S3_BARCODE_DEBUG                (1)

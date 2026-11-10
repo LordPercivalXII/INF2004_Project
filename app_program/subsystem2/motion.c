@@ -543,6 +543,14 @@ motion_task (INT stacd, void * p_exinf)
               ((uint32_t) (now_ms - right_last_tick_ms) >=
                MOTOR_ENCODER_TIMEOUT_MS))))
         {
+            bool const left_stalled =
+                (rmath_absf(left_target) > 0.001f) &&
+                ((uint32_t) (now_ms - left_last_tick_ms) >=
+                 MOTOR_ENCODER_TIMEOUT_MS);
+            bool const right_stalled =
+                (rmath_absf(right_target) > 0.001f) &&
+                ((uint32_t) (now_ms - right_last_tick_ms) >=
+                 MOTOR_ENCODER_TIMEOUT_MS);
             requested.type = MOTION_BRAKE;
             active_turn_id = 0U;
             completed_turn_id = 0U;
@@ -550,6 +558,16 @@ motion_task (INT stacd, void * p_exinf)
             encoder_fault_pending = true;
             motion_pid_reset(&left_pid);
             motion_pid_reset(&right_pid);
+            tm_printf((UB *) "S2: encoder stall L=%u R=%u target=%d/%d "
+                      "speed=%d/%d ages=%u/%u ms\n",
+                      (unsigned int) left_stalled,
+                      (unsigned int) right_stalled,
+                      (int) (left_target * 1000.0f),
+                      (int) (right_target * 1000.0f),
+                      (int) (left_speed * 1000.0f),
+                      (int) (right_speed * 1000.0f),
+                      (unsigned int) (now_ms - left_last_tick_ms),
+                      (unsigned int) (now_ms - right_last_tick_ms));
         }
 
         if (encoder_fault_pending)
@@ -558,6 +576,7 @@ motion_task (INT stacd, void * p_exinf)
 
             fault.type         = SYSTEM_EVENT_FAULT;
             fault.timestamp_ms = now_ms;
+            fault.fault_code   = SYSTEM_FAULT_ENCODER_STALL;
             if (controller_post_event(&fault))
             {
                 encoder_fault_pending = false;

@@ -35,7 +35,7 @@
 #define CTRL_LOST_FIRST_MS      (1300U)  /* arc towards last side this long */
 #define CTRL_LOST_SWEEP_MS      (1000U) /* then alternate sides every this long */
 #define CTRL_LOST_GIVEUP_MS     (10000U) /* stop searching after this       */
-#define CTRL_WHEEL_MIN          (0.04f) /* m/s: slowest wheel that turns   */
+#define CTRL_WHEEL_MIN          (0.08f) /* m/s: keep the inner wheel moving */
 #define CTRL_WHEEL_ZERO         (0.03f) /* below this the wheel is stopped */
 #define CTRL_SLEW_PER_CYCLE     (0.02f) /* max wheel target change / 10 ms */
 #define CTRL_LOST_SIDE_LEVEL    (0.20f) /* |error| that counts as a side  */
@@ -1148,7 +1148,9 @@ ctrl_handle_event (ctrl_state_t * p_ctrl, system_event_t const * p_event)
             }
             else
             {
-                ctrl_enter_fault(p_ctrl, FAULT_EXTERNAL);
+                ctrl_enter_fault(p_ctrl,
+                                 (0U != p_event->fault_code)
+                                 ? p_event->fault_code : FAULT_EXTERNAL);
             }
             break;
 
@@ -1227,6 +1229,7 @@ ctrl_step_avoidance (ctrl_state_t * p_ctrl, uint32_t now_ms)
         input.now_ms          = now_ms;
         input.distance_m      = p_ctrl->distance_m;
         input.heading_deg     = p_ctrl->heading_deg;
+        input.line_error      = p_ctrl->line_error;
         input.b_line_detected = p_ctrl->b_line_detected;
         input.b_turn_done     = !p_ctrl->b_turn_in_progress;
 
@@ -1404,6 +1407,10 @@ controller_task (INT stacd, void * p_exinf)
         /* Auto-resume after a recoverable fault once the IMU is healthy. */
         if ((MISSION_FAULT == ctrl.state) && ctrl.b_imu_healthy &&
             (FAULT_MOTION_COMMAND != ctrl.fault_code) &&
+            (SYSTEM_FAULT_ENCODER_STALL != ctrl.fault_code) &&
+            (FAULT_EXTERNAL != ctrl.fault_code) &&
+            (FAULT_BOXED_IN != ctrl.fault_code) &&
+            (FAULT_REACQUIRE != ctrl.fault_code) &&
             ((board_millis() - ctrl.fault_since_ms) >= CTRL_FAULT_RETRY_MS))
         {
             ctrl.fault_code        = 0U;
