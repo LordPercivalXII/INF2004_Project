@@ -1,4 +1,3 @@
-
 const $ = (id) => document.getElementById(id);
 
 let brokerConnected = false;
@@ -481,8 +480,11 @@ async function poll() {
     $("travelled").textContent =
       `${number(t.distance, 2)} m`;
 
+    // Display decoded ASCII barcode characters from the firmware.
     $("barcode").textContent =
-      t.barcode ?? "--";
+      hasNumber(t.barcode) && t.barcode >= 33 && t.barcode < 127
+        ? String.fromCharCode(t.barcode)
+        : "--";
 
     $("fault").textContent =
       t.fault ?? "--";

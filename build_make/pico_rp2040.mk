@@ -107,7 +107,7 @@ endif
 # with a robot that will physically move after boot.
 AUTO_START_MS ?= 0
 S3_LINE_DEBUG ?= 0
-BASE_SPEED ?= 0.35
+BASE_SPEED ?= 0.15
 ifneq ($(filter $(S3_LINE_DEBUG),0 1),$(S3_LINE_DEBUG))
 $(error Unknown S3_LINE_DEBUG '$(S3_LINE_DEBUG)'; use 0 or 1)
 endif

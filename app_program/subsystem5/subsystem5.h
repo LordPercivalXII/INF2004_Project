@@ -1,23 +1,22 @@
 /** @file subsystem5.h
  *
- * @brief Subsystem 5 -- Buddy 5: ultrasonic obstacle scanner on a servo.
- *        Student ID: <student ID>.  Port of src/buddy5_obstacle/.
+ * @brief Subsystem 5 -- Buddy 5: adaptive servo ultrasonic scanning and
+ *        obstacle profiling.  Student ID: <student ID>.
  *
- * While driving, the sensor looks the way the car is turning (straight
- * ahead on a straight); 3 readings in a row within 25 cm ahead post
- * OBSTACLE_ACTION_STOP at once, because
- * a sweep takes too long at driving speed.  Once stopped: coarse scan at
- * 60/75/90/105/120 deg, then a 5 deg fine scan around any hit; builds an
- * obstacle profile (location, width, closest point, clearances), decides
- * what to do (stage 4) and posts SYSTEM_EVENT_OBSTACLE after every scan
- * (IF-01).  avoidance.c holds the manoeuvre and line recovery (stage 5); the
- * controller runs it, because the controller owns the motors.
+ * Driving: the sensor looks straight ahead; 3 close readings in a row
+ * (20 cm) post OBSTACLE_ACTION_STOP.  Stopped: coarse scan (stage 1),
+ * fine scan over the obstacle (stage 2), obstacle profile (stage 3) and
+ * decision (stage 4), posted as SYSTEM_EVENT_OBSTACLE (IF-01).  The
+ * controller, which owns the motors, then runs avoidance.c: the bypass
+ * and the line recovery (stage 5), and hands back to line following.
  *
- * While going round the obstacle the controller points the scanner with
- * obstacle_set_look(): held toward the obstacle's side, each reading is
- * posted with b_side_reading so avoidance can measure its thickness.
+ * Files:
+ *   obstacle.c           the task: driving watch, scans, events
+ *   obstacle_geometry.c  stages 1-4 as pure functions
+ *   avoidance.c          the bypass and line recovery
+ *   drv_servo.c, drv_ultrasonic.c  the hardware
  *
- * Owns: GP15 (PWM slice 7), GP16, GP17.
+ * Owns: GP15 (servo PWM, slice 7), GP16 (echo), GP17 (trigger).
  */
 
 #ifndef SUBSYSTEM5_H
@@ -30,13 +29,12 @@
 
 #define S5_PRI_OBSTACLE     (18)    /* band 18-19 (TEAM.md) */
 
-/* Controller -> S5: where to point the scanner while avoiding (only read
- * while SYSTEM_BIT_OBSTACLE is set). */
+/* Controller -> S5: where to point the scanner while avoiding (read only
+ * while SYSTEM_BIT_OBSTACLE is set): scan while stopped, else ahead. */
 void   obstacle_set_look(avoid_look_t look);
 
-/* Controller -> S5: which way the car is turning while it follows the
- * line, -1 (hard left) .. +1 (hard right), 0 straight.  The sensor looks
- * up to 30 deg that way, so it sees what is round a curve sooner. */
+/* Controller -> S5: which way the car is turning.  Kept so controller.c
+ * need not change; this version always looks straight ahead. */
 void   obstacle_set_lead(float lead);
 
 /* Private to subsystem 5: echo widths from the interrupt to the task. */

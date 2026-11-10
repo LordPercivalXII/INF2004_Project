@@ -73,7 +73,7 @@ barcode_edge_isr (uint32_t pin, uint32_t events)
 bool
 barcode_sensor_init (void)
 {
-    board_gpio_input(PIN_IR_BARCODE, BOARD_PULL_NONE);
+    board_gpio_input(PIN_IR_BARCODE, BOARD_PULL_UP);
     g_level_black  = barcode_sensor_is_black();
     g_last_edge_us = board_micros();
 

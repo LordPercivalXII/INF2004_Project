@@ -89,6 +89,9 @@
 #define LWIP_STATS                  0
 #define LWIP_STATS_DISPLAY          0
 
+/* Default 256 B is too small for the telemetry JSON (~600 B). */
+#define MQTT_OUTPUT_RINGBUF_SIZE    1024
+
 #define LWIP_DEBUG                  0
 
 #endif /* LWIP_LWIPOPTS_H */

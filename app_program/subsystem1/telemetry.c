@@ -459,16 +459,21 @@ static void telemetry_print(telemetry_message_t const *p_msg)
 uint32_t mqtt_utk_telemetry_read(char *buffer, uint32_t buffer_size)
 {
     telemetry_message_t message;
+
     char speed[S1_FIXED_TEXT_MAX];
     char error[S1_FIXED_TEXT_MAX];
     char dist[S1_FIXED_TEXT_MAX];
     char hump[S1_FIXED_TEXT_MAX];
     char obst[S1_FIXED_TEXT_MAX];
+
+    char roll[S1_FIXED_TEXT_MAX];
     char pitch[S1_FIXED_TEXT_MAX];
     char rise[S1_FIXED_TEXT_MAX];
     char peak[S1_FIXED_TEXT_MAX];
+
     int len;
 
+    /* Validate the output buffer and MQTT message buffer. */
     if ((buffer == NULL) ||
         (buffer_size < TELEMETRY_LINE_MAX) ||
         (gh_mqtt_telemetry_mbf <= 0))
@@ -476,35 +481,66 @@ uint32_t mqtt_utk_telemetry_read(char *buffer, uint32_t buffer_size)
         return 0U;
     }
 
+    /* Retrieve the latest telemetry snapshot without blocking. */
     if (tk_rcv_mbf(gh_mqtt_telemetry_mbf, &message, TMO_POL) <= 0)
     {
         return 0U;
     }
 
-    telemetry_format_fixed(speed, message.speed_m_s, 3U);
-    telemetry_format_fixed(error, message.line_error, 3U);
-    telemetry_format_fixed(dist, message.distance_m, 3U);
-    telemetry_format_fixed(hump, message.hump_height_m, 3U);
-    telemetry_format_fixed(obst, message.obstacle_distance_cm, 1U);
+    /* Basic robot telemetry. */
+    telemetry_format_fixed(
+        speed, message.speed_m_s, 3U);
 
-    telemetry_trace_fixed(pitch, message.imu.tilt_pitch_deg);
-    telemetry_trace_fixed(rise, message.imu.terrain_rise_m);
-    telemetry_trace_fixed(peak, message.imu.terrain_peak_m);
+    telemetry_format_fixed(
+        error, message.line_error, 3U);
 
+    telemetry_format_fixed(
+        dist, message.distance_m, 3U);
+
+    telemetry_format_fixed(
+        hump, message.hump_height_m, 3U);
+
+    telemetry_format_fixed(
+        obst, message.obstacle_distance_cm, 1U);
+
+    /* IMU orientation and ramp measurements. */
+    telemetry_trace_fixed(
+        roll, message.imu.tilt_roll_deg);
+
+    telemetry_trace_fixed(
+        pitch, message.imu.tilt_pitch_deg);
+
+    telemetry_trace_fixed(
+        rise, message.imu.terrain_rise_m);
+
+    telemetry_trace_fixed(
+        peak, message.imu.terrain_peak_m);
+
+    /* Format the complete MQTT telemetry payload. */
     len = tm_sprintf(
         (UB *)buffer,
-        (UB *)"{\"t_ms\":%u,\"mission\":%u,\"speed\":%s,"
-              "\"line\":%s,\"distance\":%s,\"hump_m\":%s,"
-              "\"obstacle_cm\":%s,\"barcode\":%u,\"fault\":%u,"
-              "\"pitch_deg\":%s,\"rise_m\":%s,"
-              "\"terrain_peak_m\":%s,"
-              "\"imu_valid\":%u,\"imu_calibrated\":%u,"
-              "\"tilt_valid\":%u,"
+        (UB *)"{\"t_ms\":%u,"
+              "\"mission\":%u,"
+              "\"speed\":%s,"
+              "\"line\":%s,"
+              "\"distance\":%s,"
+              "\"hump_m\":%s,"
+              "\"obstacle_cm\":%s,"
+              "\"barcode\":%u,"
+              "\"fault\":%u,"
+              "\"imu_valid\":%u,"
+              "\"imu_calibrated\":%u,"
               "\"motion\":%u,"
-              "\"hump_active\":%u,\"hump_valid\":%u,"
+              "\"roll_deg\":%s,"
+              "\"pitch_deg\":%s,"
+              "\"tilt_valid\":%u,"
+              "\"hump_active\":%u,"
+              "\"hump_valid\":%u,"
               "\"hump_count\":%u,"
-              "\"height_tracking_valid\":%u,"
               "\"height_approx\":%u,"
+              "\"rise_m\":%s,"
+              "\"terrain_peak_m\":%s,"
+              "\"height_tracking_valid\":%u,"
               "\"height_gap_pending\":%u}",
         (unsigned int)message.timestamp_ms,
         (unsigned int)message.mission_state,
@@ -515,71 +551,28 @@ uint32_t mqtt_utk_telemetry_read(char *buffer, uint32_t buffer_size)
         obst,
         (unsigned int)message.last_barcode,
         (unsigned int)message.fault_code,
-        pitch,
-        rise,
-        peak,
         (unsigned int)message.imu.b_sensor_valid,
         (unsigned int)message.imu.b_calibrated,
-        (unsigned int)message.imu.b_tilt_valid,
         (unsigned int)message.imu.motion_state,
+        roll,
+        pitch,
+        (unsigned int)message.imu.b_tilt_valid,
         (unsigned int)message.imu.b_hump_active,
         (unsigned int)message.imu.b_hump_height_valid,
         (unsigned int)message.imu.hump_count,
-        (unsigned int)message.imu.b_height_tracking_valid,
         (unsigned int)message.imu.b_height_approximate,
+        rise,
+        peak,
+        (unsigned int)message.imu.b_height_tracking_valid,
         (unsigned int)message.imu.b_height_gap_pending);
 
+    /* Prevent reporting an invalid or oversized payload. */
     if ((len <= 0) || ((uint32_t)len >= buffer_size))
     {
         return 0U;
     }
 
     return (uint32_t)len;
-}
-
-{
-    telemetry_message_t message;
-    char speed[S1_FIXED_TEXT_MAX];
-    char error[S1_FIXED_TEXT_MAX];
-    char dist[S1_FIXED_TEXT_MAX];
-    char hump[S1_FIXED_TEXT_MAX];
-    char obst[S1_FIXED_TEXT_MAX];
-    int len;
-
-    if ((buffer == NULL) ||
-        (buffer_size < TELEMETRY_LINE_MAX) ||
-        (gh_mqtt_telemetry_mbf <= 0))
-    {
-        return 0U;
-    }
-
-    if (tk_rcv_mbf(gh_mqtt_telemetry_mbf, &message, TMO_POL) <= 0)
-    {
-        return 0U;
-    }
-
-    telemetry_format_fixed(speed, message.speed_m_s, 3U);
-    telemetry_format_fixed(error, message.line_error, 3U);
-    telemetry_format_fixed(dist, message.distance_m, 3U);
-    telemetry_format_fixed(hump, message.hump_height_m, 3U);
-    telemetry_format_fixed(obst, message.obstacle_distance_cm, 1U);
-
-    len = tm_sprintf(
-        (UB *)buffer,
-        (UB *)"{\"t_ms\":%u,\"mission\":%u,\"speed\":%s,"
-              "\"line\":%s,\"distance\":%s,\"hump_m\":%s,"
-              "\"obstacle_cm\":%s,\"barcode\":%u,\"fault\":%u}",
-        (unsigned int)message.timestamp_ms,
-        (unsigned int)message.mission_state,
-        speed,
-        error,
-        dist,
-        hump,
-        obst,
-        (unsigned int)message.last_barcode,
-        (unsigned int)message.fault_code);
-
-    return (len > 0) ? (uint32_t)len : 0U;
 }
 
 /*!

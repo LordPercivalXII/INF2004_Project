@@ -37,6 +37,13 @@ typedef struct
 
 static barcode_result_t g_result;
 static bool             gb_result_ready = false;
+static volatile bool    gb_scan_active = false;
+
+bool
+barcode_scan_active (void)
+{
+    return (gb_scan_active);
+}
 
 /* ------------------------------------------------------------------ */
 /* One-slot result shared with line_task                               */
@@ -100,6 +107,7 @@ barcode_session_reset (barcode_session_t * p_session)
     p_session->burst_other_us = 0U;
     p_session->b_tried    = false;
     p_session->b_isr_overflow = false;
+    gb_scan_active = false;
 }
 
 static void
@@ -286,6 +294,7 @@ barcode_session_add (barcode_session_t * p_session,
             (p_element->width_us >= BARCODE_GLITCH_US))
         {
             p_session->b_active     = true;
+            gb_scan_active          = true;
             p_session->pending      = *p_element;
             p_session->last_edge_us = p_element->end_us;
             p_session->widest_us    = p_element->width_us;

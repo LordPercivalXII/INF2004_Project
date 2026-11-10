@@ -1,34 +1,52 @@
 /** @file obstacle_geometry.c
  *
- * @brief Scan bookkeeping and the obstacle profile: location, width,
- *        closest point, clearances, bypass side.
- *        Pure functions (unit-tested in subsystem5_test.c).
+ * @brief Buddy 5 stages 1-4 as pure functions (see obstacle_profile.h).
  *
- * Angles in the profile are relative to straight ahead: negative = left,
- * positive = right.  Servo angles below 90 deg point left.
+ * Stage 1  coarse scan: 5 angles, 60..120 deg (obstacle.c takes them).
+ * Stage 2  fine scan: obstacle_fine_range() says where the coarse scan
+ *          hit something; obstacle.c rescans there in 5 deg steps.
+ * Stage 3  obstacle_profile_build(): location, width, closest point and
+ *          the clearance on each side.
+ * Stage 4  obstacle_plan_build(): continue, turn left, turn right, or
+ *          reverse and try again.  STOP comes from obstacle_watch_update()
+ *          while driving, before there is a profile.
  */
 
 #include "obstacle_profile.h"
 #include "../common/robot_config.h"
 #include "../common/rmath.h"
 
+/* Driving: this close straight ahead, OBSTACLE_STOP_READINGS times in a
+ * row, stops the car.  The car rolls a few cm further before it stops. */
+#define OBSTACLE_STOP_CM        (20.0f)
+#define OBSTACLE_STOP_READINGS  (3U)
+
+/* Scanning: the nearest reading must be this close to count as an
+ * obstacle (a little more than the stop distance plus one back-up). */
+#define OBSTACLE_DETECT_CM      (40.0f)
+
+/* Readings up to this far behind the nearest one are the same obstacle,
+ * so a reading that wobbles by a cm cannot split it in two. */
+#define OBSTACLE_BAND_CM        (10.0f)
+
+/* The car's path: half its 13 cm width plus 3 cm each side. */
+#define OBSTACLE_PATH_HALF_CM   (9.5f)
+
+/* Closer than this the car backs up before deciding: turning on the spot
+ * swings the front corners out about as far as the nose. */
+#define OBSTACLE_TOO_CLOSE_CM   (15.0f)
+
+#define OBSTACLE_OFFSET_MIN_CM  (10.0f)
+#define OBSTACLE_OFFSET_MAX_CM  (30.0f) /* stays on the track mat */
+
+/* The beam is about 15 deg wide, so it starts to see an edge half a beam
+ * before pointing at it; each reading covers half a step either side. */
 #define OBSTACLE_HALF_STEP_DEG  ((float) ULTRASONIC_FINE_STEP_DEG * 0.5f)
 #define OBSTACLE_HALF_BEAM_DEG  ((float) ULTRASONIC_BEAM_WIDTH_DEG * 0.5f)
-#define OBSTACLE_PATH_HALF_CM   (10.5f) /* half the car (7.5) + 3 margin */
-#define OBSTACLE_TOO_CLOSE_CM   (12.0f) /* no room to spin */
-#define OBSTACLE_STOP_CM        (25.0f) /* car still rolls after the check */
-#define OBSTACLE_STOP_READINGS  (3U)    /* close readings in a row */
-#define OBSTACLE_ROOMY_CM       (50.0f)
-#define OBSTACLE_OFFSET_MIN_CM  (10.0f)
-#define OBSTACLE_OFFSET_MAX_CM  (30.0f) /* stays on the tile mat */
-#define OBSTACLE_LEAD_STEP_DEG  (5U)    /* look-into-turn aiming steps */
 
-static bool
-obstacle_is_hit (obstacle_point_t const * p_point)
-{
-    return (p_point->distance_cm <= ULTRASONIC_THRESHOLD_CM);
-}
-
+/*!
+ * @brief Servo angle to angle from straight ahead (- left, + right).
+ */
 static float
 obstacle_relative_deg (uint32_t angle_deg)
 {
@@ -36,7 +54,7 @@ obstacle_relative_deg (uint32_t angle_deg)
 }
 
 /*!
- * @brief Sideways offset of a point: distance * sin(relative angle).
+ * @brief Sideways distance of a point at this angle and distance.
  */
 static float
 obstacle_lateral_cm (float relative_deg, float distance_cm)
@@ -45,16 +63,16 @@ obstacle_lateral_cm (float relative_deg, float distance_cm)
 }
 
 /*!
- * @brief Nearest reading among points[first..last].
+ * @brief Nearest reading among points [from, to].
  */
 static float
-obstacle_nearest_cm (obstacle_scan_t const * p_scan, uint32_t first,
-                     uint32_t last)
+obstacle_nearest_cm (obstacle_scan_t const * p_scan, uint32_t from,
+                     uint32_t to)
 {
     float    nearest = ULTRASONIC_MAX_DISTANCE_CM;
     uint32_t idx;
 
-    for (idx = first; idx <= last; idx++)
+    for (idx = from; idx <= to; idx++)
     {
         nearest = rmath_minf(nearest, p_scan->points[idx].distance_cm);
     }
@@ -70,7 +88,8 @@ obstacle_scan_reset (obstacle_scan_t * p_scan)
 
 /*!
  * @brief Add one reading, keeping the points in angle order.  A second
- *        reading at the same angle replaces the first.
+ *        reading at the same angle replaces the first (the fine scan
+ *        replaces the coarse reading there).
  */
 void
 obstacle_scan_add (obstacle_scan_t * p_scan, uint32_t angle_deg,
@@ -107,57 +126,100 @@ obstacle_scan_add (obstacle_scan_t * p_scan, uint32_t angle_deg,
 }
 
 /*!
- * @brief Build the obstacle profile from one scan.
+ * @brief Stage 2: where to fine-scan.  The region runs from one coarse
+ *        step before the first hit to one step after the last, inside
+ *        the servo's limits.
  *
- * The obstacle is the unbroken run of hits around the nearest hit.  Each
- * side's clearance is the nearest reading beside that run; if the run
- * reaches the end of the scan, that side cannot be seen and counts as
- * blocked (0).  The beam sees an edge half a beam width early, so the
- * run is trimmed by that much on each side before measuring the width.
+ * @return false if the coarse scan hit nothing (no fine scan needed).
+ */
+bool
+obstacle_fine_range (obstacle_scan_t const * p_coarse, uint32_t * p_from_deg,
+                     uint32_t * p_to_deg)
+{
+    uint32_t first = ULTRASONIC_COARSE_RIGHT_DEG;
+    uint32_t last  = ULTRASONIC_COARSE_LEFT_DEG;
+    bool     b_hit = false;
+    uint32_t idx;
+
+    for (idx = 0U; idx < p_coarse->count; idx++)
+    {
+        if (p_coarse->points[idx].distance_cm <= OBSTACLE_DETECT_CM)
+        {
+            first = (p_coarse->points[idx].angle_deg < first)
+                    ? p_coarse->points[idx].angle_deg : first;
+            last  = (p_coarse->points[idx].angle_deg > last)
+                    ? p_coarse->points[idx].angle_deg : last;
+            b_hit = true;
+        }
+    }
+
+    if (b_hit)
+    {
+        *p_from_deg = (first >= (ULTRASONIC_COARSE_LEFT_DEG +
+                                 ULTRASONIC_FINE_MARGIN_DEG))
+                      ? (first - ULTRASONIC_FINE_MARGIN_DEG)
+                      : ULTRASONIC_COARSE_LEFT_DEG;
+        *p_to_deg   = ((last + ULTRASONIC_FINE_MARGIN_DEG) <=
+                       ULTRASONIC_COARSE_RIGHT_DEG)
+                      ? (last + ULTRASONIC_FINE_MARGIN_DEG)
+                      : ULTRASONIC_COARSE_RIGHT_DEG;
+    }
+
+    return (b_hit);
+}
+
+/*!
+ * @brief Stage 3: the obstacle profile from one scan.
+ *
+ * The obstacle is the nearest reading, if it is within OBSTACLE_DETECT_CM,
+ * plus every neighbouring reading within OBSTACLE_BAND_CM of it.  Its
+ * edges are where that run of readings ends; the clearance on each side
+ * is the nearest reading beyond the edge.
  */
 void
 obstacle_profile_build (obstacle_scan_t const * p_scan,
                         obstacle_profile_t * p_profile)
 {
-    uint32_t closest = 0U;
+    uint32_t nearest = 0U;
     uint32_t first;
     uint32_t last;
     uint32_t idx;
+    float    band_cm;
     float    left_edge;
     float    right_edge;
-    float    angle;
 
     *p_profile = (obstacle_profile_t) {0};
     p_profile->closest_cm         = ULTRASONIC_MAX_DISTANCE_CM;
     p_profile->left_clearance_cm  = ULTRASONIC_MAX_DISTANCE_CM;
     p_profile->right_clearance_cm = ULTRASONIC_MAX_DISTANCE_CM;
 
-    for (idx = 0U; idx < p_scan->count; idx++)
+    if (0U == p_scan->count)
     {
-        if (obstacle_is_hit(&p_scan->points[idx]) &&
-            ((!p_profile->b_detected) ||
-             (p_scan->points[idx].distance_cm <
-              p_scan->points[closest].distance_cm)))
+        return;
+    }
+
+    for (idx = 1U; idx < p_scan->count; idx++)
+    {
+        if (p_scan->points[idx].distance_cm <
+            p_scan->points[nearest].distance_cm)
         {
-            closest = idx;
-            p_profile->b_detected = true;
+            nearest = idx;
         }
     }
 
-    if (!p_profile->b_detected)
+    if (p_scan->points[nearest].distance_cm > OBSTACLE_DETECT_CM)
     {
-        /* Nothing in range: each side's clearance is its nearest reading. */
+        /* Nothing close: each side's clearance is its nearest reading. */
         for (idx = 0U; idx < p_scan->count; idx++)
         {
-            angle = obstacle_relative_deg(p_scan->points[idx].angle_deg);
-
-            if (angle < 0.0f)
+            if (obstacle_relative_deg(p_scan->points[idx].angle_deg) < 0.0f)
             {
                 p_profile->left_clearance_cm =
                     rmath_minf(p_profile->left_clearance_cm,
                                p_scan->points[idx].distance_cm);
             }
-            else if (angle > 0.0f)
+            else if (obstacle_relative_deg(p_scan->points[idx].angle_deg) >
+                     0.0f)
             {
                 p_profile->right_clearance_cm =
                     rmath_minf(p_profile->right_clearance_cm,
@@ -168,103 +230,130 @@ obstacle_profile_build (obstacle_scan_t const * p_scan,
                 /* Straight ahead belongs to neither side. */
             }
         }
+
+        return;
     }
-    else
+
+    band_cm = p_scan->points[nearest].distance_cm + OBSTACLE_BAND_CM;
+    first   = nearest;
+    last    = nearest;
+
+    while ((first > 0U) &&
+           (p_scan->points[first - 1U].distance_cm <= band_cm))
     {
-        first = closest;
-        last  = closest;
-
-        while ((first > 0U) && obstacle_is_hit(&p_scan->points[first - 1U]))
-        {
-            first--;
-        }
-
-        while (((last + 1U) < p_scan->count) &&
-               obstacle_is_hit(&p_scan->points[last + 1U]))
-        {
-            last++;
-        }
-
-        p_profile->left_clearance_cm  = (0U == first) ? 0.0f :
-            obstacle_nearest_cm(p_scan, 0U, first - 1U);
-        p_profile->right_clearance_cm = ((last + 1U) == p_scan->count) ? 0.0f :
-            obstacle_nearest_cm(p_scan, last + 1U, p_scan->count - 1U);
-
-        left_edge  = obstacle_relative_deg(p_scan->points[first].angle_deg) -
-                     OBSTACLE_HALF_STEP_DEG + OBSTACLE_HALF_BEAM_DEG;
-        right_edge = obstacle_relative_deg(p_scan->points[last].angle_deg) +
-                     OBSTACLE_HALF_STEP_DEG - OBSTACLE_HALF_BEAM_DEG;
-
-        if (left_edge > right_edge)
-        {
-            /* Narrower than the beam can resolve. */
-            left_edge  = (left_edge + right_edge) * 0.5f;
-            right_edge = left_edge;
-        }
-
-        p_profile->closest_cm        = p_scan->points[closest].distance_cm;
-        p_profile->closest_angle_deg =
-            obstacle_relative_deg(p_scan->points[closest].angle_deg);
-        p_profile->left_edge_deg     = left_edge;
-        p_profile->right_edge_deg    = right_edge;
-        p_profile->center_angle_deg  = (left_edge + right_edge) * 0.5f;
-        p_profile->lateral_offset_cm =
-            obstacle_lateral_cm(p_profile->center_angle_deg,
-                                p_profile->closest_cm);
-        p_profile->width_cm          = rmath_maxf(0.0f,
-            obstacle_lateral_cm(right_edge,
-                                p_scan->points[last].distance_cm) -
-            obstacle_lateral_cm(left_edge,
-                                p_scan->points[first].distance_cm));
+        first--;
     }
+
+    while (((last + 1U) < p_scan->count) &&
+           (p_scan->points[last + 1U].distance_cm <= band_cm))
+    {
+        last++;
+    }
+
+    left_edge  = obstacle_relative_deg(p_scan->points[first].angle_deg) -
+                 OBSTACLE_HALF_STEP_DEG + OBSTACLE_HALF_BEAM_DEG;
+    right_edge = obstacle_relative_deg(p_scan->points[last].angle_deg) +
+                 OBSTACLE_HALF_STEP_DEG - OBSTACLE_HALF_BEAM_DEG;
+
+    if (left_edge > right_edge)
+    {
+        /* Narrower than the beam: a single direction. */
+        left_edge  = (left_edge + right_edge) * 0.5f;
+        right_edge = left_edge;
+    }
+
+    p_profile->b_detected         = true;
+    p_profile->closest_cm         = p_scan->points[nearest].distance_cm;
+    p_profile->closest_angle_deg  =
+        obstacle_relative_deg(p_scan->points[nearest].angle_deg);
+    p_profile->left_edge_deg      = left_edge;
+    p_profile->right_edge_deg     = right_edge;
+    p_profile->center_angle_deg   = (left_edge + right_edge) * 0.5f;
+    p_profile->lateral_offset_cm  =
+        obstacle_lateral_cm(p_profile->center_angle_deg,
+                            p_profile->closest_cm);
+    p_profile->width_cm           =
+        obstacle_lateral_cm(right_edge, p_profile->closest_cm) -
+        obstacle_lateral_cm(left_edge, p_profile->closest_cm);
+    p_profile->left_clearance_cm  = (0U == first) ? 0.0f :
+        obstacle_nearest_cm(p_scan, 0U, first - 1U);
+    p_profile->right_clearance_cm = ((last + 1U) == p_scan->count) ? 0.0f :
+        obstacle_nearest_cm(p_scan, last + 1U, p_scan->count - 1U);
 }
 
 /*!
- * @brief Pick the side to pass on.
+ * @brief Stage 4: decide what to do about a profile.
  *
- * @return -1 = left, +1 = right, 0 = both blocked.
+ * CONTINUE        nothing there, or it is beside the car's path.
+ * REVERSE_RETRY   in the path, and closer than OBSTACLE_TOO_CLOSE_CM, or
+ *                 neither side has room: back up and scan again.
+ * TURN_LEFT/RIGHT in the path: go round the side with room (both: the
+ *                 side that needs the smaller sideways move).  The offset
+ *                 puts the car's path just clear of that edge.
  */
-int8_t
-obstacle_choose_bypass (float left_clearance, float right_clearance)
+void
+obstacle_plan_build (obstacle_profile_t const * p_profile,
+                     obstacle_plan_t * p_plan)
 {
-    bool const b_left_clear  = (left_clearance > ULTRASONIC_THRESHOLD_CM);
-    bool const b_right_clear = (right_clearance > ULTRASONIC_THRESHOLD_CM);
-    int8_t     direction     = 0;
+    float const left_cm  = obstacle_lateral_cm(p_profile->left_edge_deg,
+                                               p_profile->closest_cm);
+    float const right_cm = obstacle_lateral_cm(p_profile->right_edge_deg,
+                                               p_profile->closest_cm);
+    float const left_offset  = OBSTACLE_PATH_HALF_CM - left_cm;
+    float const right_offset = OBSTACLE_PATH_HALF_CM + right_cm;
+    bool const  b_left_room  =
+        (p_profile->left_clearance_cm > ULTRASONIC_THRESHOLD_CM);
+    bool const  b_right_room =
+        (p_profile->right_clearance_cm > ULTRASONIC_THRESHOLD_CM);
+    bool        b_go_left;
 
-    if ((!b_left_clear) && (!b_right_clear))
+    p_plan->action           = OBSTACLE_ACTION_CONTINUE;
+    p_plan->bypass_offset_cm = 0.0f;
+
+    if ((!p_profile->b_detected) || (left_cm >= OBSTACLE_PATH_HALF_CM) ||
+        (right_cm <= -OBSTACLE_PATH_HALF_CM))
     {
-        direction = 0;
-    }
-    else if (!b_left_clear)
-    {
-        direction = 1;
-    }
-    else if (!b_right_clear)
-    {
-        direction = -1;
-    }
-    else
-    {
-        direction = (left_clearance >= right_clearance) ? -1 : 1;
+        return;     /* nothing in the car's path */
     }
 
-    return (direction);
+    if ((p_profile->closest_cm < OBSTACLE_TOO_CLOSE_CM) ||
+        ((!b_left_room) && (!b_right_room)))
+    {
+        p_plan->action = OBSTACLE_ACTION_REVERSE_RETRY;
+        return;
+    }
+
+    b_go_left = b_left_room &&
+                ((!b_right_room) || (left_offset <= right_offset));
+
+    p_plan->action           = b_go_left ? OBSTACLE_ACTION_TURN_LEFT
+                                         : OBSTACLE_ACTION_TURN_RIGHT;
+    p_plan->bypass_offset_cm = rmath_clampf(b_go_left ? left_offset
+                                                      : right_offset,
+                                            OBSTACLE_OFFSET_MIN_CM,
+                                            OBSTACLE_OFFSET_MAX_CM);
 }
 
 /*!
- * @brief Watch the straight-ahead readings while driving.  Several close
- *        readings in a row are needed, so one bad echo cannot stop the car.
+ * @brief While driving: count close readings straight ahead.
  *
- * @param[in,out] p_close_count  Close readings so far; start at 0.
+ * A reading at the sensor's maximum is a missed echo (common at a box's
+ * edge): it says nothing, so it neither counts nor resets the count.  A
+ * real reading further than OBSTACLE_STOP_CM resets it, so one bad close
+ * echo cannot stop the car.
  *
- * @return true when the car should stop.
+ * @return true once OBSTACLE_STOP_READINGS close readings came in a row.
  */
 bool
 obstacle_watch_update (uint32_t * p_close_count, float distance_cm)
 {
     bool b_stop = false;
 
-    if (distance_cm <= OBSTACLE_STOP_CM)
+    if (distance_cm >= ULTRASONIC_MAX_DISTANCE_CM)
+    {
+        /* Missed echo: no news. */
+    }
+    else if (distance_cm <= OBSTACLE_STOP_CM)
     {
         (*p_close_count)++;
 
@@ -283,90 +372,16 @@ obstacle_watch_update (uint32_t * p_close_count, float distance_cm)
 }
 
 /*!
- * @brief Servo angle that looks the way the car is turning.
- *
- * @param[in] lead  -1 (turning hard left) .. +1 (hard right), 0 straight.
- *
- * @return 60..120 deg in OBSTACLE_LEAD_STEP_DEG steps, so small steering
- *         changes do not keep the servo moving.
- */
-uint32_t
-obstacle_lead_angle (float lead)
-{
-    float const half_deg = (float) (ULTRASONIC_COARSE_RIGHT_DEG -
-                                    ULTRASONIC_COARSE_CENTER_DEG);
-    float const steps = (rmath_clampf(lead, -1.0f, 1.0f) * half_deg) /
-                        (float) OBSTACLE_LEAD_STEP_DEG;
-    int32_t const whole = (int32_t) ((steps >= 0.0f) ? (steps + 0.5f)
-                                                     : (steps - 0.5f));
-
-    return ((uint32_t) ((int32_t) ULTRASONIC_COARSE_CENTER_DEG +
-                        (whole * (int32_t) OBSTACLE_LEAD_STEP_DEG)));
-}
-
-/*!
- * @brief How far ahead a reading taken at a servo angle is: the part of
- *        it along the car's heading.  The car is turning that way, so the
- *        reading counts as in its path.
+ * @brief Kept for the controller, which calls it with every motion event.
+ *        This version always looks straight ahead while driving.
  */
 float
-obstacle_ahead_cm (uint32_t angle_deg, float distance_cm)
+obstacle_lead_from_wheels (float left_m_s, float right_m_s)
 {
-    return (distance_cm *
-            rmath_cosf(obstacle_relative_deg(angle_deg) * RMATH_DEG_TO_RAD));
-}
+    (void) left_m_s;
+    (void) right_m_s;
 
-/*!
- * @brief Decide what to do about a profile (stage 4).
- *
- * CONTINUE        nothing there, or it is entirely beside the car's path.
- * REVERSE_RETRY   in the path, and too close to spin or no side is clear.
- * TURN_LEFT/RIGHT in the path with room on that side.
- *
- * STOP is never chosen here: obstacle.c sends it while driving, when
- * obstacle_watch_update() says so, before the profile exists.
- */
-void
-obstacle_plan_build (obstacle_profile_t const * p_profile,
-                     obstacle_plan_t * p_plan)
-{
-    float const left_cm  = obstacle_lateral_cm(p_profile->left_edge_deg,
-                                               p_profile->closest_cm);
-    float const right_cm = obstacle_lateral_cm(p_profile->right_edge_deg,
-                                               p_profile->closest_cm);
-    int8_t      side;
-
-    p_plan->action           = OBSTACLE_ACTION_CONTINUE;
-    p_plan->bypass_offset_cm = 0.0f;
-
-    if (p_profile->b_detected && (left_cm < OBSTACLE_PATH_HALF_CM) &&
-        (right_cm > -OBSTACLE_PATH_HALF_CM))
-    {
-        side = obstacle_choose_bypass(p_profile->left_clearance_cm,
-                                      p_profile->right_clearance_cm);
-
-        /* Plenty of room both ways: take the shorter way round, which
-           strays least from the line. */
-        if ((p_profile->left_clearance_cm >= OBSTACLE_ROOMY_CM) &&
-            (p_profile->right_clearance_cm >= OBSTACLE_ROOMY_CM))
-        {
-            side = ((-left_cm) <= right_cm) ? -1 : 1;
-        }
-
-        if ((0 == side) || (p_profile->closest_cm < OBSTACLE_TOO_CLOSE_CM))
-        {
-            p_plan->action = OBSTACLE_ACTION_REVERSE_RETRY;
-        }
-        else
-        {
-            p_plan->action = (side < 0) ? OBSTACLE_ACTION_TURN_LEFT
-                                        : OBSTACLE_ACTION_TURN_RIGHT;
-            p_plan->bypass_offset_cm =
-                rmath_clampf(((side < 0) ? -left_cm : right_cm) +
-                             OBSTACLE_PATH_HALF_CM,
-                             OBSTACLE_OFFSET_MIN_CM, OBSTACLE_OFFSET_MAX_CM);
-        }
-    }
+    return (0.0f);
 }
 
 /*** end of file ***/

@@ -423,6 +423,7 @@ line_publish (line_ctx_t * p_ctx, float error, bool b_detected,
     event.timestamp_ms              = now_ms;
     event.data.line.line_error      = error;
     event.data.line.b_line_detected = b_detected;
+    event.data.line.b_barcode_scanning = barcode_scan_active();
 
     if (barcode_result_take(&result))
     {
