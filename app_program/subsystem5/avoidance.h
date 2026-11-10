@@ -1,41 +1,41 @@
 /** @file avoidance.h
  *
- * @brief Avoidance manoeuvre and line recovery (stages 4 and 5): a state
- *        machine run by the controller, which owns the motors.  Pure
- *        logic: no kernel calls, so it can be tested without hardware.
+ * @brief Buddy 5 stage 4 (acting on the decision) and stage 5 (line
+ *        recovery): a state machine the controller runs, because the
+ *        controller owns the motors.  Pure logic, no kernel calls, so it
+ *        is unit-tested on the PC.
  *
- * Sequence (d = bypass side):
- *   stop -> wait for a fresh complete scan -> act on its decision:
- *     CONTINUE       back to line following
- *     REVERSE_RETRY  back up, scan again (limited number of attempts)
- *     TURN_LEFT/RIGHT
- *       turn 45 deg toward d, drive out until the car is the planned
- *       distance to the side, turn back to the original heading, drive
- *       past while the sensor watches the obstacle's side (this measures
- *       its thickness) until the axle is past it, turn 70 deg toward the
- *       line (steep, to rejoin it soon after the obstacle), drive until a
- *       tape-width black run is crossed, drive the wheels over the line,
- *       turn back to the original heading until a sensor finds the line,
- *       then follow it a short way to confirm before handing control back.
- *     If the search fails: turn a full circle on the spot looking for it.
+ * Sequence (side = the way round, d = the planned sideways offset):
  *
- * Heading and position come from the wheel encoders.  Every turn aims at
- * a heading measured from where the car first stopped, so a short or long
- * turn is corrected by the next one, and the car knows how far it is from
- * the line it left.  The bypass assumes the line stays roughly straight
- * past the obstacle.
+ *   WAIT_SCAN      stopped; wait for a complete scan taken after the stop
+ *     CONTINUE       -> done: back to line following
+ *     REVERSE_RETRY  -> REVERSE 10 cm, then WAIT_SCAN again (3 at most,
+ *                       then give up: boxed in)
+ *     TURN_LEFT/RIGHT:
+ *   REVERSE        only if the way out would not clear the obstacle:
+ *                  back up just enough
+ *   TURN_OUT       60 deg toward the side
+ *   LEG_OUT        drive until the car is d to the side
+ *   TURN_PARALLEL  back to the original heading
+ *   LEG_PAST       drive past: the obstacle's front, an assumed depth
+ *                  and the car's length
+ *   TURN_IN        45 deg back toward the line
+ *   SEARCH         drive until the sensors cross the line (tape width)
+ *   ADVANCE        bring the wheels over the line
+ *   ALIGN          turn back past the original heading until a sensor
+ *                  is on the line
+ *   VERIFY         the controller follows the line a short way; then done
+ *                  (something within 20 cm ahead: a new obstacle, so
+ *                  stop and go back to WAIT_SCAN)
+ *   SWEEP          if the line is not found: turn a full circle looking
+ *                  for it (twice at most, then give up: no line)
  *
- * Motion goes through subsystem 2: straight moves at its tested speed,
- * rotations as its closed-loop MOTION_TURN.  A turn ends when the heading
- * gets there or subsystem 2 reports it complete, whichever comes first.
+ * Heading and position come from the wheel encoders, measured from where
+ * the car stopped, so the car knows how far it is from the line it left.
+ * Every turn aims at a heading, so a short turn is made up by the next.
  *
- * The scanner looks at the obstacle's side only while driving past it,
- * until its rear edge is found; the rest of the time it looks ahead.
- * Anything close ahead while driving stops the car (BLOCKED) until the
- * way is clear, then the interrupted step carries on.  If it is still
- * there after a second while driving past, it is a second obstacle: past
- * the first one already, the car turns in to the line; otherwise it scans
- * and goes round it further out on the same side.
+ * Safety: while driving forward the sensor looks straight ahead; anything
+ * within 10 cm stops the car and ends the manoeuvre (blocked).
  */
 
 #ifndef AVOIDANCE_H
@@ -60,38 +60,35 @@ typedef enum
     AVOID_PHASE_ADVANCE,
     AVOID_PHASE_ALIGN,
     AVOID_PHASE_SWEEP,
-    AVOID_PHASE_VERIFY,
-    AVOID_PHASE_BLOCKED     /* stopped: something close ahead */
+    AVOID_PHASE_VERIFY
 } avoid_phase_t;
 
-/* A side reading at or below this is the obstacle beside the car. */
-#define AVOID_SIDE_SEEN_CM  (50.0f)
-
+/* The controller prints these, in this order. */
 typedef enum
 {
     AVOID_RUNNING = 0,
-    AVOID_DONE,             /* back on the line, or the path is clear */
-    AVOID_FAILED_BOXED_IN,  /* out of reverse attempts                */
-    AVOID_FAILED_NO_LINE,   /* search and sweeps found nothing        */
-    AVOID_FAILED_TIMEOUT,   /* a scan or manoeuvre never finished     */
-    AVOID_FAILED_BLOCKED    /* something ahead never cleared          */
+    AVOID_DONE,             /* back on the line, or nothing in the way */
+    AVOID_FAILED_BOXED_IN,  /* out of reverse attempts                 */
+    AVOID_FAILED_NO_LINE,   /* search and sweeps found nothing         */
+    AVOID_FAILED_TIMEOUT,   /* a scan or a move never finished         */
+    AVOID_FAILED_BLOCKED    /* something close ahead while driving     */
 } avoid_status_t;
 
 typedef enum
 {
-    AVOID_OUT_NONE = 0,     /* keep the last command                  */
+    AVOID_OUT_NONE = 0,     /* keep the last command                   */
     AVOID_OUT_STOP,
-    AVOID_OUT_DRIVE,        /* left_speed, right_speed                */
-    AVOID_OUT_TURN          /* turn_deg, + = left, as MOTION_TURN     */
+    AVOID_OUT_DRIVE,        /* left_speed, right_speed                 */
+    AVOID_OUT_TURN          /* turn_deg, + = left, as MOTION_TURN      */
 } avoid_output_type_t;
 
-/* Where the scanner should point (see obstacle_set_look()). */
+/* Where the scanner should point (obstacle_set_look()). */
 typedef enum
 {
-    AVOID_LOOK_SCAN = 0,    /* full coarse + fine scans               */
-    AVOID_LOOK_LEFT,        /* left limit, with glances ahead         */
-    AVOID_LOOK_RIGHT,       /* right limit, with glances ahead        */
-    AVOID_LOOK_AHEAD        /* hold straight ahead                    */
+    AVOID_LOOK_SCAN = 0,    /* stopped: full coarse + fine scans       */
+    AVOID_LOOK_LEFT,        /* not used by this version                */
+    AVOID_LOOK_RIGHT,       /* not used by this version                */
+    AVOID_LOOK_AHEAD        /* moving: straight ahead, one at a time   */
 } avoid_look_t;
 
 typedef struct
@@ -115,62 +112,54 @@ typedef struct
 {
     avoid_phase_t     phase;
     uint32_t          phase_start_ms;
-    uint32_t          white_since_ms;
     float             phase_start_m;
-    float             black_start_m;
-    float             reverse_end_m;    /* odometer at the last reverse */
-    float             turn_target_deg;  /* heading the turn aims at,
-                                           relative to heading0_deg */
-    uint32_t          black_samples;
-    uint32_t          reverse_count;
-    uint32_t          sweep_count;
-    int8_t            direction;    /* -1 left, +1 right */
-    bool              b_in_black;
-    bool              b_entered;    /* phase's command was issued */
-    bool              b_decision;   /* a fresh scan result is waiting */
+    bool              b_entered;        /* phase's command was issued  */
+
+    /* The scan's decision. */
+    bool              b_decision;
     obstacle_action_t decision;
     float             decision_offset_cm;
     float             decision_closest_cm;
-    float             out_deg;      /* turn-out angle: 45, or 70 when the
-                                       car must go further sideways than
-                                       the obstacle is ahead */
+    int8_t            direction;        /* -1 left, +1 right           */
 
-    /* Position since the decision: along = the original heading, lateral
-     * = + toward the bypass side.  The sensor started at (0, 0) and the
-     * obstacle's front face is at along = decision_closest_cm. */
+    /* Backing up: how far, and what comes after. */
+    float             reverse_cm;
+    avoid_phase_t     after_reverse;
+    uint32_t          reverse_count;
+    float             reverse_end_m;    /* odometer after the last one */
+
+    /* Position since the decision, from the encoders: along = the
+     * original heading, lateral = + toward the bypass side.  The sensor
+     * started at (0, 0); the obstacle's front is at decision_closest_cm. */
     float             heading0_deg;
     float             last_m;
     float             along_cm;
     float             lateral_cm;
+    float             turn_target_deg;  /* relative to heading0_deg    */
 
-    /* Side readings while passing the obstacle. */
-    bool              b_side_fresh;
-    float             side_cm;
-    bool              b_side_seen;      /* the obstacle's side was seen */
-    bool              b_rear_found;     /* ...and then the sensor passed it */
-    bool              b_rear_bounded;   /* side never seen: rear_along_cm
-                                           and thickness_cm are maximums */
-    uint32_t          side_gap_count;   /* far readings since the last hit */
-    float             rear_along_cm;    /* furthest hit along the heading */
-    float             thickness_cm;     /* 0 until the rear edge is found */
+    /* Line recovery. */
+    bool              b_in_black;
+    float             black_start_m;
+    uint32_t          black_samples;
+    uint32_t          white_since_ms;
+    uint32_t          sweep_count;
 
-    /* Straight-ahead readings: stop for anything close while driving. */
+    /* Latest straight-ahead reading while moving. */
     bool              b_ahead_fresh;
+    bool              b_ahead_seen;     /* this step has a new reading */
     float             ahead_cm;
-    avoid_phase_t     blocked_phase;    /* step to carry on with */
-    uint32_t          blocked_start_ms;
-    uint32_t          clear_count;      /* clear readings while blocked */
 
-    /* A second obstacle met while driving past the first. */
-    bool              b_second;
-    uint32_t          second_reverses;
-    float             turn_in_min_cm;   /* along: the turn in also clears
-                                           the first obstacle */
+    /* Printed by the controller; this version does not measure the
+     * obstacle's depth, so they stay false / 0. */
+    bool              b_side_seen;
+    bool              b_rear_found;
+    bool              b_rear_bounded;
+    float             thickness_cm;
 } avoid_t;
 
-/* p_avoid must start zeroed.  Reverse attempts carry over between calls
- * until the car has driven clear of that spot, so a dead end cannot loop
- * forever between reversing and driving back. */
+/* Reverse attempts carry over between calls until the car has driven
+ * clear of that spot, so a dead end cannot loop forever between backing
+ * up and driving back. */
 void           avoid_start(avoid_t * p_avoid, uint32_t now_ms,
                            float distance_m);
 void           avoid_on_scan(avoid_t * p_avoid,

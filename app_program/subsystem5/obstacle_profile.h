@@ -1,7 +1,9 @@
 /** @file obstacle_profile.h
  *
- * @brief Scan readings, the obstacle profile and the avoidance decision
- *        (obstacle_geometry.c).  Pure data and functions: no kernel calls.
+ * @brief Buddy 5 stages 1-4 as pure functions (obstacle_geometry.c): the
+ *        scan readings, where to fine-scan, the obstacle profile, the
+ *        avoidance decision, and the stop check used while driving.
+ *        No kernel calls, so all of it is unit-tested on the PC.
  */
 
 #ifndef OBSTACLE_PROFILE_H
@@ -12,8 +14,7 @@
 
 #include "../common/robot_types.h"
 
-/* Every reading of one scan, in angle order.
- * 13 fine angles fit with room to spare. */
+/* Every reading of one scan, in angle order (13 fine angles fit). */
 #define OBSTACLE_MAX_POINTS (32U)
 
 typedef struct
@@ -28,45 +29,42 @@ typedef struct
     uint32_t         count;
 } obstacle_scan_t;
 
-/* Obstacle profile.  Angles relative to straight ahead: - left, + right.
- * Clearances are the free space beside the obstacle (0 = blocked); with
- * no obstacle they are the nearest reading on each side of the robot. */
+/* Stage 3: the obstacle profile.  Angles are from straight ahead, - left,
+ * + right; lateral distances are sideways from the sensor, - left.
+ * A clearance is the nearest reading beside the obstacle, 0 if the
+ * obstacle reaches the edge of the scan on that side. */
 typedef struct
 {
     bool  b_detected;
-    float closest_cm;
-    float closest_angle_deg;
+    float closest_cm;           /* closest point: distance ...          */
+    float closest_angle_deg;    /* ... and angle                        */
     float left_edge_deg;
     float right_edge_deg;
-    float center_angle_deg;
-    float lateral_offset_cm;    /* centre's sideways offset, - left */
+    float center_angle_deg;     /* location: direction of the centre    */
+    float lateral_offset_cm;    /* location: centre's sideways offset   */
     float width_cm;
     float left_clearance_cm;
     float right_clearance_cm;
 } obstacle_profile_t;
 
-/* What to do about a profile (stage 4). */
+/* Stage 4: what to do about it. */
 typedef struct
 {
     obstacle_action_t action;
-    float             bypass_offset_cm; /* sideways move for a turn action */
+    float             bypass_offset_cm; /* sideways move for a turn */
 } obstacle_plan_t;
 
-void   obstacle_scan_reset(obstacle_scan_t * p_scan);
-void   obstacle_scan_add(obstacle_scan_t * p_scan, uint32_t angle_deg,
-                         float distance_cm);
-void   obstacle_scan_add_nearer(obstacle_scan_t * p_scan, uint32_t angle_deg,
-                                float distance_cm);
-void   obstacle_profile_build(obstacle_scan_t const * p_scan,
-                              obstacle_profile_t * p_profile);
-int8_t obstacle_choose_bypass(float left_clearance, float right_clearance);
-bool   obstacle_watch_update(uint32_t * p_close_count, float distance_cm);
-uint32_t obstacle_lead_angle(float lead);
-float  obstacle_ahead_cm(uint32_t angle_deg, float distance_cm);
-float  obstacle_lead_from_wheels(float left_m_s, float right_m_s);
-bool   obstacle_hard_turn_stop(float lead, float distance_cm);
-void   obstacle_plan_build(obstacle_profile_t const * p_profile,
-                           obstacle_plan_t * p_plan);
+void  obstacle_scan_reset(obstacle_scan_t * p_scan);
+void  obstacle_scan_add(obstacle_scan_t * p_scan, uint32_t angle_deg,
+                        float distance_cm);
+bool  obstacle_fine_range(obstacle_scan_t const * p_coarse,
+                          uint32_t * p_from_deg, uint32_t * p_to_deg);
+void  obstacle_profile_build(obstacle_scan_t const * p_scan,
+                             obstacle_profile_t * p_profile);
+void  obstacle_plan_build(obstacle_profile_t const * p_profile,
+                          obstacle_plan_t * p_plan);
+bool  obstacle_watch_update(uint32_t * p_close_count, float distance_cm);
+float obstacle_lead_from_wheels(float left_m_s, float right_m_s);
 
 #endif /* OBSTACLE_PROFILE_H */
 
