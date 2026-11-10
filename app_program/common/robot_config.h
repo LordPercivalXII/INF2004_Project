@@ -134,9 +134,9 @@
 #define MOTOR_PID_KP                    (0.55f)
 #define MOTOR_PID_KI                    (0.08f)
 #define MOTOR_PID_KD                    (0.00f)
-#define MOTOR_TURN_SPEED_M_S            (0.18f)
-#define MOTOR_TURN_MIN_SPEED_M_S        (0.12f)
-#define MOTOR_TURN_SLOWDOWN_DEG         (25.0f)
+#define MOTOR_TURN_SPEED_M_S            (0.12f)
+#define MOTOR_TURN_MIN_SPEED_M_S        (0.12f)  /* below this the wheels stall */
+#define MOTOR_TURN_SLOWDOWN_DEG         (45.0f)
 
 /* ---- Buddy 3: line tracking (FR7, NFR6) ---- */
 #define IR_RING_SIZE                    (64U)    /* power of two          */
