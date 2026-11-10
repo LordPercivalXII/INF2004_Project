@@ -111,11 +111,21 @@ obstacle_scan_wanted (void)
     return (obstacle_car_is_avoiding() && (AVOID_LOOK_SCAN == g_look));
 }
 
+/*!
+ * @brief Point the servo and ping.  After a move the sensor is given
+ *        ULTRASONIC_SERVO_SETTLE_MS (two 50 ms ticks, Tribunal 1) to stop
+ *        swinging before the trigger, so a distance is never measured
+ *        mid-rotation.  No wait when the servo is already there, so the
+ *        straight-ahead watch while driving is not slowed down.
+ */
 static float
 obstacle_measure_at (uint32_t angle_deg, uint32_t scan_number)
 {
-    servo_set_angle(angle_deg);
-    (void) tk_dly_tsk((TMO) ULTRASONIC_SERVO_SETTLE_MS);
+    if (servo_get_angle() != angle_deg)
+    {
+        servo_set_angle(angle_deg);
+        (void) tk_dly_tsk((TMO) ULTRASONIC_SERVO_SETTLE_MS);
+    }
 
     return (ultrasonic_measure_cm(scan_number));
 }

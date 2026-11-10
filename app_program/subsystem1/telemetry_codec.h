@@ -1,3 +1,27 @@
+/** @file telemetry_codec.h
+ *
+ * @brief 4-byte binary MQTT telemetry packet (Tribunal 1 curveball;
+ *        replaces the 256+ byte JSON text payload).
+ *
+ * Serialised with explicit shifts and masks, never C bit-fields, so the
+ * byte and bit layout is identical on the RP2040 and on the laptop that
+ * decodes it (Version C gap 2).  Bit 0 is the least significant bit.
+ *
+ *   byte bits  field         encoding
+ *   ---- ----  ------------  ---------------------------------------------
+ *   0    0-2   state         mission_state_t (3 bits)
+ *   0    3-7   faults        5-bit fault mask (common/fault_mask.h)
+ *   1    0-7   speed         commanded speed, cm/s, 0..255 saturating
+ *   2    0-7   line error    offset-binary, 128 = centre: the 12-bit
+ *                            nav_q_line code shifted right 4 (Version C
+ *                            gap 3); error = (byte - 128) / 128
+ *   3    0-6   value         hump: mm 0..127; obstacle: cm / 2, 0..254 cm
+ *   3    7     kind          0 = hump height, 1 = obstacle distance
+ *
+ * The bump/obstacle byte alternates between the two kinds on successive
+ * packets; the dashboard keeps the last value of each.
+ */
+
 #ifndef TELEMETRY_CODEC_H
 #define TELEMETRY_CODEC_H
 
@@ -6,19 +30,20 @@
 
 #include "../common/robot_types.h"
 
-/* 82 meaningful bits, stored in 11 bytes. */
-#define TELEMETRY_PACKED_SIZE  (11U)
+#define TELEMETRY_PACKED_SIZE       (4U)
 
-/*
- * Encode a telemetry snapshot into a compact binary payload.
- *
- * Returns true on success, false if an input is invalid
- * or cannot be represented by the agreed field ranges.
- */
-bool telemetry_encode(
-    telemetry_message_t const * p_telemetry,
-    uint8_t * p_payload,
-    uint32_t payload_size
-);
+#define TELEMETRY_STATE_MASK        (0x07U)
+#define TELEMETRY_FAULT_MASK        (0x1FU)
+#define TELEMETRY_FAULT_SHIFT       (3U)
+#define TELEMETRY_LINE_SHIFT        (4U)    /* 12-bit -> 8-bit */
+#define TELEMETRY_VALUE_MASK        (0x7FU)
+#define TELEMETRY_KIND_OBSTACLE     (0x80U)
+#define TELEMETRY_OBSTACLE_CM_LSB   (2.0f)
+
+bool telemetry_encode(telemetry_message_t const * p_telemetry,
+                      bool b_obstacle_slot,
+                      uint8_t * p_payload, uint32_t payload_size);
 
 #endif /* TELEMETRY_CODEC_H */
+
+/*** end of file ***/

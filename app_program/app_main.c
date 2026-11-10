@@ -33,6 +33,38 @@
 #include "common/robot_config.h"
 #include "common/drv_board.h"
 #include "common/drv_gpio_irq.h"
+#include "common/robot_packed.h"
+#include "subsystem1/subsystem1.h"
+
+/*!
+ * @brief Print the Week 13 data-representation evidence: the size of each
+ *        queue message and the bytes reserved for each message buffer,
+ *        for this build (compare a PACK=1 and a PACK=0 build).
+ */
+static void
+app_report_packing (void)
+{
+    tm_printf((UB *) "[PACK] USE_BIT_PACKING=%d (message B / buffer B)\n",
+              USE_BIT_PACKING);
+    tm_printf((UB *) "[PACK] cmd_q_motion   %u / %u\n",
+              (unsigned int) sizeof(motion_cmd_wire_t),
+              (unsigned int) APP_MBF_BUFSZ(ROBOT_QUEUE_LENGTH,
+                                           sizeof(motion_cmd_wire_t)));
+    tm_printf((UB *) "[PACK] evt_q_terrain  %u\n",
+              (unsigned int) sizeof(terrain_wire_t));
+    tm_printf((UB *) "[PACK] nav_q_line     %u (unpacked %u)\n",
+              (unsigned int) (USE_BIT_PACKING ? sizeof(line_packed_t)
+                                              : sizeof(line_event_t)),
+              (unsigned int) sizeof(line_event_t));
+    tm_printf((UB *) "[PACK] nav_q_obstacle %u (unpacked %u)\n",
+              (unsigned int) (USE_BIT_PACKING ? sizeof(obstacle_packed_t)
+                                              : sizeof(obstacle_event_t)),
+              (unsigned int) sizeof(obstacle_event_t));
+    tm_printf((UB *) "[PACK] mqtt payload   %u / %u\n",
+              (unsigned int) S1_MQTT_MESSAGE_SIZE,
+              (unsigned int) APP_MBF_BUFSZ(ROBOT_QUEUE_LENGTH,
+                                           S1_MQTT_MESSAGE_SIZE));
+}
 
 /*!
  * @brief Create a task and start it.
@@ -182,6 +214,7 @@ usermain (void)
     app_check(subsystem3_init(), "subsystem3_init");
     app_check(subsystem4_init(), "subsystem4_init");
     app_check(subsystem5_init(), "subsystem5_init");
+    app_report_packing();
 
     /* Phase 2: every module starts its tasks. */
     app_check(subsystem1_start(), "subsystem1_start");

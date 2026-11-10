@@ -10,6 +10,17 @@
  *   vTaskDelayUntil(20 ms)            cyclic handler + tk_slp_tsk()
  *   xQueueReceive(cmd_q, .., 0) loop  tk_rcv_mbf(.., TMO_POL) loop
  *   Robot_PostEvent()                 controller_post_event()
+ *   xQueueReceive(cmd_q, .., 20 ms)   STOP/BRAKE sender: tk_wup_tsk();
+ *     (wake on HALT, Tribunal 1)        early wake zeroes the motors
+ *
+ * Tribunal 1: the motion task used to see a STOP only at its next
+ * 20 ms cycle, using the whole NFR10 margin.  motion_queue_command() now
+ * wakes the task for STOP/BRAKE; the early wake-up drains the queue and
+ * zeroes both motor outputs at once, and the normal cycle then applies
+ * the STOP to the PID state as before.  A blocking tk_rcv_mbf() with a
+ * 20 ms timeout (the tribunal's FreeRTOS wording) is not used: with the
+ * 10 ms tick its timeout would jitter the PID period by up to a tick,
+ * whereas the cyclic handler keeps the period exact.
  */
 
 #include <float.h>
@@ -20,6 +31,8 @@
 #include "../common/drv_board.h"
 #include "../common/rmath.h"
 #include "../controller/controller.h"
+#include "../common/robot_packed.h"
+#include "../common/fault_mask.h"
 
 #define MOTION_INTEGRAL_LIMIT   (1.0f)
 #define MOTION_PI               (3.14159265f)
@@ -82,10 +95,40 @@ volatile bool g_motion_bench_owner = false;   /* bench test owns the motors */
 #endif
 
 bool
+motion_queue_command (motion_command_t const * p_command)
+{
+    motion_cmd_wire_t wire;
+    bool              b_ok = false;
+
+    if (motion_command_is_valid(p_command) && (gh_motion_cmd_mbf > 0))
+    {
+#if USE_BIT_PACKING
+        b_ok = pack_motion_cmd(p_command, &wire);
+#else
+        wire = *p_command;
+        b_ok = true;
+#endif
+        if (b_ok)
+        {
+            b_ok = (E_OK == tk_snd_mbf(gh_motion_cmd_mbf, &wire,
+                                       (INT) sizeof(wire), TMO_POL));
+        }
+
+        /* HALT: do not wait for the next 20 ms cycle. */
+        if (b_ok && (gh_motion_tsk > 0) &&
+            ((MOTION_STOP == p_command->type) ||
+             (MOTION_BRAKE == p_command->type)))
+        {
+            (void) tk_wup_tsk(gh_motion_tsk);
+        }
+    }
+
+    return (b_ok);
+}
+
+bool
 motion_send_command (motion_command_t const * p_command)
 {
-    bool b_ok = false;
-
 #if S2_BENCH_DRIVE
     if (g_motion_bench_owner)
     {
@@ -93,13 +136,7 @@ motion_send_command (motion_command_t const * p_command)
     }
 #endif
 
-    if (motion_command_is_valid(p_command) && (gh_motion_cmd_mbf > 0))
-    {
-        b_ok = (E_OK == tk_snd_mbf(gh_motion_cmd_mbf, (void *) p_command,
-                                   (INT) sizeof(*p_command), TMO_POL));
-    }
-
-    return (b_ok);
+    return (motion_queue_command(p_command));
 }
 
 void
@@ -143,38 +180,108 @@ motion_pid_step (motion_pid_t * p_pid, float target, float measured,
     return (rmath_clampf(output, -1.0f, 1.0f));
 }
 
-/*!
- * @brief Keep only the newest queued command.
- */
-static bool
-motion_take_commands (motion_command_t * p_requested)
+/* Commands drained since the last 20 ms cycle (early wake-ups drain
+   too).  A STOP/BRAKE wins over later drive commands until the cycle. */
+typedef struct
 {
-    motion_command_t incoming;
-    INT              msg_size;
-    bool             b_received = false;
-    bool             b_stop_received = false;
+    motion_command_t    command;
+    bool                b_have;
+    bool                b_stop;
+} motion_inbox_t;
 
-    msg_size = tk_rcv_mbf(gh_motion_cmd_mbf, &incoming, TMO_POL);
+/*!
+ * @brief Drain the command buffer into the inbox, keeping the newest
+ *        command and giving STOP/BRAKE priority.
+ */
+static void
+motion_collect (motion_inbox_t * p_inbox)
+{
+    motion_cmd_wire_t wire;
+    motion_command_t  incoming;
 
-    while (msg_size > 0)
+    while (tk_rcv_mbf(gh_motion_cmd_mbf, &wire, TMO_POL) > 0)
     {
+#if USE_BIT_PACKING
+        unpack_motion_cmd(&wire, &incoming);
+#else
+        incoming = wire;
+#endif
         if ((MOTION_STOP == incoming.type) ||
             (MOTION_BRAKE == incoming.type))
         {
-            *p_requested = incoming;
-            b_stop_received = true;
-            b_received = true;
+            p_inbox->command = incoming;
+            p_inbox->b_stop  = true;
+            p_inbox->b_have  = true;
         }
-        else if (!b_stop_received)
+        else if (!p_inbox->b_stop)
         {
-            *p_requested = incoming;
-            b_received = true;
+            p_inbox->command = incoming;
+            p_inbox->b_have  = true;
         }
+        else
+        {
+            /* A STOP is pending: it wins until the next cycle. */
+        }
+    }
+}
 
-        msg_size = tk_rcv_mbf(gh_motion_cmd_mbf, &incoming, TMO_POL);
+/*!
+ * @brief Take the inbox for this cycle.
+ *
+ * @return true if a command was received since the last cycle.
+ */
+static bool
+motion_take_commands (motion_inbox_t * p_inbox, motion_command_t * p_cmd)
+{
+    bool b_have;
+
+    motion_collect(p_inbox);
+    b_have = p_inbox->b_have;
+
+    if (b_have)
+    {
+        *p_cmd = p_inbox->command;
     }
 
-    return (b_received);
+    p_inbox->b_have = false;
+    p_inbox->b_stop = false;
+
+    return (b_have);
+}
+
+static bool
+motion_mission_running (void)
+{
+    T_RFLG status = {0};
+
+    return ((gh_system_flg > 0) &&
+            (E_OK == tk_ref_flg(gh_system_flg, &status)) &&
+            (0U != (status.flgptn & SYSTEM_BIT_MISSION_RUN)));
+}
+
+/*!
+ * @brief Early wake-up (before the 20 ms period): drain commands and,
+ *        for a STOP/BRAKE or a cleared mission bit, zero the motors now.
+ */
+static void
+motion_early_halt (motion_inbox_t * p_inbox)
+{
+    motion_collect(p_inbox);
+
+    if (p_inbox->b_stop || !motion_mission_running())
+    {
+#if (!ROBOT_SIMULATION) && (!S2_ENCODER_CALIBRATION)
+        motor_set(PIN_MOTOR_LEFT_PWM, PIN_MOTOR_LEFT_DIR, 0.0f);
+        motor_set(PIN_MOTOR_RIGHT_PWM, PIN_MOTOR_RIGHT_DIR, 0.0f);
+#endif
+#if S2_HALT_TRACE
+        if (p_inbox->b_stop)
+        {
+            tm_printf((UB *) "[NFR10] S2: motors off t_us=%u\n",
+                      (unsigned int) board_micros());
+        }
+#endif
+    }
 }
 
 static void
@@ -255,7 +362,7 @@ motion_task (INT stacd, void * p_exinf)
     float            interval_s;
     float const m_per_tick = (RMATH_PI * MOTOR_WHEEL_DIAMETER_M) /
                              MOTOR_ENCODER_TICKS_PER_REV;
-    motion_command_t requested = {MOTION_STOP, 0.0f, 0.0f, 0.0f, 0U};
+    motion_command_t requested = {0};   /* MOTION_STOP */
     motion_pid_t     left_pid;
     motion_pid_t     right_pid;
 #if ROBOT_SIMULATION
@@ -287,6 +394,7 @@ motion_task (INT stacd, void * p_exinf)
     bool             encoder_fault_pending = false;
     float            distance_target_m = 0.0f;  /* target distance for MOTION_MOVE_DISTANCE */
     float            distance_traveled_m = 0.0f;  /* distance accumulated for current move */
+    static motion_inbox_t inbox;    /* zero-initialised: nothing pending */
 
     (void) stacd;
     (void) p_exinf;
@@ -311,15 +419,19 @@ motion_task (INT stacd, void * p_exinf)
     {
         motion_command_t incoming;
 
-        (void) tk_slp_tsk(TMO_FEVR);    /* woken every 20 ms */
+        /* Woken every 20 ms by the cyclic handler, and at once by a
+           STOP/BRAKE (motion_queue_command). */
+        (void) tk_slp_tsk(TMO_FEVR);
 
         {
             uint32_t const sample_us = board_micros();
             uint32_t const elapsed_us = sample_us - previous_sample_us;
-            /* Queued cyclic wake-ups must not divide new ticks by a
-               fictitious 20 ms or run the PID repeatedly at zero elapsed time. */
+            /* Early wake-up (a HALT, or queued cyclic wake-ups): stop the
+               motors now if asked, but never divide new ticks by a
+               fictitious 20 ms or run the PID at zero elapsed time. */
             if (elapsed_us < ROBOT_MOTION_PERIOD_MS * 1000U)
             {
+                motion_early_halt(&inbox);
                 continue;
             }
         }
@@ -327,16 +439,12 @@ motion_task (INT stacd, void * p_exinf)
         /* Controller-owned mission flag is the motor movement interlock.
          * Fail closed if the flag object is unavailable or cannot be read.
          */
-        T_RFLG mission_status = {0};
-        bool const mission_running =
-            (gh_system_flg > 0) &&
-            (E_OK == tk_ref_flg(gh_system_flg, &mission_status)) &&
-            (0U != (mission_status.flgptn & SYSTEM_BIT_MISSION_RUN));
+        bool const mission_running = motion_mission_running();
 
         /* Drain stale commands even while stopped. They must not be replayed
          * when the next START countdown completes.
          */
-        bool const have_command = motion_take_commands(&incoming);
+        bool const have_command = motion_take_commands(&inbox, &incoming);
         if (!mission_running)
         {
             requested.type = MOTION_STOP;
@@ -556,6 +664,7 @@ motion_task (INT stacd, void * p_exinf)
             completed_turn_id = 0U;
             encoder_fault_latched = true;
             encoder_fault_pending = true;
+            fault_mask_set(FAULT_BIT_ENCODER);
             motion_pid_reset(&left_pid);
             motion_pid_reset(&right_pid);
             tm_printf((UB *) "S2: encoder stall L=%u R=%u target=%d/%d "
@@ -607,15 +716,10 @@ motion_task (INT stacd, void * p_exinf)
         /* Recheck immediately before writing motor outputs. A STOP may
          * clear the mission bit while this iteration is running.
          */
+        if (!motion_mission_running())
         {
-            T_RFLG status = {0};
-            if ((gh_system_flg <= 0) ||
-                (E_OK != tk_ref_flg(gh_system_flg, &status)) ||
-                (0U == (status.flgptn & SYSTEM_BIT_MISSION_RUN)))
-            {
-                left_out = 0.0f;
-                right_out = 0.0f;
-            }
+            left_out = 0.0f;
+            right_out = 0.0f;
         }
 
 #if (!ROBOT_SIMULATION) && (!S2_ENCODER_CALIBRATION)

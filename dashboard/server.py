@@ -31,14 +31,51 @@ def on_disconnect(c, userdata, disconnect_flags, reason_code, properties):
     with lock:
         state['connected'] = False
 
+PACKET_SIZE = 4
+
+
+def decode_packet(payload, previous):
+    """Decode the robot's 4-byte binary telemetry packet.
+
+    Layout (app_program/subsystem1/telemetry_codec.h, bit 0 = LSB):
+      byte 0: bits 0-2 mission state, bits 3-7 fault mask
+      byte 1: commanded speed, cm/s
+      byte 2: line error, offset-binary (128 = centre), error = (b-128)/128
+      byte 3: bit 7 = 1 obstacle (bits 0-6 x 2 cm), 0 hump (bits 0-6 mm)
+    Byte 3 alternates between hump and obstacle, so the other value is
+    carried over from the previous packet.
+    """
+    b0, b1, b2, b3 = payload
+    value = {
+        'mission': b0 & 0x07,
+        'fault': (b0 >> 3) & 0x1F,
+        'speed': b1 / 100.0,
+        'line': (b2 - 128) / 128.0,
+        'hump_m': (previous or {}).get('hump_m'),
+        'obstacle_cm': (previous or {}).get('obstacle_cm'),
+        'binary': True,
+    }
+    if b3 & 0x80:
+        value['obstacle_cm'] = (b3 & 0x7F) * 2.0
+    else:
+        value['hump_m'] = (b3 & 0x7F) / 1000.0
+    return value
+
+
 def on_message(c, userdata, msg):
     print('MQTT MESSAGE RECEIVED:', msg.topic, repr(msg.payload), flush=True)
-    try:
-        value = json.loads(msg.payload.decode('utf-8-sig'))
-        if not isinstance(value, dict):
+    if len(msg.payload) == PACKET_SIZE:
+        with lock:
+            previous = state['latest']
+        value = decode_packet(msg.payload, previous)
+    else:
+        # PACK=0 firmware still publishes the JSON text payload.
+        try:
+            value = json.loads(msg.payload.decode('utf-8-sig'))
+            if not isinstance(value, dict):
+                return
+        except (UnicodeDecodeError, ValueError):
             return
-    except (UnicodeDecodeError, ValueError):
-        return
     with lock:
         if barcode_baseline['pending']:
             barcode_baseline['value'] = value.get('barcode')

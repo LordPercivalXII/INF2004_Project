@@ -8,6 +8,11 @@
  * Each USB JSON line is written using a single tm_putstring() call.
  * MQTT telemetry is passed through a non-blocking micro T-Kernel
  * message buffer and retrieved by the Wi-Fi task.
+ *
+ * Tribunal 1: with USE_BIT_PACKING the MQTT payload is the 4-byte binary
+ * packet of telemetry_codec.h (no snprintf on the MQTT path) and the
+ * MQTT message buffer holds 4-byte packets instead of whole snapshots.
+ * The USB console keeps the readable text.
  */
 
 #include "subsystem1.h"
@@ -15,6 +20,8 @@
 #include "../common/drv_board.h"
 #include "../controller/controller.h"
 #include "../subsystem4/imu_height.h"
+#include "../common/fault_mask.h"
+#include "telemetry_codec.h"
 
 #if TK_SUPPORT_SMP && TM_CONSOLE_USB_CDC
 #include "../../kernel/knlinc/smp_lock.h"
@@ -77,6 +84,7 @@ void mqtt_utk_disconnected(void)
     return;
 #endif
 
+    fault_mask_set(FAULT_BIT_COMMS);
     command.type = CONTROL_STOP;
     command.value = 0.0f;
 
@@ -366,11 +374,13 @@ static void telemetry_print(telemetry_message_t const *p_msg)
 
         (void) tm_sprintf((UB *) line,
                           (UB *) "[%4u.%u s] %-6s spd=%s line=%s dist=%sm "
-                          "pitch=%s roll=%s obst=%scm bc=%s fault=%u%s%s\n",
+                          "pitch=%s roll=%s obst=%scm bc=%s fault=%u "
+                          "faults=0x%02x%s%s\n",
                           secs10 / 10U, secs10 % 10U,
                           p_names[(mission < 4U) ? mission : 3U],
                           speed, error, dist, pitch, roll, obst, bc,
                           (unsigned int) p_msg->fault_code,
+                          (unsigned int) p_msg->fault_mask,
                           p_msg->imu.b_calibrated ? "" : " IMU-CAL",
                           (p_msg->imu.b_hump_height_valid) ?
                             " H-VALID" : (p_msg->imu.b_hump_active) ? " H-ACTIVE" : "");
@@ -457,6 +467,25 @@ static void telemetry_print(telemetry_message_t const *p_msg)
  */
 uint32_t mqtt_utk_telemetry_read(char *buffer, uint32_t buffer_size)
 {
+#if USE_BIT_PACKING
+    uint8_t  packet[TELEMETRY_PACKED_SIZE];
+    uint32_t idx;
+
+    if ((NULL == buffer) || (buffer_size < TELEMETRY_PACKED_SIZE) ||
+        (gh_mqtt_telemetry_mbf <= 0) ||
+        (tk_rcv_mbf(gh_mqtt_telemetry_mbf, packet, TMO_POL) !=
+         (INT) TELEMETRY_PACKED_SIZE))
+    {
+        return 0U;
+    }
+
+    for (idx = 0U; idx < TELEMETRY_PACKED_SIZE; idx++)
+    {
+        buffer[idx] = (char) packet[idx];
+    }
+
+    return TELEMETRY_PACKED_SIZE;
+#else
     telemetry_message_t message;
     char speed[S1_FIXED_TEXT_MAX];
     char error[S1_FIXED_TEXT_MAX];
@@ -527,6 +556,7 @@ uint32_t mqtt_utk_telemetry_read(char *buffer, uint32_t buffer_size)
         (unsigned int)message.imu.b_height_gap_pending);
 
     return (len > 0) ? (uint32_t)len : 0U;
+#endif /* USE_BIT_PACKING */
 }
 
 /*!
@@ -541,6 +571,10 @@ void telemetry_task(INT stacd, void *p_exinf)
     char line[S1_FIXED_TEXT_MAX * 2U];
 #if TM_MQTT
     bool b_mqtt_queue_error = false;
+#if USE_BIT_PACKING
+    uint8_t packet[TELEMETRY_PACKED_SIZE];
+    bool b_obstacle_slot = false;
+#endif
 #endif
 
     (void)stacd;
@@ -562,10 +596,20 @@ void telemetry_task(INT stacd, void *p_exinf)
                 /* Commissioning traces stay on USB; MQTT receives snapshots. */
                 if (gh_mqtt_telemetry_mbf > 0)
                 {
+#if USE_BIT_PACKING
+                    /* Byte 3 alternates hump / obstacle each packet. */
+                    (void)telemetry_encode(&message, b_obstacle_slot,
+                                           packet, sizeof(packet));
+                    b_obstacle_slot = !b_obstacle_slot;
+                    if (E_OK != tk_snd_mbf(gh_mqtt_telemetry_mbf, packet,
+                                           (INT)sizeof(packet), TMO_POL))
+#else
                     if (E_OK != tk_snd_mbf(gh_mqtt_telemetry_mbf,
                                            (void *)&message,
                                            (INT)sizeof(message), TMO_POL))
+#endif
                     {
+                        fault_mask_set(FAULT_BIT_COMMS);
                         if (!b_mqtt_queue_error)
                         {
                             tm_printf((UB *)"S1: MQTT telemetry buffer full; "

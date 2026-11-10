@@ -8,6 +8,9 @@
  *          gh_event_mbf, sent with controller_post_event().
  *   IF-02  S1 -> controller: user commands, message buffer
  *          gh_control_mbf (control_command_t).
+ *   IF-07  S4 -> controller: evt_q_terrain (shock, hump height), message
+ *          buffer gh_terrain_mbf, sent with controller_post_terrain();
+ *          1 byte packed, read before every other queue.
  *   IF-05  controller -> any: status bits, event flag gh_system_flg
  *          (SYSTEM_BIT_xxx).  Read with tk_ref_flg or wait with
  *          tk_wai_flg; only the controller sets or clears bits.
@@ -24,8 +27,10 @@
 extern ID gh_event_mbf;
 extern ID gh_control_mbf;
 extern ID gh_system_flg;
+extern ID gh_terrain_mbf;   /* evt_q_terrain, 1 byte, polled first */
 
 bool controller_post_event(system_event_t const * p_event);
+bool controller_post_terrain(bool b_shock, float height_m);
 
 /* Private to the controller. */
 void controller_task(INT stacd, void * p_exinf);

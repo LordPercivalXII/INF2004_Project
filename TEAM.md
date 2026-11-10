@@ -98,7 +98,21 @@ The receiver creates the kernel object and publishes its ID in its header.
 | IF-03 | controller → S2 | message buffer (owned by S2) | `gh_motion_cmd_mbf` via `motion_send_command()` | `motion_command_t`, 12 deep; S2 keeps the newest |
 | IF-04 | controller → S1 | message buffer (owned by S1) | `gh_telemetry_mbf` via `telemetry_publish()` | `telemetry_message_t`, 12 deep |
 | IF-05 | controller → any | event flag (owned by controller) | `gh_system_flg` | `SYSTEM_BIT_READY/MISSION_RUN/OBSTACLE/FAULT/WIFI_UP` |
+| IF-07 | S4 → controller | message buffer (owned by controller), `TMO_POL`, **read before every other queue** | `gh_terrain_mbf` via `controller_post_terrain()` | `terrain_packed_t` (1 B: shock:1, height_mm:7), 8 deep |
 | IF-06 | MQTT (WiFi service task) → S3 | message buffer (owned by S3), `TMO_POL` | `gh_route_cfg_mbf` via `mqtt_utk_route_rx()` | route table text from `MQTT_ROUTE_TOPIC`, e.g. `A:L,B:R,C:S,D:U` (format in `subsystem3/route.c`) |
+
+Packed wire formats (Tribunal 1) live in `common/robot_packed.h`; build
+with `make PACK=0` for the unpacked "before" version. IF-01 messages are
+variable-length (header + the payload actually used); line and obstacle
+payloads travel packed (4 B and 9 B). IF-03 travels packed (4 B) and a
+STOP/BRAKE wakes `motion_task` at once. MQTT telemetry is a 4-byte binary
+packet (`subsystem1/telemetry_codec.h`).
+
+Shared fault mask (`common/fault_mask.h`, 5 bits): S4 IMU, S2 encoder,
+S3 GP28 ISR + controller (line), S5 task + GP16 ISR (no echo), S1 comms.
+Set from tasks or ISRs with `fault_mask_set()` (cross-core critical
+section, `common/crit_sect.h`, SIO spinlock 31); the controller takes a
+snapshot-and-clear into each telemetry packet.
 
 IF-01 line events carry `barcode` (decoded character, ASCII) once per read and, on a junction, `junction_action` (left/right/straight/U-turn) resolved by S3 from the stored character.
 
@@ -113,8 +127,9 @@ S5 `gh_echo_mbf` (echo ISR → `obstacle_task`, 4 deep).
 | Task | 32 | 1 | 1 | 1 | 2 | 1 | 1 |
 | Event flag | 16 | 1 | | | | | |
 | Mutex | 12 | | | | 2 | | |
-| Message buffer | 12 | 2 | 1 | 1 | 2 | | 1 |
+| Message buffer | 12 | 3 | 2 | 1 | 2 | | 1 |
 | Cyclic handler | 12 | | | 1 | 1 | 1 | |
 
 The kernel's `iica` driver also creates one event flag. Total: 7 tasks,
-7 message buffers, 3 cyclic handlers — well inside `config/config.h`.
+9 message buffers, 3 cyclic handlers — inside `config/config.h`.
+SIO hardware spinlock 31 is reserved for `common/crit_sect.c`.

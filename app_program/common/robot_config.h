@@ -64,7 +64,7 @@
 #define ULTRASONIC_ECHO_TIMEOUT_MS      (30U)
 #define ULTRASONIC_MIN_PING_INTERVAL_MS (66U)
 #define ULTRASONIC_ECHO_QUEUE_LENGTH    (4U)
-#define ULTRASONIC_SERVO_SETTLE_MS      (50U)
+#define ULTRASONIC_SERVO_SETTLE_MS      (100U)  /* after a move; Tribunal 1 */
 #define ULTRASONIC_COARSE_LEFT_DEG      (60U)   /* 30 deg left of centre: cabling limit */
 #define ULTRASONIC_COARSE_CENTER_DEG    (90U)
 #define ULTRASONIC_COARSE_RIGHT_DEG     (120U)  /* 30 deg right of centre: cabling limit */

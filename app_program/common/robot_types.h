@@ -222,6 +222,7 @@ typedef struct
     float           obstacle_distance_cm;
     uint32_t        last_barcode;
     uint32_t        fault_code;
+    uint8_t         fault_mask;     /* 5-bit snapshot, fault_mask.h */
     imu_event_t     imu;
     bool            b_height_trace;
     uint32_t        trace_sequence;

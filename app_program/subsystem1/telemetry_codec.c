@@ -1,132 +1,79 @@
 /** @file telemetry_codec.c
  *
- * @brief Minimum-bit binary telemetry encoder.
+ * @brief 4-byte binary MQTT telemetry encoder (layout in the header).
+ *        Pure C, no kernel calls: also built by test_telemetry_codec.c.
  */
-
-#include "telemetry_codec.h"
 
 #include <stddef.h>
-#include <string.h>
 
-/*
- * Write a value into a binary payload using exactly bit_count bits.
+#include "telemetry_codec.h"
+#include "../common/robot_packed.h"
+
+#define TELEMETRY_SPEED_MAX_CM_S    (255U)
+#define TELEMETRY_SPEED_SCALE       (100.0f)    /* m/s -> cm/s  */
+#define TELEMETRY_HUMP_SCALE        (1000.0f)   /* m -> mm      */
+
+/*!
+ * @brief Encode a telemetry snapshot into the 4-byte MQTT payload.
  *
- * Bits are written most-significant-bit first.
- * bit_position is measured from the start of the payload.
- */
-static void
-write_bits(uint8_t *p_payload,
-           uint32_t bit_position,
-           uint32_t value,
-           uint8_t bit_count)
-{
-    uint8_t i;
-
-    for (i = 0U; i < bit_count; i++)
-    {
-        uint32_t const position = bit_position + i;
-        uint32_t const byte_index = position / 8U;
-        uint8_t const bit_index =
-            (uint8_t)(7U - (position % 8U));
-
-        uint8_t const bit =
-            (uint8_t)((value >> (bit_count - 1U - i)) & 1U);
-
-        if (bit != 0U)
-        {
-            p_payload[byte_index] |=
-                (uint8_t)(1U << bit_index);
-        }
-        else
-        {
-            p_payload[byte_index] &=
-                (uint8_t)~(1U << bit_index);
-        }
-    }
-}
-
-/*
- * Encode a telemetry snapshot into 82 meaningful bits.
+ * @param[in]  p_telemetry      Snapshot from the controller.
+ * @param[in]  b_obstacle_slot  true: byte 3 carries the obstacle distance;
+ *                              false: the hump height.
+ * @param[out] p_payload        TELEMETRY_PACKED_SIZE bytes.
+ * @param[in]  payload_size     Capacity of p_payload.
  *
- * Layout:
- *  0-31  timestamp
- * 32-33  mission state
- * 34-39  base speed
- * 40-47  line error
- * 48-59  distance
- * 60-67  hump height
- * 68-76  obstacle distance
- * 77-78  last barcode
- * 79-81  fault code
- * 82-87  padding (zero)
+ * @return false if a pointer is NULL or the buffer is too small.
  */
-bool telemetry_encode(telemetry_message_t const *p_telemetry,
-                      uint8_t *p_payload,
-                      uint32_t payload_size)
+bool
+telemetry_encode (telemetry_message_t const * p_telemetry,
+                  bool b_obstacle_slot,
+                  uint8_t * p_payload, uint32_t payload_size)
 {
-    uint32_t speed_code;
-    uint32_t line_code;
-    uint32_t distance_code;
-    uint32_t hump_code;
-    uint32_t obstacle_code;
+    uint32_t state;
+    uint32_t line_q12;
+    uint32_t value;
 
-    if ((NULL == p_telemetry) ||
-        (NULL == p_payload) ||
+    if ((NULL == p_telemetry) || (NULL == p_payload) ||
         (payload_size < TELEMETRY_PACKED_SIZE))
     {
-        return false;
+        return (false);
     }
 
-    /*
-     * Validate the supported ranges before conversion.
-     * These are our proposed protocol limits.
-     */
-    if ((p_telemetry->mission_state > MISSION_FAULT) ||
-        !(p_telemetry->speed_m_s >= 0.10f &&
-          p_telemetry->speed_m_s <= 0.70f) ||
-        !(p_telemetry->line_error >= -1.0f &&
-          p_telemetry->line_error <= 1.0f) ||
-        !(p_telemetry->distance_m >= -20.0f &&
-          p_telemetry->distance_m <= 20.0f) ||
-        !(p_telemetry->hump_height_m >= 0.0f &&
-          p_telemetry->hump_height_m <= 0.20f) ||
-        !(p_telemetry->obstacle_distance_cm >= 2.0f &&
-          p_telemetry->obstacle_distance_cm <= 400.0f) ||
-        (p_telemetry->last_barcode > 3U) ||
-        (p_telemetry->fault_code > 7U))
+    state = (uint32_t) p_telemetry->mission_state;
+    if (state > TELEMETRY_STATE_MASK)
     {
-        return false;
+        state = (uint32_t) MISSION_FAULT;
     }
 
-    /* Convert floating-point values to unsigned integers. */
-    speed_code =
-        (uint32_t)(p_telemetry->speed_m_s * 100.0f + 0.5f) - 10U;
+    /* Same 12-bit offset-binary code as nav_q_line; the unsigned shift
+       is the BARR-C form of the tribunal's (int8_t)(err_12b >> 4). */
+    line_q12 = pack_offset(p_telemetry->line_error, PACK_LINE_SCALE,
+                           PACK_Q12_BIAS, PACK_Q12_MAX);
 
-    line_code =
-        (uint32_t)((p_telemetry->line_error + 1.0f) * 100.0f + 0.5f);
+    if (b_obstacle_slot)
+    {
+        value = pack_unsigned(p_telemetry->obstacle_distance_cm,
+                              1.0f / TELEMETRY_OBSTACLE_CM_LSB,
+                              TELEMETRY_VALUE_MASK) |
+                TELEMETRY_KIND_OBSTACLE;
+    }
+    else
+    {
+        value = pack_unsigned(p_telemetry->hump_height_m,
+                              TELEMETRY_HUMP_SCALE, TELEMETRY_VALUE_MASK);
+    }
 
-    distance_code =
-        (uint32_t)((p_telemetry->distance_m + 20.0f) * 100.0f + 0.5f);
+    p_payload[0] = (uint8_t) ((state & TELEMETRY_STATE_MASK) |
+                              (((uint32_t) p_telemetry->fault_mask &
+                                TELEMETRY_FAULT_MASK) <<
+                               TELEMETRY_FAULT_SHIFT));
+    p_payload[1] = (uint8_t) pack_unsigned(p_telemetry->speed_m_s,
+                                           TELEMETRY_SPEED_SCALE,
+                                           TELEMETRY_SPEED_MAX_CM_S);
+    p_payload[2] = (uint8_t) (line_q12 >> TELEMETRY_LINE_SHIFT);
+    p_payload[3] = (uint8_t) value;
 
-    hump_code =
-        (uint32_t)(p_telemetry->hump_height_m * 1000.0f + 0.5f);
-
-    obstacle_code =
-        (uint32_t)(p_telemetry->obstacle_distance_cm - 2.0f + 0.5f);
-
-    /* Clear the output so unused padding bits are zero. */
-    memset(p_payload, 0, TELEMETRY_PACKED_SIZE);
-
-    /* Pack fields using the agreed bit positions. */
-    write_bits(p_payload, 0U, p_telemetry->timestamp_ms, 32U);
-    write_bits(p_payload, 32U, (uint32_t)p_telemetry->mission_state, 2U);
-    write_bits(p_payload, 34U, speed_code, 6U);
-    write_bits(p_payload, 40U, line_code, 8U);
-    write_bits(p_payload, 48U, distance_code, 12U);
-    write_bits(p_payload, 60U, hump_code, 8U);
-    write_bits(p_payload, 68U, obstacle_code, 9U);
-    write_bits(p_payload, 77U, p_telemetry->last_barcode, 2U);
-    write_bits(p_payload, 79U, p_telemetry->fault_code, 3U);
-
-    return true;
+    return (true);
 }
+
+/*** end of file ***/

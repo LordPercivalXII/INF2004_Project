@@ -11,6 +11,7 @@
 #include "../common/robot_config.h"
 #include "../common/drv_board.h"
 #include "../common/drv_gpio_irq.h"
+#include "../common/fault_mask.h"
 
 #define US_TRIGGER_SETTLE_US    (2U)
 #define US_TRIGGER_PULSE_US     (10U)
@@ -21,6 +22,7 @@
 #define US_SIM_RIGHT_CM         (60.0f)
 #define US_SIM_CENTER_CM        (100.0f)
 
+/* Single-writer: only the echo ISR increments it (Tribunal 1, RMW). */
 static volatile uint32_t g_echo_drops         = 0U;
 
 #if S5_ULTRASONIC_HW
@@ -55,6 +57,7 @@ ultrasonic_echo_isr (uint32_t pin, uint32_t events)
                                    (INT) sizeof(width_us), TMO_POL))
             {
                 g_echo_drops++;
+                fault_mask_set(FAULT_BIT_NO_ECHO);
             }
         }
         else
@@ -168,6 +171,13 @@ ultrasonic_measure_cm (uint32_t scan_number)
                           (TMO) ULTRASONIC_ECHO_TIMEOUT_MS);
     gb_measuring = false;
 
+    if (E_TMOUT == received)
+    {
+        /* No echo within ULTRASONIC_ECHO_TIMEOUT_MS (angled or absorbing
+           surface, or nothing in range): reported, the task never hangs. */
+        fault_mask_set(FAULT_BIT_NO_ECHO);
+    }
+
     if ((received > 0) && (0U != echo_width_us))
     {
         distance_cm = (float) echo_width_us * US_CM_PER_US_ROUND_TRIP;
@@ -196,9 +206,11 @@ ultrasonic_measure_cm (uint32_t scan_number)
 uint32_t
 ultrasonic_take_drops (void)
 {
-    uint32_t const drops = g_echo_drops;
+    static uint32_t seen = 0U;  /* task-side copy; the ISR never writes it */
+    uint32_t const  now  = g_echo_drops;
+    uint32_t const  drops = now - seen;
 
-    g_echo_drops = 0U;
+    seen = now;
 
     return (drops);
 }

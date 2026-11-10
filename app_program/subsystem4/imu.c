@@ -6,6 +6,7 @@
 #include "../common/drv_board.h"
 #include "../common/rmath.h"
 #include "../controller/controller.h"
+#include "../common/fault_mask.h"
 
 #define IMU_RETRY_MS             (1000U)
 #define IMU_CALIBRATION_WARN_MS  (5000U)
@@ -87,6 +88,7 @@ imu_task (INT stacd, void * p_exinf)
     bool b_timing_reported = false;
     bool b_queue_error = false;
     bool b_was_calibrated = false;
+    uint32_t last_shock_count = 0U;
 
     (void) stacd;
     (void) p_exinf;
@@ -205,6 +207,27 @@ imu_task (INT stacd, void * p_exinf)
         if (processor.output.b_hump_rejected)
         {
             tm_printf((UB *) "S4: terrain window rejected; no new height\n");
+        }
+        if (!processor.output.b_sensor_valid)
+        {
+            fault_mask_set(FAULT_BIT_IMU);
+        }
+        /* evt_q_terrain first: the controller reads it before the IMU
+           event below and before any queued line events (NFR10). */
+        {
+            bool const b_new_shock =
+                (processor.output.shock_count != last_shock_count);
+            float const height_m =
+                (processor.output.b_hump_complete &&
+                 processor.output.b_hump_height_valid)
+                ? processor.output.estimated_hump_height_m : 0.0f;
+
+            if ((b_new_shock || (height_m > 0.0f)) &&
+                !controller_post_terrain(b_new_shock, height_m))
+            {
+                tm_printf((UB *) "S4: terrain buffer full; event lost\n");
+            }
+            last_shock_count = processor.output.shock_count;
         }
         event.type = SYSTEM_EVENT_IMU;
         event.timestamp_ms = now_ms;

@@ -99,3 +99,87 @@ see "Check on hardware" below.
    verify `IR_ANALOG_BLACK_IS_HIGH` and `IR_BARCODE_BLACK_LEVEL`.
 5. IMU: no `S4: MPU6050 not found on iica` message; a tap gives a shock.
 6. Ultrasonic/servo: servo sweeps 60/75/90/105/120°, `obstacle_cm` tracks a hand.
+
+## Tribunal 1 fixes (Week 8, post-tribunal)
+
+Implemented from `CSC19_PostTri1` Versions B and C, kept on micro T-Kernel
+3.0 (no FreeRTOS call was reintroduced). BARR-C:2018 as for the rest of
+`app_program/`.
+
+### FreeRTOS wording in the tribunal → what was implemented
+
+| Tribunal decision (FreeRTOS terms) | micro T-Kernel implementation |
+|---|---|
+| `taskENTER_CRITICAL()` in tasks, `taskENTER_CRITICAL_FROM_ISR()` in ISRs | `crit_enter()`/`crit_exit()` (`common/crit_sect.c`): `DI()` + SIO spinlock 31. `DI`/`EI` save/restore PRIMASK, so the same call is legal in tasks and handlers; the spinlock covers the other core, which `DI` alone does not |
+| 5-bit shared fault bitmask | `common/fault_mask.c`: `fault_mask_set/clear/take` inside the critical section; `take` = atomic snapshot-and-clear |
+| `xQueueReceive(cmd_q_motion, 20 ms)` so HALT wakes Motion Control | cyclic handler kept (exact 20 ms PID period with a 10 ms tick); `motion_queue_command()` calls `tk_wup_tsk()` for STOP/BRAKE and the early wake-up zeroes both PWM outputs at once |
+| Vehicle Controller polls `evt_q_terrain` first after `xQueueSelectFromSet()` | new 1-byte `gh_terrain_mbf`; `ctrl_poll_terrain()` runs at the top of each loop and before every queued IF-01 event |
+| `xQueueOverwrite` 4-byte MQTT packet | `telemetry_encode()` → 4-byte message buffer → `mqtt_utk_telemetry_read()` |
+| `(int8_t)(line_err_12b >> 4)` | same result without a shift of signed data (BARR-C): the 12-bit field is offset-binary, so the shift is unsigned |
+| C bit-fields + `__attribute__((packed))` + `_Static_assert` | `common/robot_packed.h` (unsigned bit-fields only) |
+| `#define USE_BIT_PACKING 1` | `make PACK=1` (default) / `PACK=0`; boot prints a `[PACK]` size table |
+
+### Bit layouts that differ from the tribunal table, and why
+
+| Queue | Tribunal | Implemented | Reason |
+|---|---|---|---|
+| `cmd_q_motion` | 2 B (mode:2, dir:2, speed:8, turn:4) | 4 B (mode:3, turn_id:5, arg_a:12, arg_b:12) | line steering sends a different speed to each wheel; there are 5 command types; turns need a matching ID |
+| `nav_q_obstacle` | 2 B (6-bit width/clearance) | 9 B, 9-bit cm fields | 6 bits stop at 63 cm but the sensor reads 250 cm; the avoidance needs a signed bypass offset and the scan start time |
+| `nav_q_line` + `cmd_q_barcode` | 2 B + 1 B | 2 B + 1 B + 1 B barcode character | as decided, plus the character for telemetry |
+| MQTT | 4 B | 4 B as decided | the barcode no longer goes over MQTT (still on USB); byte 3 alternates hump/obstacle |
+
+Turn IDs now count 1..31 (`ctrl_next_turn_id()`) to fit the 5-bit field.
+
+### Measured sizes (arm-none-eabi-gcc 13.2, Cortex-M0+)
+
+| Item | PACK=0 | PACK=1 |
+|---|---|---|
+| `cmd_q_motion` message / buffer reserved | 24 B / 336 B | 4 B / 96 B |
+| MQTT message / buffer reserved | 204 B / 2496 B | 4 B / 96 B |
+| MQTT payload on the wire | JSON, about 400 B | 4 B |
+| IF-01 line message (sent every 10 ms) | 40 B (was 124 B before this change: whole union) | 16 B |
+| IF-01 obstacle message | 60 B | 21 B |
+| `evt_q_terrain` message / buffer (new) | 8 B / 96 B | 1 B / 64 B |
+
+Message buffers come from the kernel's memory, not `.bss`, so
+`arm-none-eabi-size` shows the same `.bss` for both builds; use the
+`[PACK]` boot lines for the RAM comparison.
+
+### Other changes
+
+* **Shock stop (NFR10).** A new shock while following or avoiding enters
+  recoverable fault 5: STOP is sent, the motion task is woken and the
+  car resumes after `CTRL_SHOCK_STOP_MS` (2 s). Previously a shock only
+  slowed the car; `CTRL_SHOCK_STOP_ENABLED 0` restores that. Expected
+  path: IMU sample (≤10 ms) + controller wake + motion wake (<1 ms each),
+  about 12 ms. `[NFR10]` console lines carry µs timestamps for the
+  measurement.
+* **junction_lock.** A 1-bit flag in the controller: after a junction is
+  acted on, further junction flags are ignored until the car has moved
+  `CTRL_JUNCTION_LOCK_M` (5 cm) past it, or past the end of its turn.
+* **Servo settle.** `ULTRASONIC_SERVO_SETTLE_MS` 50 → 100 ms, applied only
+  when the servo actually moved (the straight-ahead watch while driving
+  no longer waits at all). Full scans already happen with the car stopped.
+* **NO_ECHO.** An echo timeout (30 ms) or a full echo buffer in the GP16
+  ISR sets `FAULT_BIT_NO_ECHO`. With nothing in range this bit is set
+  routinely; it is reported, never acted on.
+* **ISR counter races.** `barcode_sensor_take_counts/_overflow()` and
+  `ultrasonic_take_drops()` read then cleared counters the ISR writes;
+  now the ISR is the only writer and the task reports differences.
+
+### Host tests
+
+```sh
+cd testing/integration && gcc -std=c99 -Wall -Wextra -I../../app_program/common \
+    test_packing_host.c ../../app_program/common/robot_packed.c -o tp -lm && ./tp
+cd app_program/subsystem1 && gcc -std=c99 -Wall -Wextra test_telemetry_codec.c \
+    telemetry_codec.c ../common/robot_packed.c -o tc && ./tc
+```
+
+### Still to check on hardware
+
+1. `[NFR10]` timestamps: tap the IMU while driving; stop must be ≤ 40 ms.
+2. Junction lock on the real 20 mm tape at mission speed.
+3. Full scan time with the 100 ms settle stays under 3 s (NFR8).
+4. Dashboard shows mission, speed, line, hump, obstacle and fault from
+   the binary packet.

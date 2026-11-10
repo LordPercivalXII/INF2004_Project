@@ -1,46 +1,53 @@
 /** @file test_telemetry_codec.c
  *
- * @brief Unit test for minimum-bit telemetry encoding.
+ * @brief PC test for the 4-byte binary MQTT packet (not in the firmware;
+ *        the makefile filters this file out).
+ *
+ *   gcc -std=c99 -Wall -Wextra test_telemetry_codec.c telemetry_codec.c \
+ *       ../common/robot_packed.c -o test_codec && ./test_codec
  */
 
 #include <assert.h>
-#include <stdint.h>
 #include <stdio.h>
-#include <string.h>
 
-#include "../../app_program/subsystem1/telemetry_codec.h"
+#include "telemetry_codec.h"
 
-int main(void)
+int
+main (void)
 {
     telemetry_message_t telemetry = {0};
+    uint8_t             payload[TELEMETRY_PACKED_SIZE] = {0};
 
-    uint8_t payload[TELEMETRY_PACKED_SIZE] = {0};
+    telemetry.mission_state        = MISSION_AVOIDING;     /* 2      */
+    telemetry.fault_mask           = 0x09U;                 /* IMU+NO_ECHO */
+    telemetry.speed_m_s            = 0.35f;                 /* 35 cm/s */
+    telemetry.line_error           = -0.5f;
+    telemetry.hump_height_m        = 0.042f;                /* 42 mm  */
+    telemetry.obstacle_distance_cm = 61.0f;                 /* 31 x 2 cm */
 
-    uint8_t const expected[TELEMETRY_PACKED_SIZE] = {
-        0x00, 0x00, 0x13, 0x88,
-        0x59, 0x64, 0x8C, 0xA3,
-        0x23, 0x12, 0x00
-    };
+    assert(telemetry_encode(&telemetry, false, payload, sizeof(payload)));
+    assert(payload[0] == (uint8_t) (2U | (0x09U << 3)));
+    assert(35U == payload[1]);
+    /* -0.5 * 2047 = -1024 (rounded) -> 1024 -> >> 4 = 64 */
+    assert(64U == payload[2]);
+    assert(42U == payload[3]);
 
-    telemetry.timestamp_ms = 5000U;
-    telemetry.mission_state = MISSION_FOLLOWING;
-    telemetry.speed_m_s = 0.35f;
-    telemetry.line_error = 0.0f;
-    telemetry.distance_m = 2.50f;
-    telemetry.hump_height_m = 0.05f;
-    telemetry.obstacle_distance_cm = 100.0f;
-    telemetry.last_barcode = 1U;
-    telemetry.fault_code = 0U;
+    assert(telemetry_encode(&telemetry, true, payload, sizeof(payload)));
+    assert((0x80U | 31U) == payload[3]);
 
-    assert(telemetry_encode(
-        &telemetry,
-        payload,
-        sizeof(payload)
-    ));
+    telemetry.line_error = 1.0f;        /* 4095 >> 4 = 255 */
+    telemetry.speed_m_s  = 9.0f;        /* saturates      */
+    assert(telemetry_encode(&telemetry, true, payload, sizeof(payload)));
+    assert((255U == payload[2]) && (255U == payload[1]));
+    telemetry.line_error = 0.0f;        /* 2048 >> 4 = 128 */
+    assert(telemetry_encode(&telemetry, true, payload, sizeof(payload)));
+    assert(128U == payload[2]);
 
-    assert(memcmp(payload, expected, sizeof(expected)) == 0);
+    assert(!telemetry_encode(&telemetry, true, payload, 3U));
 
-    printf("PASS: Telemetry encoded correctly!\n");
+    printf("test_telemetry_codec: all tests passed\n");
 
-    return 0;
+    return (0);
 }
+
+/*** end of file ***/
