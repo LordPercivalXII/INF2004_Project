@@ -30,10 +30,9 @@
 #define CTRL_STEER_KD           (0.0f)   /* steer per (error/s)          */
 #define CTRL_CURVE_SLOW         (0.50f)  /* speed cut at full steer      */
 #define CTRL_STEER_DEADBAND     (0.10f)
-#define CTRL_LOST_PIVOT_SPEED   (0.15f) /* m/s outer wheel while searching */
+#define CTRL_LOST_PIVOT_SPEED   (0.20f) /* m/s outer wheel while searching */
 #define CTRL_LOST_FIRST_MS      (1300U)  /* arc towards last side this long */
-#define CTRL_LOST_SWEEP_MS      (1000U) /* then alternate sides every this long */
-#define CTRL_LOST_GIVEUP_MS     (10000U) /* stop searching after this       */
+#define CTRL_LOST_SWEEP_MS      (1000U) /* alternate sides after initial arc */
 #define CTRL_WHEEL_MIN          (0.04f) /* m/s: slowest wheel that turns   */
 #define CTRL_WHEEL_ZERO         (0.03f) /* below this the wheel is stopped */
 #define CTRL_SLEW_PER_CYCLE     (0.02f) /* max wheel target change / 10 ms */
@@ -41,8 +40,7 @@
 #define CTRL_CENTRED_LEVEL      (0.12f) /* |error| below this = centred   */
 #define CTRL_CENTRED_CYCLES     (10U)   /* centred this long: forget side */
 #define CTRL_CENTRE_LEVEL       (0.60f) /* last |error| below this: line is between the sensors */
-#define CTRL_SEARCH_SPIN_SPEED  (0.22f) /* m/s per wheel, in-place search */
-#define CTRL_BETWEEN_STEER      (0.55f) /* steer while line is between sensors */
+#define CTRL_BETWEEN_STEER      (0.25f) /* steer while line is between sensors */
 #define CTRL_CENTRE_HOLD_CYCLES (40U)   /* x 10 ms to drive straight on both-white */
 #define CTRL_LOST_CYCLES        (8U)    /* x 10 ms lost before pivoting   */
 #define CTRL_LINE_DT_S          ((float) ROBOT_LINE_PERIOD_MS / 1000.0f)
@@ -616,31 +614,23 @@ ctrl_handle_line (ctrl_state_t * p_ctrl, line_event_t const * p_line)
         if ((!p_line->b_line_detected) && (0.0f != p_ctrl->last_side_any) &&
             (p_ctrl->lost_cycles >= CTRL_LOST_CYCLES) &&
             (!b_between) &&
-            (lost_ms < CTRL_LOST_GIVEUP_MS) &&
             (MISSION_FOLLOWING == p_ctrl->state))
         {
             /* Line lost at a sharp corner: arc towards the side it was
                last seen.  If that does not find it, sweep the other way
                instead of spinning round, then fall back to steering. */
-            /* Arc towards the last side first, then alternate sides so a
-               wrong guess is corrected and the car never circles. */
-            /* Each sweep is longer than the last (1x, 2x, 3x...), so the
-               search widens until it reaches the line. */
-            uint32_t phase = 0U;
-            uint32_t span  = CTRL_LOST_FIRST_MS;
-            uint32_t t     = lost_ms;
-            while (t >= span)
-            {
-                t -= span;
-                phase++;
-                span = CTRL_LOST_FIRST_MS * (phase + 1U);
-            }
-            float const side = (0U == (phase & 1U))
+            /* Search toward the last seen side first, then alternate on a
+               fixed interval until either sensor reacquires the line. */
+            bool const b_first_arc = (lost_ms < CTRL_LOST_FIRST_MS);
+            uint32_t const sweep_phase = b_first_arc ? 0U :
+                ((lost_ms - CTRL_LOST_FIRST_MS) / CTRL_LOST_SWEEP_MS);
+            float const side = (0U == (sweep_phase & 1U))
                 ? p_ctrl->last_side_any : -p_ctrl->last_side_any;
-            /* Rotate on the spot so the car stays over the lost corner
-               instead of driving across to a different part of the track. */
-            float const outer =  CTRL_SEARCH_SPIN_SPEED;
-            float const inner = -CTRL_SEARCH_SPIN_SPEED;
+            /* Arc gently towards the last side. A forward outer wheel with
+               the inner wheel stopped is more reliable than commanding both
+               wheels slowly in opposite directions during line reacquisition. */
+            float const outer = CTRL_LOST_PIVOT_SPEED;
+            float const inner = 0.0f;
 
             ctrl_set_motion_slewed((side > 0.0f) ? outer : inner,
                                    (side > 0.0f) ? inner : outer, true);

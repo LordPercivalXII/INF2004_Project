@@ -2,7 +2,8 @@
  *
  * @brief Motor driver.  Called only from motion_task (owning task).
  *
- * PWM: 125 MHz / 1 / 65536 = ~1.9 kHz, same as the FreeRTOS version.
+ * PWM: 125 MHz / 1 / 6250 = 20 kHz. The Robo Pico motor driver supports
+ * PWM up to 20 kHz; moving above the audible band reduces motor whine.
  */
 
 #include "drv_motor.h"
@@ -11,8 +12,8 @@
 #include "../common/rmath.h"
 
 #define MOTOR_PWM_CLKDIV    (1U)
-#define MOTOR_PWM_WRAP      (65535U)
-#define MOTOR_PWM_FULL      (65535.0f)
+#define MOTOR_PWM_WRAP      (6249U)
+#define MOTOR_PWM_FULL      ((float) MOTOR_PWM_WRAP + 1.0f)
 
 /*!
  * @brief Configure both H-bridge inputs of both motors; motors stopped.
