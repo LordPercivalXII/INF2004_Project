@@ -115,6 +115,7 @@ void     line_task(INT stacd, void * p_exinf);
 void     barcode_task(INT stacd, void * p_exinf);
 void     barcode_result_put(barcode_result_t const * p_result);
 bool     barcode_result_take(barcode_result_t * p_result);
+bool     barcode_scan_active(void);
 
 /* Junction detector state (line.c). */
 typedef struct

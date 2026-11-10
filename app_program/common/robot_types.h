@@ -70,6 +70,7 @@ typedef struct
     bool        b_line_detected;
     bool        b_junction;
     bool        b_barcode_valid;
+    bool        b_barcode_scanning;
     bool        b_barcode_reversed; /* read right-to-left               */
     uint16_t    barcode;            /* decoded character (ASCII) when
                                        b_barcode_valid                   */

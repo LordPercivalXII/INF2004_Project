@@ -22,6 +22,7 @@ Define a test here before running it. Test IDs never change.
 | INT-J1 | junction with stored LEFT/RIGHT/U-turn barcode: drive to centre, turn, resume | S3 -> controller -> S2 | manual | route `A:L,B:R,C:S,D:U` on MQTT; scan `*A*`, drive to a cross | console `CTRL: junction -> turn 90 deg after 10 mm`, car pivots on the cross and follows the left branch |
 | INT-J2 | junction with no barcode stored goes straight | S3 -> controller | manual | drive over a cross without scanning first | `CTRL: junction -> STRAIGHT (no barcode stored)`, no turn |
 | INT-J3 | barcode stored but no route table published | S3 | manual | scan `*A*` before publishing the route | `S3: junction: 'A' -> STRAIGHT (route table empty ...)` |
+| INT-J4 | after a junction turn the car keeps going the way it turned | controller | manual | LEFT junction, then RIGHT junction; also stop the pivot slightly short | car settles onto the branch on the turn side; never spins back the other way |
 
 **Hardware safety:** INT-09's image can start the motors automatically after boot
 once the IMU is healthy. Keep the track clear and be ready to cut motor power.

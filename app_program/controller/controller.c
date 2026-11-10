@@ -30,9 +30,11 @@
 #define CTRL_STEER_KD           (0.0f)   /* steer per (error/s)          */
 #define CTRL_CURVE_SLOW         (0.50f)  /* speed cut at full steer      */
 #define CTRL_STEER_DEADBAND     (0.10f)
-#define CTRL_LOST_PIVOT_SPEED   (0.20f) /* m/s outer wheel while searching */
+/* Preserve the local search tuning and the bounded search duration. */
+#define CTRL_LOST_PIVOT_SPEED   (0.15f) /* m/s outer wheel while searching */
 #define CTRL_LOST_FIRST_MS      (1300U)  /* arc towards last side this long */
-#define CTRL_LOST_SWEEP_MS      (1000U) /* alternate sides after initial arc */
+#define CTRL_LOST_SWEEP_MS      (1000U) /* then alternate sides every this long */
+#define CTRL_LOST_GIVEUP_MS     (10000U) /* stop searching after this       */
 #define CTRL_WHEEL_MIN          (0.04f) /* m/s: slowest wheel that turns   */
 #define CTRL_WHEEL_ZERO         (0.03f) /* below this the wheel is stopped */
 #define CTRL_SLEW_PER_CYCLE     (0.02f) /* max wheel target change / 10 ms */
@@ -40,7 +42,8 @@
 #define CTRL_CENTRED_LEVEL      (0.12f) /* |error| below this = centred   */
 #define CTRL_CENTRED_CYCLES     (10U)   /* centred this long: forget side */
 #define CTRL_CENTRE_LEVEL       (0.60f) /* last |error| below this: line is between the sensors */
-#define CTRL_BETWEEN_STEER      (0.25f) /* steer while line is between sensors */
+#define CTRL_SEARCH_SPIN_SPEED  (0.22f) /* m/s per wheel, in-place search */
+#define CTRL_BETWEEN_STEER      (0.55f) /* steer while line is between sensors */
 #define CTRL_CENTRE_HOLD_CYCLES (40U)   /* x 10 ms to drive straight on both-white */
 #define CTRL_LOST_CYCLES        (8U)    /* x 10 ms lost before pivoting   */
 #define CTRL_LINE_DT_S          ((float) ROBOT_LINE_PERIOD_MS / 1000.0f)
@@ -53,7 +56,7 @@
 #define CTRL_RAMP_SPEED_SLEW    (0.02f) /* factor change per line cycle */
 #define CTRL_SHOCK_HOLD_MS      (800U)
 #define CTRL_START_DELAY_MS     (3000U)
-#define CTRL_BARCODE_SLOW_SIDE  (0.55f)
+#define CTRL_BARCODE_SPEED_FACTOR (0.55f)
 #define CTRL_SHOCK_FACTOR       (0.7f)
 
 #define CTRL_IMU_BAD_MS         (1000U) /* IMU must be bad this long to fault */
@@ -92,6 +95,7 @@ typedef struct
     bool                b_turn_in_progress;  /* also set while
                                                 approaching a junction */
     bool                b_junction_approach; /* driving to the pivot   */
+    bool                b_junction_turn;     /* junction pivot running */
     float               junction_start_m;    /* odometer at detection  */
     float               junction_turn_deg;   /* turn to make there     */
     uint32_t            junction_start_ms;
@@ -99,6 +103,7 @@ typedef struct
     uint32_t            next_turn_id;
     uint32_t            active_turn_id;
     bool                b_line_detected;
+    bool                b_barcode_scanning;
     float               prev_line_error;    /* for the D term           */
     bool                b_steer_primed;     /* prev_line_error is valid */
     uint32_t            lost_cycles;
@@ -315,6 +320,7 @@ ctrl_enter_fault (ctrl_state_t * p_ctrl, uint32_t code)
     p_ctrl->state      = MISSION_FAULT;
     p_ctrl->b_turn_in_progress = false;
     p_ctrl->b_junction_approach = false;
+    p_ctrl->b_junction_turn = false;
     p_ctrl->active_turn_id = 0U;
     p_ctrl->pending_turn = (uint16_t) BARCODE_CMD_NONE;
     ctrl_set_bits(SYSTEM_BIT_FAULT);
@@ -358,6 +364,7 @@ ctrl_handle_command (ctrl_state_t * p_ctrl,
             p_ctrl->state = MISSION_IDLE;
             p_ctrl->b_turn_in_progress = false;
             p_ctrl->b_junction_approach = false;
+            p_ctrl->b_junction_turn = false;
             p_ctrl->active_turn_id = 0U;
             p_ctrl->pending_turn = (uint16_t) BARCODE_CMD_NONE;
             ctrl_clear_bits(SYSTEM_BIT_MISSION_RUN | SYSTEM_BIT_OBSTACLE);
@@ -510,7 +517,8 @@ ctrl_junction_step (ctrl_state_t * p_ctrl)
 
         if (ctrl_turn_motion(p_ctrl->junction_turn_deg, p_ctrl->next_turn_id))
         {
-            p_ctrl->active_turn_id = p_ctrl->next_turn_id;
+            p_ctrl->active_turn_id  = p_ctrl->next_turn_id;
+            p_ctrl->b_junction_turn = true;
         }
         else
         {
@@ -519,13 +527,42 @@ ctrl_junction_step (ctrl_state_t * p_ctrl)
     }
 }
 
+/*!
+ * @brief A junction pivot has finished: point the line memory at the
+ *        side the car turned to.  If the turn stopped a little short, the
+ *        new branch is still on that side, so steering and the lost-line
+ *        search look there first (line error > 0 = line to the right).
+ */
+static void
+ctrl_junction_turn_done (ctrl_state_t * p_ctrl)
+{
+    float const side = (p_ctrl->junction_turn_deg > 0.0f) ? -1.0f : 1.0f;
+
+    p_ctrl->b_junction_turn = false;
+    p_ctrl->last_side       = side;
+    p_ctrl->last_side_any   = side;
+    p_ctrl->last_seen_error = side;
+    p_ctrl->centred_cycles  = 0U;
+    p_ctrl->lost_cycles     = 0U;
+    p_ctrl->lost_start_ms   = board_millis();
+}
+
 static void
 ctrl_handle_line (ctrl_state_t * p_ctrl, line_event_t const * p_line)
 {
     p_ctrl->line_error      = p_line->line_error;
     p_ctrl->b_line_detected = p_line->b_line_detected;
+    p_ctrl->b_barcode_scanning = p_line->b_barcode_scanning;
 
-    if (p_line->b_line_detected)
+    if (p_ctrl->b_junction_approach || p_ctrl->b_junction_turn)
+    {
+        /* Junction manoeuvre: the pivot sweeps the old line across the
+           sensors and off the far side (a LEFT pivot sends it off to the
+           RIGHT).  Remembering that would make the lost-line search spin
+           the wrong way once the turn ends, so the line memory is frozen
+           here and seeded by ctrl_junction_turn_done() instead. */
+    }
+    else if (p_line->b_line_detected)
     {
         p_ctrl->lost_cycles = 0U;
         p_ctrl->last_seen_error = p_line->line_error;
@@ -619,18 +656,25 @@ ctrl_handle_line (ctrl_state_t * p_ctrl, line_event_t const * p_line)
             /* Line lost at a sharp corner: arc towards the side it was
                last seen.  If that does not find it, sweep the other way
                instead of spinning round, then fall back to steering. */
-            /* Search toward the last seen side first, then alternate on a
-               fixed interval until either sensor reacquires the line. */
-            bool const b_first_arc = (lost_ms < CTRL_LOST_FIRST_MS);
-            uint32_t const sweep_phase = b_first_arc ? 0U :
-                ((lost_ms - CTRL_LOST_FIRST_MS) / CTRL_LOST_SWEEP_MS);
-            float const side = (0U == (sweep_phase & 1U))
+            /* Arc towards the last side first, then alternate sides so a
+               wrong guess is corrected and the car never circles. */
+            /* Each sweep is longer than the last (1x, 2x, 3x...), so the
+               search widens until it reaches the line. */
+            uint32_t phase = 0U;
+            uint32_t span  = CTRL_LOST_FIRST_MS;
+            uint32_t t     = lost_ms;
+            while (t >= span)
+            {
+                t -= span;
+                phase++;
+                span = CTRL_LOST_FIRST_MS * (phase + 1U);
+            }
+            float const side = (0U == (phase & 1U))
                 ? p_ctrl->last_side_any : -p_ctrl->last_side_any;
-            /* Arc gently towards the last side. A forward outer wheel with
-               the inner wheel stopped is more reliable than commanding both
-               wheels slowly in opposite directions during line reacquisition. */
-            float const outer = CTRL_LOST_PIVOT_SPEED;
-            float const inner = 0.0f;
+            /* Rotate on the spot so the car stays over the lost corner
+               instead of driving across to a different part of the track. */
+            float const outer =  CTRL_SEARCH_SPIN_SPEED;
+            float const inner = -CTRL_SEARCH_SPIN_SPEED;
 
             ctrl_set_motion_slewed((side > 0.0f) ? outer : inner,
                                    (side > 0.0f) ? inner : outer, true);
@@ -684,11 +728,14 @@ ctrl_handle_line (ctrl_state_t * p_ctrl, line_event_t const * p_line)
 
         /* Slow down while steering hard, so the sensors keep up with
            tight curves at high speed; full speed again on straights. */
+        float const min_speed = p_ctrl->b_barcode_scanning
+                                ? CTRL_WHEEL_MIN : ROBOT_MIN_SPEED;
         float const speed = rmath_maxf(
             ctrl_drive_speed(p_ctrl) *
+                (p_ctrl->b_barcode_scanning ? CTRL_BARCODE_SPEED_FACTOR : 1.0f) *
                 (1.0f - (CTRL_CURVE_SLOW *
                          rmath_minf(rmath_absf(steer), 1.0f))),
-            ROBOT_MIN_SPEED);
+            min_speed);
 
         float const left_cmd  = speed * (1.0f + steer);
         float const right_cmd = speed * (1.0f - steer);
@@ -895,6 +942,7 @@ ctrl_handle_obstacle (ctrl_state_t * p_ctrl,
         p_ctrl->state = MISSION_AVOIDING;
         p_ctrl->b_turn_in_progress = false;
         p_ctrl->b_junction_approach = false;
+        p_ctrl->b_junction_turn = false;
         p_ctrl->active_turn_id = 0U;
         p_ctrl->pending_turn = (uint16_t) BARCODE_CMD_NONE;
         avoid_start(&p_ctrl->avoid, board_millis(), p_ctrl->distance_m);
@@ -1039,6 +1087,11 @@ ctrl_handle_event (ctrl_state_t * p_ctrl, system_event_t const * p_event)
             {
                 p_ctrl->b_turn_in_progress = false;
                 p_ctrl->active_turn_id = 0U;
+
+                if (p_ctrl->b_junction_turn)
+                {
+                    ctrl_junction_turn_done(p_ctrl);
+                }
             }
             break;
         }
