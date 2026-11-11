@@ -394,6 +394,8 @@ motion_task (INT stacd, void * p_exinf)
     uint32_t         previous_sample_us;
     uint32_t         last_encoder_report_ms = 0U;
     uint32_t         reported_left_rejected = 0U;
+    uint32_t         reported_left_reversed = 0U;
+    uint32_t         reported_right_reversed = 0U;
     uint32_t         reported_right_rejected = 0U;
     bool             encoder_fault_latched = false;
     bool             encoder_fault_pending = false;
@@ -561,16 +563,26 @@ motion_task (INT stacd, void * p_exinf)
         {
             uint32_t left_rejected;
             uint32_t right_rejected;
+            uint32_t left_reversed;
+            uint32_t right_reversed;
             encoder_read_rejected(&left_rejected, &right_rejected);
+            encoder_read_reversed(&left_reversed, &right_reversed);
             if ((left_rejected != reported_left_rejected) ||
-                (right_rejected != reported_right_rejected))
+                (right_rejected != reported_right_rejected) ||
+                (left_reversed != reported_left_reversed) ||
+                (right_reversed != reported_right_reversed))
             {
                 tm_printf((UB *) "S2: encoder short edges rejected "
+                          "left=%u right=%u, reversed glitches "
                           "left=%u right=%u (totals)\n",
                           (unsigned int) left_rejected,
-                          (unsigned int) right_rejected);
+                          (unsigned int) right_rejected,
+                          (unsigned int) left_reversed,
+                          (unsigned int) right_reversed);
                 reported_left_rejected = left_rejected;
                 reported_right_rejected = right_rejected;
+                reported_left_reversed = left_reversed;
+                reported_right_reversed = right_reversed;
             }
             last_encoder_report_ms = now_ms;
         }

@@ -63,6 +63,15 @@
 
 #define AVOID_CM_PER_M          (100.0f)
 
+/* Heading hold on straight drives (P control on the encoder heading).
+ * Trim = KP x heading error, added to the right wheel and taken off the
+ * left (a positive error needs a turn to the left).  The clamp keeps both
+ * wheels at or above 0.08 m/s at AVOID_SPEED_M_S. */
+#define AVOID_HOLD_KP           (0.004f)    /* m/s per degree   */
+#define AVOID_HOLD_MAX          (0.04f)     /* m/s              */
+#define AVOID_HOLD_RESEND       (0.003f)    /* m/s: resend when the trim
+                                               moves this much  */
+
 /*!
  * @brief Start a phase.
  */
@@ -79,6 +88,7 @@ avoid_enter (avoid_t * p_avoid, avoid_phase_t phase,
     p_avoid->white_since_ms = p_input->now_ms;
     p_avoid->verify_line_samples = 0U;
     p_avoid->b_ahead_fresh  = false;
+    p_avoid->b_hold         = false;    /* a new phase stops holding */
 }
 
 static float
@@ -94,12 +104,62 @@ avoid_relative_deg (avoid_t const * p_avoid, avoid_input_t const * p_input)
     return (p_input->heading_deg - p_avoid->heading0_deg);
 }
 
-static void
-avoid_drive (avoid_output_t * p_output, float speed)
+static float
+avoid_hold_trim (avoid_t const * p_avoid, avoid_input_t const * p_input)
 {
+    float const error_deg = p_avoid->hold_deg -
+                            avoid_relative_deg(p_avoid, p_input);
+
+    return (rmath_clampf(AVOID_HOLD_KP * error_deg,
+                         -AVOID_HOLD_MAX, AVOID_HOLD_MAX));
+}
+
+static void
+avoid_hold_output (avoid_t * p_avoid, avoid_output_t * p_output, float trim)
+{
+    p_avoid->hold_trim    = trim;
     p_output->type        = AVOID_OUT_DRIVE;
-    p_output->left_speed  = speed;
-    p_output->right_speed = speed;
+    p_output->left_speed  = p_avoid->hold_speed - trim;
+    p_output->right_speed = p_avoid->hold_speed + trim;
+}
+
+/*!
+ * @brief Start a straight drive that holds a heading.
+ *
+ * @param[in] speed     m/s, negative = backwards (the trim works the same
+ *                      way: the turn rate follows right minus left).
+ * @param[in] hold_deg  Heading to keep, relative to heading0_deg: the
+ *                      target of the turn before this leg, so a turn that
+ *                      stopped within its tolerance is also corrected.
+ */
+static void
+avoid_hold_start (avoid_t * p_avoid, avoid_input_t const * p_input,
+                  avoid_output_t * p_output, float speed, float hold_deg)
+{
+    p_avoid->b_hold     = true;
+    p_avoid->hold_deg   = hold_deg;
+    p_avoid->hold_speed = speed;
+    avoid_hold_output(p_avoid, p_output, avoid_hold_trim(p_avoid, p_input));
+}
+
+/*!
+ * @brief While holding: resend the drive when the trim has moved enough.
+ */
+static void
+avoid_hold_step (avoid_t * p_avoid, avoid_input_t const * p_input,
+                 avoid_output_t * p_output)
+{
+    float trim;
+
+    if (p_avoid->b_hold)
+    {
+        trim = avoid_hold_trim(p_avoid, p_input);
+
+        if (rmath_absf(trim - p_avoid->hold_trim) >= AVOID_HOLD_RESEND)
+        {
+            avoid_hold_output(p_avoid, p_output, trim);
+        }
+    }
 }
 
 /*!
@@ -164,19 +224,21 @@ avoid_step_turn (avoid_t * p_avoid, avoid_input_t const * p_input,
 
 /*!
  * @brief A straight drive of a set length (negative speed: backwards),
- *        then the next phase.
+ *        holding a heading, then the next phase.
+ *
+ * @param[in] hold_deg  Heading to keep (read on the first call only).
  */
 static avoid_status_t
 avoid_step_drive (avoid_t * p_avoid, avoid_input_t const * p_input,
                   avoid_output_t * p_output, float speed, float length_cm,
-                  avoid_phase_t next_phase)
+                  float hold_deg, avoid_phase_t next_phase)
 {
     avoid_status_t status = AVOID_RUNNING;
 
     if (!p_avoid->b_entered)
     {
         p_avoid->b_entered = true;
-        avoid_drive(p_output, speed);
+        avoid_hold_start(p_avoid, p_input, p_output, speed, hold_deg);
     }
     else if (avoid_travelled_cm(p_avoid, p_input) >= length_cm)
     {
@@ -189,7 +251,7 @@ avoid_step_drive (avoid_t * p_avoid, avoid_input_t const * p_input,
     }
     else
     {
-        /* Still driving. */
+        avoid_hold_step(p_avoid, p_input, p_output);
     }
 
     return (status);
@@ -543,8 +605,10 @@ avoid_step (avoid_t * p_avoid, avoid_input_t const * p_input,
             break;
 
         case AVOID_PHASE_REVERSE:
+            /* Back straight out along the heading it stopped on. */
             status = avoid_step_drive(p_avoid, p_input, p_output,
                                       -AVOID_SPEED_M_S, p_avoid->reverse_cm,
+                                      avoid_relative_deg(p_avoid, p_input),
                                       p_avoid->after_reverse);
 
             if (p_avoid->phase != AVOID_PHASE_REVERSE)
@@ -570,6 +634,7 @@ avoid_step (avoid_t * p_avoid, avoid_input_t const * p_input,
                                           AVOID_OUT_SLACK *
                                           (p_avoid->decision_offset_cm /
                                            AVOID_SIN_OUT),
+                                          p_avoid->turn_target_deg,
                                           AVOID_PHASE_TURN_PARALLEL);
             }
             break;
@@ -587,8 +652,10 @@ avoid_step (avoid_t * p_avoid, avoid_input_t const * p_input,
             }
             else if (!p_avoid->b_entered)
             {
+                /* Parallel to the original path (turn_target_deg = 0). */
                 p_avoid->b_entered = true;
-                avoid_drive(p_output, AVOID_SPEED_M_S);
+                avoid_hold_start(p_avoid, p_input, p_output, AVOID_SPEED_M_S,
+                                 p_avoid->turn_target_deg);
             }
             else if (age_ms >= AVOID_DRIVE_TIMEOUT_MS)
             {
@@ -596,7 +663,7 @@ avoid_step (avoid_t * p_avoid, avoid_input_t const * p_input,
             }
             else
             {
-                /* Still driving past. */
+                avoid_hold_step(p_avoid, p_input, p_output);
             }
             break;
 
@@ -622,7 +689,8 @@ avoid_step (avoid_t * p_avoid, avoid_input_t const * p_input,
             else if (!p_avoid->b_entered)
             {
                 p_avoid->b_entered = true;
-                avoid_drive(p_output, AVOID_SPEED_M_S);
+                avoid_hold_start(p_avoid, p_input, p_output, AVOID_SPEED_M_S,
+                                 p_avoid->turn_target_deg);
             }
             else if ((!p_avoid->b_in_black) &&
                      ((p_avoid->lateral_cm <= -AVOID_SEARCH_OVERSHOOT_CM) ||
@@ -634,7 +702,7 @@ avoid_step (avoid_t * p_avoid, avoid_input_t const * p_input,
             }
             else
             {
-                /* Still searching. */
+                avoid_hold_step(p_avoid, p_input, p_output);
             }
             break;
 

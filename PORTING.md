@@ -217,3 +217,40 @@ Check on hardware: the barcode must finish decoding before the junction.
 Decoding ends after the 150 ms end gap, so leave at least ~25 mm of white
 between the last bar and the junction at 0.15 m/s; otherwise the
 character is stored after the junction and used at the next one.
+
+## Avoidance drift and encoder-stall fault (field log, 55 s)
+
+Symptoms: during avoidance the car drifts right on legs meant to be
+straight, with the left wheel visibly faster; one run ended in a
+permanent `FAULT code 7` (encoder stall, left wheel, `ages=520/40 ms`).
+
+Evidence in the log:
+- only the left encoder rejects glitch edges (`left=68 right=0`);
+- the left wheel reads slow or even backwards while driving forward
+  (`left_m_s=-0.058 right_m_s=0.157`).
+
+Cause: tick direction is channel B sampled on an A rising edge. A
+glitch on A's falling edge looks like a rising edge with B in the
+opposite state, so it counts a tick backwards and cancels a real one.
+The left wheel reads slow, its PID drives it harder, and the car drifts
+right. The encoder heading (right minus left ticks) is wrong too, so the
+turns are off. If every falling edge glitches, the net count stops and
+the stall watchdog fires while the wheel is turning.
+
+Fixes:
+1. `drv_encoder.c`: direction filter. A tick against the wheel's current
+   direction is held back; 3 in a row are a real reversal (all counted),
+   otherwise they are dropped and reported as
+   `reversed glitches left=N right=N`.
+2. `avoidance.c`: heading hold on every straight avoidance drive
+   (REVERSE, LEG_OUT, LEG_PAST, SEARCH): P control on the encoder heading
+   toward the leg's intended heading, trim up to +-0.04 m/s.
+3. `obstacle_geometry.c`: the bypass offset now includes
+   `OBSTACLE_CLEARANCE_MARGIN_CM` (5 cm); before, the car's side was
+   planned exactly on the estimated obstacle edge.
+
+Still check the hardware: a clean encoder should report almost no
+rejected edges or reversed glitches. If the left counters keep climbing,
+reseat the left encoder connector, keep its wires away from the motor
+leads, and consider 4.7 kOhm external pull-ups on GP12/GP13 (the internal
+pull-ups are about 50 kOhm).

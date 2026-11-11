@@ -138,6 +138,13 @@ typedef struct
     float             lateral_cm;
     float             turn_target_deg;  /* relative to heading0_deg    */
 
+    /* Heading hold on straight drives: equal wheel targets alone let any
+     * left/right speed difference turn into drift. */
+    bool              b_hold;
+    float             hold_deg;         /* relative to heading0_deg    */
+    float             hold_speed;       /* m/s, negative = backwards   */
+    float             hold_trim;        /* last trim sent, m/s         */
+
     /* Line recovery. */
     bool              b_in_black;
     float             black_start_m;

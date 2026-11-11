@@ -291,7 +291,8 @@ obstacle_profile_build (obstacle_scan_t const * p_scan,
  *                 margin: back up and scan again.
  * TURN_LEFT/RIGHT in the path: go round the side with room (both: the
  *                 side that needs the smaller sideways move).  The offset
- *                 puts the car's path just clear of that edge.
+ *                 puts the car's side OBSTACLE_CLEARANCE_MARGIN_CM clear
+ *                 of that edge.
  */
 void
 obstacle_plan_build (obstacle_profile_t const * p_profile,
@@ -338,8 +339,12 @@ obstacle_plan_build (obstacle_profile_t const * p_profile,
 
     p_plan->action           = b_go_left ? OBSTACLE_ACTION_TURN_LEFT
                                          : OBSTACLE_ACTION_TURN_RIGHT;
-    p_plan->bypass_offset_cm = rmath_clampf(b_go_left ? left_offset
-                                                      : right_offset,
+    /* The edge offset alone puts the car's side exactly on the estimated
+       edge (zero gap), and the ultrasonic edge estimate can be several cm
+       short: add the same margin the room check above already assumes. */
+    p_plan->bypass_offset_cm = rmath_clampf((b_go_left ? left_offset
+                                                       : right_offset) +
+                                            OBSTACLE_CLEARANCE_MARGIN_CM,
                                             OBSTACLE_OFFSET_MIN_CM,
                                             OBSTACLE_OFFSET_MAX_CM);
 }
