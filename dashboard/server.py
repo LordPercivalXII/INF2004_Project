@@ -79,10 +79,24 @@ def decode_packet(payload, previous):
         })
         return value
 
+    if len(payload) == 4 and (b0 & 0x07) == 7 and (b0 & 0x08):
+        value = dict(previous or {})
+        pitch_qdeg = b2 if b2 < 0x80 else b2 - 0x100
+        value.update({
+            'imu_valid': bool(b0 & 0x10),
+            'motion': b1,
+            'pitch_deg': pitch_qdeg / 4.0,
+            'hump_count': b3,
+            'height_approx': bool(b0 & 0x20),
+            'height_gap_pending': bool(b0 & 0x40),
+            'binary': True,
+        })
+        return value
+
     if len(payload) == 4 and (b0 & 0x07) == 7:
         value = dict(previous or {})
         value.update({
-            'simulation': bool(b0 & 0x08),
+            'simulation': bool(b0 & 0x80),
             'barcode': b1 & 0x7F,
             'junction_char': chr(b2) if b2 else '',
             'junction_action': ACTIONS[b3 & 0x03],

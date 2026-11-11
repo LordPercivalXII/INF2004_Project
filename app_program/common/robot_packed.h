@@ -33,7 +33,7 @@
  *                                              the sensor reads 250 cm;
  *                                              needs signed offset and
  *                                              scan time
- *   MQTT status      4 B       4 B   ~800 B    + binary ramp/metadata frames
+ *   MQTT status      4 B       4 B   ~800 B    + typed ramp/IMU/metadata frames
  *
  * USE_BIT_PACKING (make PACK=0|1, default 1) selects packed queue structs
  * and compact binary MQTT telemetry. PACK=0 remains available for the

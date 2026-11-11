@@ -135,7 +135,7 @@ Turn IDs now count 1..31 (`ctrl_next_turn_id()`) to fit the 5-bit field.
 | Item | PACK=0 | PACK=1 |
 |---|---|---|
 | `cmd_q_motion` message / buffer reserved | 24 B / 336 B | 4 B / 96 B |
-| MQTT message / buffer reserved | 204 B / 2496 B | 4 B / 288 B (three frames per snapshot) |
+| MQTT message / buffer reserved | 204 B / 2496 B | 4 B / 384 B (four frames per snapshot) |
 | MQTT payload on the wire | JSON, about 400 B | 4 B |
 | IF-01 line message (sent every 10 ms) | 40 B (was 124 B before this change: whole union) | 16 B |
 | IF-01 obstacle message | 60 B | 21 B |

@@ -1,8 +1,8 @@
 /** @file telemetry_codec.h
  *
  * @brief Compact binary MQTT telemetry records (Tribunal 1 curveball;
- *        replaces the 256+ byte JSON text payload). Status, ramp and
- *        metadata are sent as separate four-byte frames so each MQTT
+ *        replaces the 256+ byte JSON text payload). Status, ramp, IMU and
+ *        metadata are separate four-byte frames so each MQTT
  *        payload stays within the tribunal's four-byte limit.
  *
  * Serialised with explicit shifts and masks, never C bit-fields, so the
@@ -25,8 +25,10 @@
  * The bump/obstacle byte alternates between the two kinds on successive
  * status packets; the dashboard keeps the last value of each. State 6
  * identifies a four-byte ramp record (flags, signed rise mm, peak mm,
- * last completed hump mm). State 7 identifies a four-byte metadata record
- * (simulation flag, barcode, junction character, action/count).
+ * last completed hump mm). State 7 identifies metadata (simulation flag,
+ * barcode, junction character, action/count); state 7 with bit 3 set is
+ * an IMU record (motion, pitch quarter-degrees, count, sensor-valid,
+ * approximate and gap flags).
  */
 
 #ifndef TELEMETRY_CODEC_H

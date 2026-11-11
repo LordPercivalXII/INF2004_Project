@@ -26,7 +26,7 @@
    USE_BIT_PACKING, else the JSON text of the full snapshot. */
 #if USE_BIT_PACKING
 #define S1_MQTT_MESSAGE_SIZE    (4U)    /* = TELEMETRY_PACKED_SIZE */
-#define S1_MQTT_QUEUE_LENGTH    (ROBOT_QUEUE_LENGTH * 3U) /* 3 frames/snapshot */
+#define S1_MQTT_QUEUE_LENGTH    (ROBOT_QUEUE_LENGTH * 4U) /* 4 frames/snapshot */
 #else
 #define S1_MQTT_MESSAGE_SIZE    (sizeof(telemetry_message_t))
 #define S1_MQTT_QUEUE_LENGTH    (ROBOT_QUEUE_LENGTH)

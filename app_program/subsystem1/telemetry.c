@@ -78,7 +78,7 @@ static void telemetry_encode_height(telemetry_message_t const *p_message,
 static void telemetry_encode_metadata(telemetry_message_t const *p_message,
                                       uint8_t packet[4])
 {
-    packet[0] = (uint8_t)(7U | (p_message->b_simulation ? 0x08U : 0U));
+    packet[0] = (uint8_t)(7U | (p_message->b_simulation ? 0x80U : 0U));
     packet[1] = ((p_message->last_barcode >= TELEMETRY_ASCII_FIRST) &&
                  (p_message->last_barcode <= TELEMETRY_ASCII_LAST))
                     ? (uint8_t)p_message->last_barcode : 0U;
@@ -89,6 +89,25 @@ static void telemetry_encode_metadata(telemetry_message_t const *p_message,
                     ? (uint8_t)p_message->last_junction_char : 0U;
     packet[3] = (uint8_t)(((uint32_t)p_message->last_junction_action & 0x03U) |
                           (((uint32_t)p_message->junction_count & 0x3FU) << 2));
+}
+
+static void telemetry_encode_imu(telemetry_message_t const *p_message,
+                                 uint8_t packet[4])
+{
+    float pitch_qdeg = p_message->imu.tilt_pitch_deg * 4.0f;
+    uint32_t flags = 0U;
+
+    if (p_message->imu.b_sensor_valid) flags |= 0x10U;
+    if (p_message->imu.b_height_approximate) flags |= 0x20U;
+    if (p_message->imu.b_height_gap_pending) flags |= 0x40U;
+    if (pitch_qdeg > 127.0f) pitch_qdeg = 127.0f;
+    if (pitch_qdeg < -128.0f) pitch_qdeg = -128.0f;
+
+    packet[0] = (uint8_t)(7U | 0x08U | flags);
+    packet[1] = (uint8_t)p_message->imu.motion_state;
+    packet[2] = (uint8_t)(int8_t)pitch_qdeg;
+    packet[3] = (uint8_t)((p_message->imu.hump_count > 255U)
+                              ? 255U : p_message->imu.hump_count);
 }
 #endif
 
@@ -700,6 +719,14 @@ void telemetry_task(INT stacd, void *p_exinf)
                         !b_mqtt_queue_error)
                     {
                         tm_printf((UB *)"S1: MQTT metadata record dropped\n");
+                        b_mqtt_queue_error = true;
+                    }
+                    telemetry_encode_imu(&message, packet);
+                    if (E_OK != tk_snd_mbf(gh_mqtt_telemetry_mbf, packet,
+                                           (INT)sizeof(packet), TMO_POL) &&
+                        !b_mqtt_queue_error)
+                    {
+                        tm_printf((UB *)"S1: MQTT IMU record dropped\n");
                         b_mqtt_queue_error = true;
                     }
 #endif
