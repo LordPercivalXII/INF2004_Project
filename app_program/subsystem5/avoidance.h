@@ -102,7 +102,9 @@ typedef enum
     AVOID_LOOK_SCAN = 0,    /* stopped: full coarse + fine scans       */
     AVOID_LOOK_LEFT,        /* not used by this version                */
     AVOID_LOOK_RIGHT,       /* not used by this version                */
-    AVOID_LOOK_AHEAD        /* moving: straight ahead, one at a time   */
+    AVOID_LOOK_AHEAD,       /* moving: straight ahead, one at a time   */
+    AVOID_LOOK_SCAN_FAR     /* stopped after backing up: full scans,
+                               obstacles up to OBSTACLE_DETECT_FAR_CM  */
 } avoid_look_t;
 
 typedef struct

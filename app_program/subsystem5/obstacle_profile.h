@@ -17,6 +17,15 @@
 /* Every reading of one scan, in angle order (13 fine angles fit). */
 #define OBSTACLE_MAX_POINTS (32U)
 
+/* Scanning: the nearest reading must be this close to count as an
+ * obstacle (a little more than the stop distance plus one back-up). */
+#define OBSTACLE_DETECT_CM      (40.0f)
+
+/* After backing up from an obstacle whose edges the scan could not see:
+ * the same obstacle is now further away, so look further.  From 46 cm
+ * (after three back-ups) +-30 deg covers about +-26 cm to each side. */
+#define OBSTACLE_DETECT_FAR_CM  (60.0f)
+
 typedef struct
 {
     uint32_t angle_deg;         /* servo angle, 90 = straight ahead */
@@ -27,6 +36,7 @@ typedef struct
 {
     obstacle_point_t points[OBSTACLE_MAX_POINTS];
     uint32_t         count;
+    float            detect_cm;  /* obstacle range; 0 = OBSTACLE_DETECT_CM */
 } obstacle_scan_t;
 
 /* Stage 3: the obstacle profile.  Angles are from straight ahead, - left,

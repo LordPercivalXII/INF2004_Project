@@ -108,7 +108,8 @@ obstacle_car_is_avoiding (void)
 static bool
 obstacle_scan_wanted (void)
 {
-    return (obstacle_car_is_avoiding() && (AVOID_LOOK_SCAN == g_look));
+    return (obstacle_car_is_avoiding() &&
+            ((AVOID_LOOK_SCAN == g_look) || (AVOID_LOOK_SCAN_FAR == g_look)));
 }
 
 /*!
@@ -189,6 +190,12 @@ obstacle_scan (obstacle_scan_t * p_scan, uint32_t scan_number,
     float      distance;
 
     obstacle_scan_reset(p_scan);
+
+    if (AVOID_LOOK_SCAN_FAR == g_look)
+    {
+        /* Backed up from it: the same obstacle is further away now. */
+        p_scan->detect_cm = OBSTACLE_DETECT_FAR_CM;
+    }
 
     for (idx = 0U; (idx < OBSTACLE_COARSE_COUNT) && obstacle_scan_wanted();
          idx++)

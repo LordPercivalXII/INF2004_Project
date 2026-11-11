@@ -21,10 +21,6 @@
 #define OBSTACLE_STOP_CM        (20.0f)
 #define OBSTACLE_STOP_READINGS  (3U)
 
-/* Scanning: the nearest reading must be this close to count as an
- * obstacle (a little more than the stop distance plus one back-up). */
-#define OBSTACLE_DETECT_CM      (40.0f)
-
 /* Readings up to this far behind the nearest one are the same obstacle,
  * so a reading that wobbles by a cm cannot split it in two. */
 #define OBSTACLE_BAND_CM        (10.0f)
@@ -64,6 +60,17 @@ obstacle_lateral_cm (float relative_deg, float distance_cm)
 }
 
 /*!
+ * @brief How close the nearest reading must be to count as an obstacle
+ *        (OBSTACLE_DETECT_CM unless the scan was asked to look further).
+ */
+static float
+obstacle_detect_cm (obstacle_scan_t const * p_scan)
+{
+    return ((p_scan->detect_cm > 0.0f) ? p_scan->detect_cm
+                                       : OBSTACLE_DETECT_CM);
+}
+
+/*!
  * @brief Nearest reading among points [from, to].
  */
 static float
@@ -84,7 +91,8 @@ obstacle_nearest_cm (obstacle_scan_t const * p_scan, uint32_t from,
 void
 obstacle_scan_reset (obstacle_scan_t * p_scan)
 {
-    p_scan->count = 0U;
+    p_scan->count     = 0U;
+    p_scan->detect_cm = OBSTACLE_DETECT_CM;
 }
 
 /*!
@@ -144,7 +152,7 @@ obstacle_fine_range (obstacle_scan_t const * p_coarse, uint32_t * p_from_deg,
 
     for (idx = 0U; idx < p_coarse->count; idx++)
     {
-        if (p_coarse->points[idx].distance_cm <= OBSTACLE_DETECT_CM)
+        if (p_coarse->points[idx].distance_cm <= obstacle_detect_cm(p_coarse))
         {
             first = (p_coarse->points[idx].angle_deg < first)
                     ? p_coarse->points[idx].angle_deg : first;
@@ -172,7 +180,8 @@ obstacle_fine_range (obstacle_scan_t const * p_coarse, uint32_t * p_from_deg,
 /*!
  * @brief Stage 3: the obstacle profile from one scan.
  *
- * The obstacle is the nearest reading, if it is within OBSTACLE_DETECT_CM,
+ * The obstacle is the nearest reading, if it is within the scan's range
+ * (OBSTACLE_DETECT_CM, or OBSTACLE_DETECT_FAR_CM after backing up),
  * plus every neighbouring reading within OBSTACLE_BAND_CM of it.  Its
  * edges are where that run of readings ends; the clearance on each side
  * is the nearest reading beyond the edge.
@@ -208,7 +217,7 @@ obstacle_profile_build (obstacle_scan_t const * p_scan,
         }
     }
 
-    if (p_scan->points[nearest].distance_cm > OBSTACLE_DETECT_CM)
+    if (p_scan->points[nearest].distance_cm > obstacle_detect_cm(p_scan))
     {
         /* Nothing close: each side's clearance is its nearest reading. */
         for (idx = 0U; idx < p_scan->count; idx++)

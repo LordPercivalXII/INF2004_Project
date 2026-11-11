@@ -540,6 +540,36 @@ subsystem5_test (void)
                ((AVOID_FAILED_BOXED_IN == status) && (4U == idx)),
                "three reverses at one spot, then gives up as boxed in");
 
+    /* After backing up, the scan looks further.  A 40 cm wide box at
+       46 cm (70..110 deg): out of the normal 40 cm range, so a normal
+       scan sees nothing; a far scan sees it and both its edges, and
+       goes round it.  The avoidance asks for the far scan only after a
+       back-up. */
+    s5_test_sweep(&scan, 70U, 110U, 46.0f);
+    plan  = s5_test_plan(&scan);
+    scan.detect_cm = OBSTACLE_DETECT_FAR_CM;
+    plan2 = s5_test_plan(&scan);
+    b_ok  = (OBSTACLE_ACTION_CONTINUE == plan.action) &&
+            ((OBSTACLE_ACTION_TURN_LEFT == plan2.action) ||
+             (OBSTACLE_ACTION_TURN_RIGHT == plan2.action));
+    car   = (s5_model_t) {0};
+    avoid = (avoid_t) {0};
+    avoid_start(&avoid, 0U, 0.0f);
+    (void) avoid_step(&avoid, &car.input, &output);         /* stop */
+    b_ok  = b_ok && (AVOID_LOOK_SCAN == avoid_look(&avoid));
+    result = s5_test_result(OBSTACLE_ACTION_REVERSE_RETRY, 0.0f, 17.0f, 0U);
+    avoid_on_scan(&avoid, &result);
+    status = avoid_step(&avoid, &car.input, &output);       /* decide */
+    status = (AVOID_RUNNING == status)
+             ? s5_test_run(&avoid, &car, AVOID_PHASE_WAIT_SCAN, false)
+             : status;
+    TEST_CHECK("S5-U40",
+               (b_ok && (AVOID_RUNNING == status) &&
+                (AVOID_PHASE_WAIT_SCAN == avoid.phase) &&
+                (AVOID_LOOK_SCAN_FAR == avoid_look(&avoid))),
+               "after backing up the scan looks to 60 cm: a wide box at "
+               "46 cm is seen and gone round, not taken for a clear scan");
+
     TEST_SUMMARY("subsystem5");
 }
 

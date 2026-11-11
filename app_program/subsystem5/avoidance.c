@@ -547,14 +547,30 @@ avoid_is_following (avoid_t const * p_avoid)
 
 /*!
  * @brief Where the scanner should point: full scans while stopped to
- *        decide, straight ahead the rest of the time.
+ *        decide, straight ahead the rest of the time.  After backing up
+ *        the scan looks further: the obstacle it backed away from is now
+ *        further off, and a clear scan then would end in boxed in.
  */
 avoid_look_t
 avoid_look (avoid_t const * p_avoid)
 {
-    return (((AVOID_PHASE_IDLE == p_avoid->phase) ||
-             (AVOID_PHASE_WAIT_SCAN == p_avoid->phase))
-            ? AVOID_LOOK_SCAN : AVOID_LOOK_AHEAD);
+    avoid_look_t look = AVOID_LOOK_AHEAD;
+
+    if (AVOID_PHASE_IDLE == p_avoid->phase)
+    {
+        look = AVOID_LOOK_SCAN;
+    }
+    else if (AVOID_PHASE_WAIT_SCAN == p_avoid->phase)
+    {
+        look = (0U == p_avoid->reverse_count) ? AVOID_LOOK_SCAN
+                                              : AVOID_LOOK_SCAN_FAR;
+    }
+    else
+    {
+        /* Moving: straight ahead. */
+    }
+
+    return (look);
 }
 
 char const *

@@ -46,6 +46,7 @@ Test IDs never change meaning and are never reused. Tests for features removed i
 | S5-U37 | going round: within 9 cm ahead stops and waits (BLOCKED), 40 cm does not; 3 readings beyond 15 cm carry on with the same step (a missed echo neither counts nor restarts, Tribunal 1 A5), and the bypass still finishes | Stage 5 | auto | `subsystem5_test.c` | PASS |
 | S5-U38 | blocked: a reading within 15 cm restarts the clear count; still there after 8 s, gives up (blocked, fault 4), not before | Stage 5 | auto | `subsystem5_test.c` | PASS |
 | S5-U39 | turning: within 9 cm ahead stops the turn, 12 cm does not; when clear the turn finishes only what is left (40 of 60°) | Stage 5 | auto | `subsystem5_test.c` | PASS |
+| S5-U40 | after backing up the scan looks to 60 cm instead of 40: a 40 cm wide box at 46 cm is seen (a normal scan misses it) and gone round; only a scan after a back-up looks further | Stage 3, 4 | auto | `subsystem5_test.c` | PASS |
 | S5-M01 | box on a straight: car goes round it and rejoins the line going the same way | Stage 4, 5, IF-01, IF-03 | manual | SIM=0, floor; tune the distances in `avoidance.c` | mission 1 → 2 → 1, no contact |
 | S5-M02 | box placed on the line, car at driving speed | Stage 1, 4 | manual | SIM=0, floor, save the console output | car stops short of the box; `S5: STOP obstacle in path at x cm` with x about 15-20 |
 | S5-M03 | box beside the line, outside the car's path | Stage 4 | manual | SIM=0, floor | car keeps following, or stops, scans and prints `CONTINUE` |
