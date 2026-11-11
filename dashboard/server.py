@@ -34,12 +34,12 @@ def on_disconnect(c, userdata, disconnect_flags, reason_code, properties):
     with lock:
         state['connected'] = False
 
-PACKET_SIZES = (4, 5, 7)  # older firmware sent 4 or 5 bytes
+PACKET_SIZES = (4, 5, 7)  # current 4-byte frames; legacy 5/7-byte frames
 ACTIONS = ('STRAIGHT', 'LEFT', 'RIGHT', 'U-TURN')
 
 
 def decode_packet(payload, previous):
-    """Decode the robot's 7-byte binary telemetry packet.
+    """Decode compact binary telemetry frames (plus legacy 5/7-byte packets).
 
     Layout (app_program/subsystem1/telemetry_codec.h, bit 0 = LSB):
       byte 0: bits 0-2 state (0 idle, 1 following, 2 avoiding, 3 fault,
@@ -49,13 +49,62 @@ def decode_packet(payload, previous):
       byte 3: bit 7 = 1 obstacle (bits 0-6 x 2 cm), 0 hump (bits 0-6 mm)
       byte 4: bits 0-6 last decoded barcode character (ASCII), 0 = none;
               bit 7 = simulation build (the motors are not driven)
-      byte 5: barcode used at the last junction (ASCII), 0 = none stored
-      byte 6: bits 0-1 action chosen there (0 S, 1 L, 2 R, 3 U),
-              bits 2-7 junction counter (mod 64)
-    Byte 3 alternates between hump and obstacle, so the other value is
-    carried over from the previous packet.
+      state 6 (4-byte frame): ramp flags, signed rise mm, peak mm, last
+              completed hump mm
+      state 7 (4-byte frame): simulation flag, barcode, junction character,
+              action and junction counter
+    Byte 3 of status frames alternates between hump and obstacle, so the
+    other value is carried over from the previous packet.
     """
     b0, b1, b2, b3 = payload[:4]
+    # A 4-byte state-6 record carries ramp height alongside the normal
+    # compact status packets. It shares the telemetry topic and merges into
+    # the latest status so the dashboard keeps mission/speed/line values.
+    if len(payload) == 4 and (b0 & 0x07) == 6:
+        value = dict(previous or {})
+        flags = (b0 >> 3) & 0x1F
+        rise_mm = b1 if b1 < 0x80 else b1 - 0x100
+        value.update({
+            'imu_valid': bool(flags & 0x01),
+            'tilt_valid': bool(flags & 0x01),
+            'imu_calibrated': bool(flags & 0x02),
+            'height_tracking_valid': bool(flags & 0x04),
+            'hump_active': bool(flags & 0x08),
+            'hump_valid': bool(flags & 0x10),
+            'height_approx': True,
+            'rise_m': rise_mm / 1000.0,
+            'terrain_peak_m': b2 / 1000.0,
+            'hump_m': b3 / 1000.0,
+            'binary': True,
+        })
+        return value
+
+    if len(payload) == 4 and (b0 & 0x07) == 7 and (b0 & 0x08):
+        value = dict(previous or {})
+        pitch_qdeg = b2 if b2 < 0x80 else b2 - 0x100
+        value.update({
+            'imu_valid': bool(b0 & 0x10),
+            'motion': b1,
+            'pitch_deg': pitch_qdeg / 4.0,
+            'hump_count': b3,
+            'height_approx': bool(b0 & 0x20),
+            'height_gap_pending': bool(b0 & 0x40),
+            'binary': True,
+        })
+        return value
+
+    if len(payload) == 4 and (b0 & 0x07) == 7:
+        value = dict(previous or {})
+        value.update({
+            'simulation': bool(b0 & 0x80),
+            'barcode': b1 & 0x7F,
+            'junction_char': chr(b2) if b2 else '',
+            'junction_action': ACTIONS[b3 & 0x03],
+            'junction_count': b3 >> 2,
+            'binary': True,
+        })
+        return value
+
     value = {
         'mission': b0 & 0x07,
         'fault': (b0 >> 3) & 0x1F,
@@ -63,6 +112,11 @@ def decode_packet(payload, previous):
         'line': (b2 - 128) / 128.0,
         'hump_m': (previous or {}).get('hump_m'),
         'obstacle_cm': (previous or {}).get('obstacle_cm'),
+        'barcode': (previous or {}).get('barcode', 0),
+        'simulation': (previous or {}).get('simulation', False),
+        'junction_char': (previous or {}).get('junction_char', ''),
+        'junction_action': (previous or {}).get('junction_action'),
+        'junction_count': (previous or {}).get('junction_count', 0),
         'binary': True,
     }
     if len(payload) >= 5:

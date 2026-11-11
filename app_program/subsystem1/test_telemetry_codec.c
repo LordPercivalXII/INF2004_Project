@@ -1,6 +1,6 @@
 /** @file test_telemetry_codec.c
  *
- * @brief PC test for the 7-byte binary MQTT packet (not in the firmware;
+ * @brief PC test for the 4-byte binary MQTT status packet (not in firmware;
  *        the makefile filters this file out).
  *
  *   gcc -std=c99 -Wall -Wextra test_telemetry_codec.c telemetry_codec.c \
@@ -43,34 +43,7 @@ main (void)
     assert(telemetry_encode(&telemetry, true, payload, sizeof(payload)));
     assert(128U == payload[2]);
 
-    assert(!telemetry_encode(&telemetry, true, payload, 6U));
-
-    /* Bytes 5-6: last junction decision. */
-    telemetry.last_junction_char   = 'F';
-    telemetry.last_junction_action = BARCODE_CMD_RIGHT;
-    telemetry.junction_count       = 65U;       /* wraps to 1 */
-    assert(telemetry_encode(&telemetry, true, payload, sizeof(payload)));
-    assert(('F' == payload[5]) && ((2U | (1U << 2)) == payload[6]));
-    telemetry.last_junction_char   = '\0';      /* none stored: straight */
-    telemetry.last_junction_action = BARCODE_CMD_NONE;
-    assert(telemetry_encode(&telemetry, true, payload, sizeof(payload)));
-    assert((0U == payload[5]) && (0U == (payload[6] & 3U)));
-
-    /* Byte 4: barcode character. */
-    telemetry.last_barcode = 'A';
-    assert(telemetry_encode(&telemetry, true, payload, sizeof(payload)));
-    assert('A' == payload[4]);
-    telemetry.last_barcode = 0U;            /* none */
-    assert(telemetry_encode(&telemetry, true, payload, sizeof(payload)));
-    assert(0U == payload[4]);
-    telemetry.b_simulation = true;          /* bit 7, char still readable */
-    telemetry.last_barcode = 'B';
-    assert(telemetry_encode(&telemetry, true, payload, sizeof(payload)));
-    assert((0x80U | 'B') == payload[4]);
-    telemetry.b_simulation = false;
-    telemetry.last_barcode = ' ';           /* not printable: none */
-    assert(telemetry_encode(&telemetry, true, payload, sizeof(payload)));
-    assert(0U == payload[4]);
+    assert(!telemetry_encode(&telemetry, true, payload, 3U));
 
     /* Byte 0 state: START countdown and START held for the IMU. */
     telemetry.mission_state   = MISSION_IDLE;

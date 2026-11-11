@@ -38,9 +38,9 @@
 /* Steering is a fraction of the drive speed, so a given line error gives
  * the same path curvature at any speed: 1.0 = inner wheel stopped (pivot
  * on it), above 1.0 = inner wheel backwards. */
-#define CTRL_STEER_GAIN         (0.40f) /* steer per unit line error    */
-#define CTRL_STEER_LIMIT        (1.20f)
-#define CTRL_STEER_SMOOTH       (0.35f) /* weight of newest sample      */
+#define CTRL_STEER_GAIN         (0.60f) /* steer per unit line error    */
+#define CTRL_STEER_LIMIT        (0.90f) /* keep the inner wheel forward */
+#define CTRL_STEER_SMOOTH       (0.45f) /* weight of newest sample      */
 #define CTRL_STEER_KD           (0.0f)   /* steer per (error/s)          */
 #define CTRL_CURVE_SLOW         (0.50f)  /* speed cut at full steer      */
 #define CTRL_STEER_DEADBAND     (0.10f)

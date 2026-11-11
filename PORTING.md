@@ -117,7 +117,7 @@ Implemented from `CSC19_PostTri1` Versions B and C, kept on micro T-Kernel
 | `xQueueOverwrite` 4-byte MQTT packet | `telemetry_encode()` → 4-byte message buffer → `mqtt_utk_telemetry_read()` |
 | `(int8_t)(line_err_12b >> 4)` | same result without a shift of signed data (BARR-C): the 12-bit field is offset-binary, so the shift is unsigned |
 | C bit-fields + `__attribute__((packed))` + `_Static_assert` | `common/robot_packed.h` (unsigned bit-fields only) |
-| `#define USE_BIT_PACKING 1` | `make PACK=1` (default) / `PACK=0`; boot prints a `[PACK]` size table |
+| `#define USE_BIT_PACKING 1` | `make PACK=1` (default, compact binary telemetry) / `PACK=0` (JSON comparison/debug build); boot prints a `[PACK]` size table |
 
 ### Bit layouts that differ from the tribunal table, and why
 
@@ -135,7 +135,7 @@ Turn IDs now count 1..31 (`ctrl_next_turn_id()`) to fit the 5-bit field.
 | Item | PACK=0 | PACK=1 |
 |---|---|---|
 | `cmd_q_motion` message / buffer reserved | 24 B / 336 B | 4 B / 96 B |
-| MQTT message / buffer reserved | 204 B / 2496 B | 4 B / 96 B |
+| MQTT message / buffer reserved | 204 B / 2496 B | 4 B / 384 B (four frames per snapshot) |
 | MQTT payload on the wire | JSON, about 400 B | 4 B |
 | IF-01 line message (sent every 10 ms) | 40 B (was 124 B before this change: whole union) | 16 B |
 | IF-01 obstacle message | 60 B | 21 B |
