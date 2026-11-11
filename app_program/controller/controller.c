@@ -181,6 +181,11 @@ typedef struct
     ctrl_flags_t        flags;
     float               junction_lock_m;     /* odometer when locked */
     char                last_junction_char;  /* barcode used, '\0' none */
+    bool                b_junction_approach; /* driving the axle onto the
+                                                junction before pivoting */
+    float               junction_start_m;    /* odometer at detection  */
+    uint32_t            junction_start_ms;
+    char                junction_symbol;
     bool                b_post_turn;         /* just finished a junction
                                                 pivot: gentle search      */
     uint32_t            post_turn_ms;
@@ -559,6 +564,7 @@ ctrl_clear_fault (ctrl_state_t * p_ctrl)
     p_ctrl->state              = MISSION_IDLE;
     p_ctrl->b_turn_in_progress = false;
     p_ctrl->b_junction_turn    = false;
+    p_ctrl->b_junction_approach = false;
     p_ctrl->active_turn_id     = 0U;
     p_ctrl->pending_turn       = (uint16_t) BARCODE_CMD_NONE;
     ctrl_junction_unlock(p_ctrl);
@@ -605,6 +611,7 @@ ctrl_enter_fault (ctrl_state_t * p_ctrl, uint32_t code)
     p_ctrl->state      = MISSION_FAULT;
     p_ctrl->b_turn_in_progress = false;
     p_ctrl->b_junction_turn = false;
+    p_ctrl->b_junction_approach = false;
     p_ctrl->active_turn_id = 0U;
     p_ctrl->pending_turn = (uint16_t) BARCODE_CMD_NONE;
     ctrl_junction_unlock(p_ctrl);
@@ -678,6 +685,7 @@ ctrl_handle_command (ctrl_state_t * p_ctrl,
             p_ctrl->state = MISSION_IDLE;
             p_ctrl->b_turn_in_progress = false;
             p_ctrl->b_junction_turn = false;
+            p_ctrl->b_junction_approach = false;
             p_ctrl->active_turn_id = 0U;
             p_ctrl->pending_turn = (uint16_t) BARCODE_CMD_NONE;
             ctrl_junction_unlock(p_ctrl);
@@ -783,8 +791,69 @@ ctrl_junction_angle (uint16_t action)
  * @param[in] angle_deg  +90 left, -90 right, 180 U-turn.
  * @param[in] symbol     Barcode character that chose it ('\0' if none).
  */
+static void ctrl_junction_pivot(ctrl_state_t * p_ctrl, float angle_deg,
+                                char symbol);
+
+/*!
+ * @brief Junction detected (line sensors on the crossing): keep driving
+ *        straight, at the current speed and without line steering, until
+ *        the wheel axle - JUNCTION_PIVOT_OFFSET_M behind the sensors - is
+ *        over the junction centre, then pivot (ctrl_junction_step).
+ *        Pivoting at the sensors put the turn centre that far short of
+ *        the junction, leaving the car beside the new branch.
+ */
 static void
 ctrl_junction_begin (ctrl_state_t * p_ctrl, float angle_deg, char symbol)
+{
+    float const speed = ctrl_drive_speed(p_ctrl);
+
+    p_ctrl->junction_turn_deg   = angle_deg;
+    p_ctrl->junction_symbol     = symbol;
+    p_ctrl->b_junction_approach = true;
+    p_ctrl->b_turn_in_progress  = true;     /* suspends line steering */
+    p_ctrl->active_turn_id      = 0U;
+    p_ctrl->junction_start_m    = p_ctrl->distance_m;
+    p_ctrl->junction_start_ms   = board_millis();
+    ctrl_set_motion(speed, speed);
+    tm_printf((UB *) "CTRL: junction -> barcode '%c' -> turn %d deg after "
+              "%d mm (axle to centre)\n",
+              ('\0' != symbol) ? symbol : '-', (int) angle_deg,
+              (int) (JUNCTION_PIVOT_OFFSET_M * 1000.0f));
+}
+
+/*!
+ * @brief While approaching: as soon as the odometer has covered
+ *        JUNCTION_PIVOT_OFFSET_M (or the approach times out), pivot.
+ *        Called on every motion event (20 ms, ~3 mm at 0.15 m/s).
+ */
+static void
+ctrl_junction_step (ctrl_state_t * p_ctrl)
+{
+    bool const b_arrived = ((p_ctrl->distance_m - p_ctrl->junction_start_m)
+                            >= JUNCTION_PIVOT_OFFSET_M);
+    bool const b_timeout = ((board_millis() - p_ctrl->junction_start_ms)
+                            >= JUNCTION_APPROACH_TIMEOUT_MS);
+
+    if (p_ctrl->b_junction_approach && (b_arrived || b_timeout))
+    {
+        p_ctrl->b_junction_approach = false;
+
+        if (b_timeout && !b_arrived)
+        {
+            tm_printf((UB *) "CTRL: junction approach timed out, "
+                      "turning here\n");
+        }
+
+        ctrl_junction_pivot(p_ctrl, p_ctrl->junction_turn_deg,
+                            p_ctrl->junction_symbol);
+    }
+}
+
+/*!
+ * @brief Pivot now (closed-loop turn; the motion task starts it at once).
+ */
+static void
+ctrl_junction_pivot (ctrl_state_t * p_ctrl, float angle_deg, char symbol)
 {
     uint32_t const turn_id = ctrl_next_turn_id(p_ctrl);
 
@@ -795,9 +864,11 @@ ctrl_junction_begin (ctrl_state_t * p_ctrl, float angle_deg, char symbol)
         p_ctrl->active_turn_id     = turn_id;
         p_ctrl->b_turn_in_progress = true;  /* suspends line steering */
         p_ctrl->b_junction_turn    = true;
-        tm_printf((UB *) "CTRL: junction -> barcode '%c' -> turn %d deg "
-                  "now t_us=%u\n",
-                  ('\0' != symbol) ? symbol : '-', (int) angle_deg,
+        tm_printf((UB *) "CTRL: pivot %d deg at junction centre "
+                  "(barcode '%c', drove %d mm) t_us=%u\n",
+                  (int) angle_deg, ('\0' != symbol) ? symbol : '-',
+                  (int) ((p_ctrl->distance_m - p_ctrl->junction_start_m) *
+                         1000.0f),
                   (unsigned int) board_micros());
     }
     else
@@ -1276,6 +1347,7 @@ ctrl_handle_obstacle (ctrl_state_t * p_ctrl,
         p_ctrl->state = MISSION_AVOIDING;
         p_ctrl->b_turn_in_progress = false;
         p_ctrl->b_junction_turn = false;
+        p_ctrl->b_junction_approach = false;
         p_ctrl->active_turn_id = 0U;
         p_ctrl->pending_turn = (uint16_t) BARCODE_CMD_NONE;
         ctrl_junction_unlock(p_ctrl);
@@ -1413,6 +1485,8 @@ ctrl_handle_event (ctrl_state_t * p_ctrl, system_event_t const * p_event)
                 (void) ds;
 #endif
             }
+            ctrl_junction_step(p_ctrl);
+
             if (p_ctrl->b_turn_in_progress &&
                 p_event->data.motion.turn_complete &&
                 (p_event->data.motion.turn_id == p_ctrl->active_turn_id))

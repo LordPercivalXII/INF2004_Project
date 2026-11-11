@@ -218,11 +218,14 @@
                                                     away from the line  */
 #endif
 
-/* Junction turns (controller.c).  The pivot is commanded on the junction
- * event itself, with no drive forward first: the line sensors sit at the
- * wheel axle (~0 mm in the photos), so the car pivots on the crossing.
- * If the sensors are ever moved well ahead of the axle, the car will
- * pivot before reaching the crossing line. */
+/* Junction turns (controller.c).  A junction is detected when the LINE
+ * SENSORS reach the crossing, but the car pivots about its WHEEL AXLE,
+ * about 13.5 cm behind them (measured on the car).  So it drives straight
+ * on, at full speed, until the axle is over the junction centre, then
+ * pivots at once.  Too little: the car ends beside the new branch facing
+ * away from it; too much: it ends past it.  Tune on the track. */
+#define JUNCTION_PIVOT_OFFSET_M         (0.130f) /* sensors -> axle, m    */
+#define JUNCTION_APPROACH_TIMEOUT_MS    (2500U)  /* turn anyway if stuck  */
 
 /* 1 = read the REAL line sensors (ADC, boot calibration) even in a
  * SIM=1 build, to check polarity and steering sign by hand while the

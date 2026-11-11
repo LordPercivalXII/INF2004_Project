@@ -538,3 +538,25 @@ Check on the car: a junction mapped RIGHT pivots clockwise (seen from
 above), and line following still tracks. If line following steers away
 from the line, the line sensors were not mirrored after all: set
 `LINE_ERROR_SIGN` back to 1.0f for the swapped case and report it.
+
+## Pivot at the junction centre (axle offset)
+
+A junction is detected when the line sensors reach the crossing, but the
+car pivots about its wheel axle, about 13.5 cm behind them. Pivoting at
+detection put the turn centre that far short of the junction, so after a
+90-degree turn the car sat beside the new branch, facing away from it.
+
+Now (`controller.c`, `robot_config.h`): on a junction turn the car keeps
+driving straight at full speed, with line steering suspended so the
+crossing tape cannot pull it sideways, until the odometer has covered
+`JUNCTION_PIVOT_OFFSET_M` (0.130 m). The pivot is then commanded on that
+motion event (20 ms granularity, ~3 mm at 0.15 m/s), and the motion task
+starts it at once (no stop in between). Safety timeout:
+`JUNCTION_APPROACH_TIMEOUT_MS` (2.5 s). STRAIGHT junctions are unaffected.
+
+Console:
+`CTRL: junction -> barcode 'F' -> turn -90 deg after 130 mm (axle to centre)`
+then `CTRL: pivot -90 deg at junction centre (barcode 'F', drove 131 mm)`.
+
+Tuning: if the car ends beside the new branch, increase the offset; if it
+ends past it, decrease it (1 cm steps).
