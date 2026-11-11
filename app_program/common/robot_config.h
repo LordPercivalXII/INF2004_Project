@@ -178,6 +178,11 @@
 #define MOTOR_TURN_SPEED_M_S            (0.12f)
 #define MOTOR_TURN_MIN_SPEED_M_S        (0.12f)  /* below this the wheels stall */
 #define MOTOR_TURN_SLOWDOWN_DEG         (45.0f)
+/* On-the-spot turns: smallest duty per wheel (0..1).  The speed PID gives
+ * a stuck wheel only ~0.19 at 0.12 m/s, too little to drag the wheels
+ * sideways at 20 kHz PWM (fault 7, encoder stall).  Raise it if a turn
+ * still stalls; lower it if turns overshoot. */
+#define MOTOR_TURN_MIN_DUTY             (0.30f)
 
 /* ---- Buddy 3: line tracking (FR7, NFR6) ---- */
 #define IR_RING_SIZE                    (64U)    /* power of two          */

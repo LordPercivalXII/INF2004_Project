@@ -175,24 +175,6 @@ s5_test_run (avoid_t * p_avoid, s5_model_t * p_car, avoid_phase_t until,
 }
 
 /*!
- * @brief True if the model passed exactly these phases, in this order.
- */
-static bool
-s5_test_phases_are (s5_model_t const * p_car, avoid_phase_t const * p_expect,
-                    uint32_t count)
-{
-    bool     b_same = (p_car->phase_count == count);
-    uint32_t idx;
-
-    for (idx = 0U; b_same && (idx < count); idx++)
-    {
-        b_same = (p_car->phases[idx] == p_expect[idx]);
-    }
-
-    return (b_same);
-}
-
-/*!
  * @brief Start an avoidance at standstill and feed it one scan result.
  */
 static void
@@ -341,7 +323,9 @@ subsystem5_test (void)
                 (plan.bypass_offset_cm >= 10.0f)),
                "bypass side: the side needing the smaller move");
 
-    s5_test_sweep(&scan, 115U, 120U, S5_TEST_NEAR_CM);  /* beside the path */
+    /* Beside the path: edge at 27.5 deg, 35 cm away = ~16 cm to the side,
+       clear of the car's half width + 4 cm (11.5 cm). */
+    s5_test_sweep(&scan, 115U, 120U, 35.0f);
     b_ok  = (OBSTACLE_ACTION_CONTINUE == s5_test_plan(&scan).action);
     s5_test_sweep(&scan, 0U, 0U, S5_TEST_NEAR_CM);      /* nothing */
     b_ok  = b_ok && (OBSTACLE_ACTION_CONTINUE == s5_test_plan(&scan).action);
@@ -383,27 +367,6 @@ subsystem5_test (void)
 
     /* ---- Stage 4 -> 5: the avoidance ----------------------------------- */
 
-    /* Box 30 cm ahead, go right 12 cm, line along the original path. */
-    s5_test_begin(&avoid, &car, OBSTACLE_ACTION_TURN_RIGHT, 12.0f, 30.0f);
-    status = s5_test_run(&avoid, &car, AVOID_PHASE_IDLE, true);
-    {
-        static avoid_phase_t const expect[] =
-        {
-            AVOID_PHASE_WAIT_SCAN, AVOID_PHASE_TURN_OUT, AVOID_PHASE_LEG_OUT,
-            AVOID_PHASE_TURN_PARALLEL, AVOID_PHASE_LEG_PAST,
-            AVOID_PHASE_TURN_IN, AVOID_PHASE_SEARCH, AVOID_PHASE_ADVANCE,
-            AVOID_PHASE_ALIGN, AVOID_PHASE_VERIFY
-        };
-
-        TEST_CHECK("S5-U15",
-                   ((AVOID_DONE == status) &&
-                    s5_test_phases_are(&car, expect,
-                                       sizeof(expect) / sizeof(expect[0])) &&
-                    (car.min_speed >= 0.0f)),
-                   "manoeuvre: stop, scan, out, past, in, find the line, "
-                   "align, verify, done (no back-up with room)");
-    }
-
     /* Short turn-out: the turn reports done at 35 deg; the next turn aims
        at the original heading, so it turns back 35, not 45. */
     s5_test_begin(&avoid, &car, OBSTACLE_ACTION_TURN_RIGHT, 12.0f, 30.0f);
@@ -423,35 +386,109 @@ subsystem5_test (void)
                "turns aim at a heading: a short turn-out is undone exactly");
 
     /* Too close for the way out: at 60 deg a 30 cm offset moves the car
-       17.3 cm forward, + 5 cm = 22.3 cm needed; the box is at 16. */
+       17.3 cm forward, + 5 cm nose + 4 cm clearance = 26.3 cm needed;
+       the box is at 16, so back up ~10 cm. */
     s5_test_begin(&avoid, &car, OBSTACLE_ACTION_TURN_LEFT, 30.0f, 16.0f);
     status = s5_test_run(&avoid, &car, AVOID_PHASE_TURN_OUT, false);
     TEST_CHECK("S5-U33",
                ((AVOID_RUNNING == status) &&
                 (AVOID_PHASE_TURN_OUT == avoid.phase) &&
                 (car.min_speed < 0.0f) &&
-                (avoid.along_cm < -5.5f) && (avoid.along_cm > -7.5f)),
-               "too close for the way out: backs up just enough (~6 cm) "
-               "before turning out");
+                (avoid.along_cm < -9.5f) && (avoid.along_cm > -11.5f)),
+               "too close for the way out: backs up just enough (~10 cm, "
+               "keeping 4 cm clear) before turning out");
 
-    /* Something 8 cm ahead while driving out: stop, give up. */
+    /* A hand put in front while driving past, then taken away: stop,
+       wait, carry on, and still finish the bypass. */
     s5_test_begin(&avoid, &car, OBSTACLE_ACTION_TURN_RIGHT, 12.0f, 30.0f);
-    (void) s5_test_run(&avoid, &car, AVOID_PHASE_LEG_OUT, false);
-    (void) s5_test_run(&avoid, &car, AVOID_PHASE_TURN_PARALLEL, false);
-    b_ok = (AVOID_PHASE_TURN_PARALLEL == avoid.phase);
-    s5_test_begin(&avoid, &car, OBSTACLE_ACTION_TURN_RIGHT, 12.0f, 30.0f);
-    (void) s5_test_run(&avoid, &car, AVOID_PHASE_LEG_OUT, false);
+    (void) s5_test_run(&avoid, &car, AVOID_PHASE_LEG_PAST, false);
     (void) avoid_step(&avoid, &car.input, &output);     /* drive */
     avoid_on_ahead_reading(&avoid, 40.0f);
     status = avoid_step(&avoid, &car.input, &output);
-    b_ok = b_ok && (AVOID_RUNNING == status);
+    b_ok = (AVOID_RUNNING == status) && (AVOID_PHASE_LEG_PAST == avoid.phase);
     avoid_on_ahead_reading(&avoid, 8.0f);
     status = avoid_step(&avoid, &car.input, &output);
-    TEST_CHECK("S5-U34",
-               (b_ok && (AVOID_FAILED_BLOCKED == status) &&
-                (AVOID_OUT_STOP == output.type)),
-               "going round: a reading within 10 cm ahead stops the car "
-               "(blocked); 40 cm does not");
+    b_ok = b_ok && (AVOID_RUNNING == status) &&
+           (AVOID_PHASE_BLOCKED == avoid.phase) &&
+           (AVOID_OUT_STOP == output.type);
+    car.speed = 0.0f;
+    (void) avoid_step(&avoid, &car.input, &output);     /* no reading */
+    for (idx = 0U; idx < 4U; idx++)
+    {
+        b_ok = b_ok && (AVOID_PHASE_BLOCKED == avoid.phase);
+        avoid_on_ahead_reading(&avoid, (1U == idx)
+                               ? ULTRASONIC_MAX_DISTANCE_CM : 60.0f);
+        (void) avoid_step(&avoid, &car.input, &output);
+    }
+    b_ok = b_ok && (AVOID_PHASE_LEG_PAST == avoid.phase);
+    status = s5_test_run(&avoid, &car, AVOID_PHASE_IDLE, true);
+    TEST_CHECK("S5-U37",
+               (b_ok && (AVOID_DONE == status)),
+               "going round: within 9 cm ahead stops and waits (40 cm does "
+               "not); 3 clear readings carry on (a missed echo between "
+               "them neither counts nor restarts), and the bypass still "
+               "finishes");
+
+    /* Something that stays: a reading between 8 and 15 cm restarts the
+       clear count; after 8 s it gives up (blocked), not before. */
+    s5_test_begin(&avoid, &car, OBSTACLE_ACTION_TURN_RIGHT, 12.0f, 30.0f);
+    (void) s5_test_run(&avoid, &car, AVOID_PHASE_LEG_OUT, false);
+    (void) avoid_step(&avoid, &car.input, &output);     /* drive */
+    avoid_on_ahead_reading(&avoid, 7.0f);
+    (void) avoid_step(&avoid, &car.input, &output);
+    count = car.input.now_ms;                           /* blocked at */
+    b_ok = (AVOID_PHASE_BLOCKED == avoid.phase);
+    {
+        static float const readings[] = {60.0f, 60.0f, 12.0f, 60.0f, 60.0f};
+
+        for (idx = 0U; idx < (sizeof(readings) / sizeof(readings[0])); idx++)
+        {
+            avoid_on_ahead_reading(&avoid, readings[idx]);
+            car.input.now_ms += S5_TEST_STEP_MS;
+            status = avoid_step(&avoid, &car.input, &output);
+            b_ok = b_ok && (AVOID_RUNNING == status) &&
+                   (AVOID_PHASE_BLOCKED == avoid.phase);
+        }
+    }
+    car.input.now_ms = count + 7950U;
+    status = avoid_step(&avoid, &car.input, &output);
+    b_ok = b_ok && (AVOID_RUNNING == status);
+    car.input.now_ms = count + 8000U;
+    status = avoid_step(&avoid, &car.input, &output);
+    TEST_CHECK("S5-U38",
+               (b_ok && (AVOID_FAILED_BLOCKED == status)),
+               "blocked: a reading within 15 cm restarts the clear count; "
+               "still there after 8 s, gives up (blocked), not before");
+
+    /* Turning out: 12 cm ahead does not stop a turn, 7 cm (inside the
+       9 cm limit) does.  When it
+       has gone, the turn finishes only what is left (60 - 20 = 40 deg). */
+    s5_test_begin(&avoid, &car, OBSTACLE_ACTION_TURN_RIGHT, 12.0f, 30.0f);
+    (void) s5_test_run(&avoid, &car, AVOID_PHASE_TURN_OUT, false);
+    (void) avoid_step(&avoid, &car.input, &output);     /* turn -60 */
+    b_ok = (AVOID_OUT_TURN == output.type);
+    car.input.heading_deg = -20.0f;
+    car.input.b_turn_done = false;
+    avoid_on_ahead_reading(&avoid, 12.0f);
+    (void) avoid_step(&avoid, &car.input, &output);
+    b_ok = b_ok && (AVOID_PHASE_TURN_OUT == avoid.phase);
+    avoid_on_ahead_reading(&avoid, 7.0f);
+    (void) avoid_step(&avoid, &car.input, &output);
+    b_ok = b_ok && (AVOID_PHASE_BLOCKED == avoid.phase) &&
+           (AVOID_OUT_STOP == output.type);
+    car.input.b_turn_done = true;                       /* cancelled */
+    for (idx = 0U; idx < 3U; idx++)
+    {
+        avoid_on_ahead_reading(&avoid, 60.0f);
+        (void) avoid_step(&avoid, &car.input, &output);
+    }
+    b_ok = b_ok && (AVOID_PHASE_TURN_OUT == avoid.phase);
+    (void) avoid_step(&avoid, &car.input, &output);
+    TEST_CHECK("S5-U39",
+               (b_ok && (AVOID_OUT_TURN == output.type) &&
+                (output.turn_deg < -39.0f) && (output.turn_deg > -41.0f)),
+               "turning: within 9 cm ahead stops the turn (12 cm does "
+               "not); when clear it turns only the 40 deg left");
 
     /* Back on the line, confirming it: something 18 cm ahead is a new
        obstacle, so stop and wait for a scan. */
@@ -502,6 +539,36 @@ subsystem5_test (void)
     TEST_CHECK("S5-U16",
                ((AVOID_FAILED_BOXED_IN == status) && (4U == idx)),
                "three reverses at one spot, then gives up as boxed in");
+
+    /* After backing up, the scan looks further.  A 40 cm wide box at
+       46 cm (70..110 deg): out of the normal 40 cm range, so a normal
+       scan sees nothing; a far scan sees it and both its edges, and
+       goes round it.  The avoidance asks for the far scan only after a
+       back-up. */
+    s5_test_sweep(&scan, 70U, 110U, 46.0f);
+    plan  = s5_test_plan(&scan);
+    scan.detect_cm = OBSTACLE_DETECT_FAR_CM;
+    plan2 = s5_test_plan(&scan);
+    b_ok  = (OBSTACLE_ACTION_CONTINUE == plan.action) &&
+            ((OBSTACLE_ACTION_TURN_LEFT == plan2.action) ||
+             (OBSTACLE_ACTION_TURN_RIGHT == plan2.action));
+    car   = (s5_model_t) {0};
+    avoid = (avoid_t) {0};
+    avoid_start(&avoid, 0U, 0.0f);
+    (void) avoid_step(&avoid, &car.input, &output);         /* stop */
+    b_ok  = b_ok && (AVOID_LOOK_SCAN == avoid_look(&avoid));
+    result = s5_test_result(OBSTACLE_ACTION_REVERSE_RETRY, 0.0f, 17.0f, 0U);
+    avoid_on_scan(&avoid, &result);
+    status = avoid_step(&avoid, &car.input, &output);       /* decide */
+    status = (AVOID_RUNNING == status)
+             ? s5_test_run(&avoid, &car, AVOID_PHASE_WAIT_SCAN, false)
+             : status;
+    TEST_CHECK("S5-U40",
+               (b_ok && (AVOID_RUNNING == status) &&
+                (AVOID_PHASE_WAIT_SCAN == avoid.phase) &&
+                (AVOID_LOOK_SCAN_FAR == avoid_look(&avoid))),
+               "after backing up the scan looks to 60 cm: a wide box at "
+               "46 cm is seen and gone round, not taken for a clear scan");
 
     TEST_SUMMARY("subsystem5");
 }

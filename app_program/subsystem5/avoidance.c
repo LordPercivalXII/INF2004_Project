@@ -2,7 +2,7 @@
  *
  * @brief Buddy 5 avoidance and line recovery (see avoidance.h).
  *
- * The distances below are first guesses for the 13 cm car on the tile
+ * The distances below are first guesses for the 15 cm car on the tile
  * mat; tune them from floor tests (testing/subsystem5/TEST_LOG.md).
  */
 
@@ -31,17 +31,33 @@
 #define AVOID_RETRY_FORGET_CM   (40.0f) /* drove clear of that spot    */
 
 /* The bypass. */
-#define AVOID_ROOM_MARGIN_CM    (5.0f)  /* front distance needed = the
+/* Every distance below keeps AVOID_CLEARANCE_CM between the car and the
+ * obstacle (the sides: OBSTACLE_PATH_HALF_CM in obstacle_geometry.c). */
+#define AVOID_CLEARANCE_CM      (4.0f)
+#define AVOID_CAR_LENGTH_CM     (18.0f) /* front IR sensors to rear    */
+#define AVOID_NOSE_CM           (5.0f)  /* nose ahead of the sensor    */
+#define AVOID_ROOM_MARGIN_CM    (AVOID_NOSE_CM + AVOID_CLEARANCE_CM)
+                                        /* front distance needed = the
                                            forward part of the way out
-                                           + this (the nose is 5 cm
-                                           ahead of the sensor)        */
+                                           + this                      */
 #define AVOID_DEPTH_CM          (20.0f) /* assumed obstacle depth      */
-#define AVOID_PAST_CM           (17.0f) /* sensor past the rear before
-                                           turning in: the car's rear
-                                           is ~11 cm behind the sensor,
-                                           plus margin                 */
+#define AVOID_PAST_CM           ((AVOID_CAR_LENGTH_CM - AVOID_NOSE_CM) + \
+                                 AVOID_CLEARANCE_CM)
+                                        /* sensor past the obstacle's
+                                           rear before turning in: the
+                                           car's rear (13 cm behind the
+                                           sensor) + the clearance     */
 #define AVOID_OUT_SLACK         (1.5f)  /* LEG_OUT length limit factor */
-#define AVOID_AHEAD_STOP_CM     (10.0f) /* this close ahead: blocked   */
+#define AVOID_AHEAD_STOP_CM     (AVOID_NOSE_CM + AVOID_CLEARANCE_CM)
+                                        /* this close ahead (9 cm
+                                           from the sensor): stop and
+                                           wait                        */
+#define AVOID_TURN_STOP_CM      (AVOID_NOSE_CM + AVOID_CLEARANCE_CM)
+                                        /* the same while turning      */
+#define AVOID_CLEAR_CM          (15.0f) /* beyond this ahead is clear  */
+#define AVOID_CLEAR_READINGS    (3U)    /* clear readings in a row to
+                                           carry on                    */
+#define AVOID_BLOCKED_WAIT_MS   (8000U) /* still there: give up        */
 #define AVOID_NEW_OBSTACLE_CM   (20.0f) /* ahead while confirming the
                                            line: a new obstacle        */
 
@@ -427,16 +443,39 @@ avoid_step_find (avoid_t * p_avoid, avoid_input_t const * p_input,
 }
 
 /*!
- * @brief True in the phases that drive forward, where something close
- *        ahead must stop the car.
+ * @brief How close ahead stops the car in this phase: 9 cm (nose +
+ *        clearance) while driving forward or turning, 0 (never)
+ *        otherwise.  REVERSE backs
+ *        away; SWEEP spins past the obstacle just passed; VERIFY has its
+ *        own rule (a new obstacle).
  */
-static bool
-avoid_is_driving_forward (avoid_phase_t phase)
+static float
+avoid_stop_cm (avoid_phase_t phase)
 {
-    return ((AVOID_PHASE_LEG_OUT == phase) ||
-            (AVOID_PHASE_LEG_PAST == phase) ||
-            (AVOID_PHASE_SEARCH == phase) ||
-            (AVOID_PHASE_ADVANCE == phase));
+    float stop_cm = 0.0f;
+
+    switch (phase)
+    {
+        case AVOID_PHASE_LEG_OUT:
+        case AVOID_PHASE_LEG_PAST:
+        case AVOID_PHASE_SEARCH:
+        case AVOID_PHASE_ADVANCE:
+            stop_cm = AVOID_AHEAD_STOP_CM;
+            break;
+
+        case AVOID_PHASE_TURN_OUT:
+        case AVOID_PHASE_TURN_PARALLEL:
+        case AVOID_PHASE_TURN_IN:
+        case AVOID_PHASE_ALIGN:
+            stop_cm = AVOID_TURN_STOP_CM;
+            break;
+
+        default:
+            /* Not checked. */
+            break;
+    }
+
+    return (stop_cm);
 }
 
 void
@@ -495,25 +534,43 @@ avoid_on_ahead_reading (avoid_t * p_avoid, float distance_cm)
 }
 
 /*!
- * @brief True while the controller should steer along the line itself.
+ * @brief True while the controller should steer along the line itself:
+ *        only once the IR has found the line (VERIFY).  In SEARCH there
+ *        is no line under the sensors yet, so the line follower would
+ *        steer on a stale error and curve the car back early.
  */
 bool
 avoid_is_following (avoid_t const * p_avoid)
 {
-    return ((AVOID_PHASE_SEARCH == p_avoid->phase) ||
-            (AVOID_PHASE_VERIFY == p_avoid->phase));
+    return (AVOID_PHASE_VERIFY == p_avoid->phase);
 }
 
 /*!
  * @brief Where the scanner should point: full scans while stopped to
- *        decide, straight ahead the rest of the time.
+ *        decide, straight ahead the rest of the time.  After backing up
+ *        the scan looks further: the obstacle it backed away from is now
+ *        further off, and a clear scan then would end in boxed in.
  */
 avoid_look_t
 avoid_look (avoid_t const * p_avoid)
 {
-    return (((AVOID_PHASE_IDLE == p_avoid->phase) ||
-             (AVOID_PHASE_WAIT_SCAN == p_avoid->phase))
-            ? AVOID_LOOK_SCAN : AVOID_LOOK_AHEAD);
+    avoid_look_t look = AVOID_LOOK_AHEAD;
+
+    if (AVOID_PHASE_IDLE == p_avoid->phase)
+    {
+        look = AVOID_LOOK_SCAN;
+    }
+    else if (AVOID_PHASE_WAIT_SCAN == p_avoid->phase)
+    {
+        look = (0U == p_avoid->reverse_count) ? AVOID_LOOK_SCAN
+                                              : AVOID_LOOK_SCAN_FAR;
+    }
+    else
+    {
+        /* Moving: straight ahead. */
+    }
+
+    return (look);
 }
 
 char const *
@@ -523,7 +580,7 @@ avoid_phase_name (avoid_phase_t phase)
     {
         "IDLE", "WAIT_SCAN", "REVERSE", "TURN_OUT", "LEG_OUT",
         "TURN_PARALLEL", "LEG_PAST", "TURN_IN", "SEARCH", "ADVANCE",
-        "ALIGN", "SWEEP", "VERIFY"
+        "ALIGN", "SWEEP", "VERIFY", "BLOCKED"
     };
 
     return (((uint32_t) phase < (sizeof(names) / sizeof(names[0])))
@@ -541,6 +598,7 @@ avoid_step (avoid_t * p_avoid, avoid_input_t const * p_input,
     avoid_status_t status   = AVOID_RUNNING;
     uint32_t const age_ms   = p_input->now_ms - p_avoid->phase_start_ms;
     float const    side     = (float) p_avoid->direction;
+    float const    stop_cm  = avoid_stop_cm(p_avoid->phase);
 
     *p_output = (avoid_output_t) {0};
 
@@ -549,13 +607,20 @@ avoid_step (avoid_t * p_avoid, avoid_input_t const * p_input,
         avoid_track(p_avoid, p_input);
     }
 
-    /* Something close ahead while driving forward: stop, give up. */
-    if (avoid_is_driving_forward(p_avoid->phase) && p_avoid->b_entered &&
-        p_avoid->b_ahead_fresh &&
-        (p_avoid->ahead_cm <= AVOID_AHEAD_STOP_CM))
+    /* Something close ahead while moving: stop (this also cancels a turn)
+       and wait for it to go.  The position tracking carries on, so the
+       interrupted step can pick up where it stopped. */
+    if ((stop_cm > 0.0f) && p_avoid->b_entered && p_avoid->b_ahead_fresh &&
+        (p_avoid->ahead_cm <= stop_cm))
     {
-        p_output->type = AVOID_OUT_STOP;
-        return (AVOID_FAILED_BLOCKED);
+        avoid_phase_t const from = p_avoid->phase;
+
+        avoid_enter(p_avoid, AVOID_PHASE_BLOCKED, p_input);
+        p_avoid->b_entered      = true;     /* the stop is sent below */
+        p_avoid->blocked_from   = from;
+        p_avoid->clear_readings = 0U;
+        p_output->type          = AVOID_OUT_STOP;
+        return (AVOID_RUNNING);
     }
 
     p_avoid->b_ahead_seen  = p_avoid->b_ahead_fresh;
@@ -729,6 +794,35 @@ avoid_step (avoid_t * p_avoid, avoid_input_t const * p_input,
              * tape while the chassis is still angled across it. */
             avoid_step_turn(p_avoid, p_input, p_output, 0.0f,
                             AVOID_PHASE_VERIFY);
+            break;
+
+        case AVOID_PHASE_BLOCKED:
+            /* Stopped.  A missed echo neither counts nor restarts the
+               count (Tribunal 1, A5: an angled or round object can
+               scatter the echo, so no echo is not proof of clear). */
+            if (p_avoid->b_ahead_seen &&
+                (p_avoid->ahead_cm < ULTRASONIC_MAX_DISTANCE_CM))
+            {
+                p_avoid->clear_readings =
+                    (p_avoid->ahead_cm > AVOID_CLEAR_CM)
+                    ? (p_avoid->clear_readings + 1U) : 0U;
+            }
+
+            if (p_avoid->clear_readings >= AVOID_CLEAR_READINGS)
+            {
+                /* Gone: start the interrupted step again.  Turns aim at a
+                   heading and the legs end on position, so it finishes
+                   only what is left. */
+                avoid_enter(p_avoid, p_avoid->blocked_from, p_input);
+            }
+            else if (age_ms >= AVOID_BLOCKED_WAIT_MS)
+            {
+                status = AVOID_FAILED_BLOCKED;
+            }
+            else
+            {
+                /* Waiting. */
+            }
             break;
 
         case AVOID_PHASE_SWEEP:

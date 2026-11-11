@@ -34,8 +34,21 @@
  * the car stopped, so the car knows how far it is from the line it left.
  * Every turn aims at a heading, so a short turn is made up by the next.
  *
- * Safety: while driving forward the sensor looks straight ahead; anything
- * within 10 cm stops the car and ends the manoeuvre (blocked).
+ * Clearance: the car keeps 4 cm from the obstacle on every side: the
+ * sideways offset, the room needed in front before turning out, the
+ * drive past before turning in, and the stop distance below.
+ *
+ * Safety: while moving the sensor looks straight ahead.  Anything within
+ * 9 cm of the sensor (4 cm of the nose) while driving forward (LEG_OUT,
+ * LEG_PAST, SEARCH, ADVANCE) or turning (TURN_OUT, TURN_PARALLEL,
+ * TURN_IN, ALIGN) stops the car:
+ *   BLOCKED        stopped; wait for 3 readings in a row beyond 15 cm (a
+ *                  hand or a moving object has gone; a missed echo
+ *                  neither counts nor restarts), then carry on with
+ *                  the interrupted step.  Still there after 8 s: give up
+ *                  (blocked).
+ * SWEEP spins on the spot looking for the line and is not checked: the
+ * sensor sweeps past the obstacle just passed.
  */
 
 #ifndef AVOIDANCE_H
@@ -60,7 +73,8 @@ typedef enum
     AVOID_PHASE_ADVANCE,
     AVOID_PHASE_ALIGN,
     AVOID_PHASE_SWEEP,
-    AVOID_PHASE_VERIFY
+    AVOID_PHASE_VERIFY,
+    AVOID_PHASE_BLOCKED     /* stopped: something close ahead          */
 } avoid_phase_t;
 
 /* The controller prints these, in this order. */
@@ -71,7 +85,7 @@ typedef enum
     AVOID_FAILED_BOXED_IN,  /* out of reverse attempts                 */
     AVOID_FAILED_NO_LINE,   /* search and sweeps found nothing         */
     AVOID_FAILED_TIMEOUT,   /* a scan or a move never finished         */
-    AVOID_FAILED_BLOCKED    /* something close ahead while driving     */
+    AVOID_FAILED_BLOCKED    /* something close ahead did not go away   */
 } avoid_status_t;
 
 typedef enum
@@ -88,7 +102,9 @@ typedef enum
     AVOID_LOOK_SCAN = 0,    /* stopped: full coarse + fine scans       */
     AVOID_LOOK_LEFT,        /* not used by this version                */
     AVOID_LOOK_RIGHT,       /* not used by this version                */
-    AVOID_LOOK_AHEAD        /* moving: straight ahead, one at a time   */
+    AVOID_LOOK_AHEAD,       /* moving: straight ahead, one at a time   */
+    AVOID_LOOK_SCAN_FAR     /* stopped after backing up: full scans,
+                               obstacles up to OBSTACLE_DETECT_FAR_CM  */
 } avoid_look_t;
 
 typedef struct
@@ -158,6 +174,10 @@ typedef struct
     bool              b_ahead_fresh;
     bool              b_ahead_seen;     /* this step has a new reading */
     float             ahead_cm;
+
+    /* BLOCKED: the step to carry on with, and clear readings so far. */
+    avoid_phase_t     blocked_from;
+    uint32_t          clear_readings;
 
     /* Printed by the controller; this version does not measure the
      * obstacle's depth, so they stay false / 0. */
