@@ -1,6 +1,6 @@
 /** @file telemetry_codec.c
  *
- * @brief 7-byte binary MQTT telemetry encoder (layout in the header).
+ * @brief Four-byte binary MQTT status encoder (layout in the header).
  *        Pure C, no kernel calls: also built by test_telemetry_codec.c.
  */
 
@@ -14,7 +14,7 @@
 #define TELEMETRY_HUMP_SCALE        (1000.0f)   /* m -> mm      */
 
 /*!
- * @brief Encode a telemetry snapshot into the 7-byte MQTT payload.
+ * @brief Encode a telemetry snapshot into the 4-byte status payload.
  *
  * @param[in]  p_telemetry      Snapshot from the controller.
  * @param[in]  b_obstacle_slot  true: byte 3 carries the obstacle distance;
@@ -83,24 +83,6 @@ telemetry_encode (telemetry_message_t const * p_telemetry,
                                            TELEMETRY_SPEED_MAX_CM_S);
     p_payload[2] = (uint8_t) (line_q12 >> TELEMETRY_LINE_SHIFT);
     p_payload[3] = (uint8_t) value;
-    p_payload[4] = ((p_telemetry->last_barcode >= TELEMETRY_ASCII_FIRST) &&
-                    (p_telemetry->last_barcode <= TELEMETRY_ASCII_LAST))
-                   ? (uint8_t) p_telemetry->last_barcode : 0U;
-    if (p_telemetry->b_simulation)
-    {
-        p_payload[4] = (uint8_t) (p_payload[4] | TELEMETRY_SIMULATION_BIT);
-    }
-    p_payload[5] = (((uint8_t) p_telemetry->last_junction_char >=
-                     TELEMETRY_ASCII_FIRST) &&
-                    ((uint8_t) p_telemetry->last_junction_char <=
-                     TELEMETRY_ASCII_LAST))
-                   ? (uint8_t) p_telemetry->last_junction_char : 0U;
-    p_payload[6] = (uint8_t) (((uint32_t) p_telemetry->last_junction_action &
-                               TELEMETRY_ACTION_MASK) |
-                              (((uint32_t) p_telemetry->junction_count &
-                                TELEMETRY_JUNCTION_MASK) <<
-                               TELEMETRY_JUNCTION_SHIFT));
-
     return (true);
 }
 

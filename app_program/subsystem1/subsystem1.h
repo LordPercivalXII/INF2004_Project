@@ -16,17 +16,20 @@
 #include "../app.h"
 #include "../common/robot_types.h"
 #include "../common/robot_packed.h"
+#include "../common/robot_config.h"
 
 #define S1_PRI_TELEMETRY        (20)    /* band 20-21: lowest (TEAM.md) */
 #define S1_RECEIVE_TIMEOUT_MS   (100U)
 #define S1_FIXED_TEXT_MAX       (16U)   /* "-1000000.000" + NUL fits */
 
-/* MQTT payload: 7-byte binary packet (telemetry_codec.h) when
+/* MQTT payload: 4-byte binary records (telemetry_codec.h) when
    USE_BIT_PACKING, else the JSON text of the full snapshot. */
 #if USE_BIT_PACKING
-#define S1_MQTT_MESSAGE_SIZE    (7U)    /* = TELEMETRY_PACKED_SIZE */
+#define S1_MQTT_MESSAGE_SIZE    (4U)    /* = TELEMETRY_PACKED_SIZE */
+#define S1_MQTT_QUEUE_LENGTH    (ROBOT_QUEUE_LENGTH * 3U) /* 3 frames/snapshot */
 #else
 #define S1_MQTT_MESSAGE_SIZE    (sizeof(telemetry_message_t))
+#define S1_MQTT_QUEUE_LENGTH    (ROBOT_QUEUE_LENGTH)
 #endif
 
 extern ID gh_telemetry_mbf;

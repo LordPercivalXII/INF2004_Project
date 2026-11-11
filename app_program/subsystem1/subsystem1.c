@@ -33,10 +33,10 @@ subsystem1_init (void)
         return gh_telemetry_mbf;
     }
 
-    /* Telemetry-to-MQTT buffer: 7-byte binary packets when packed
-       (Tribunal 1), whole snapshots for the JSON payload otherwise. */
+    /* Telemetry-to-MQTT buffer: 4-byte binary frames when packed
+       (status, ramp-height and metadata records), whole snapshots for JSON. */
     cmbf.maxmsz = (INT) S1_MQTT_MESSAGE_SIZE;
-    cmbf.bufsz  = (SZ) APP_MBF_BUFSZ(ROBOT_QUEUE_LENGTH,
+    cmbf.bufsz  = (SZ) APP_MBF_BUFSZ(S1_MQTT_QUEUE_LENGTH,
                                      S1_MQTT_MESSAGE_SIZE);
     gh_mqtt_telemetry_mbf = tk_cre_mbf(&cmbf);
 

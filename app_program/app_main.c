@@ -62,7 +62,7 @@ app_report_packing (void)
               (unsigned int) sizeof(obstacle_event_t));
     tm_printf((UB *) "[PACK] mqtt payload   %u / %u\n",
               (unsigned int) S1_MQTT_MESSAGE_SIZE,
-              (unsigned int) APP_MBF_BUFSZ(ROBOT_QUEUE_LENGTH,
+              (unsigned int) APP_MBF_BUFSZ(S1_MQTT_QUEUE_LENGTH,
                                            S1_MQTT_MESSAGE_SIZE));
 }
 
