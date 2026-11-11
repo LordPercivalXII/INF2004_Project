@@ -110,6 +110,13 @@ extern ID gh_route_mtx;             /* route table + waypoint memory   */
  * message on MQTT_ROUTE_TOPIC.  Never blocks. */
 void mqtt_utk_route_rx(char const * p_payload, uint32_t length);
 
+/* Called by the WiFi service task: the route table actually in use, as
+ * "A:L,B:R,*:S" ("*" = characters not listed), for MQTT_ROUTE_ACTIVE_TOPIC.
+ * Returns the text length and its version (bumped on every change);
+ * 0 if the table is busy right now (never blocks). */
+uint32_t mqtt_utk_route_echo_read(char * p_buffer, uint32_t buffer_size,
+                                  uint32_t * p_version);
+
 /* Private to subsystem 3. */
 void     line_task(INT stacd, void * p_exinf);
 void     barcode_task(INT stacd, void * p_exinf);

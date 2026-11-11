@@ -4,7 +4,20 @@
 #include "imu_processing.h"
 #include "../common/rmath.h"
 
-#define IMU_CAL_ACCEL_SPAN_G     (0.04f)
+/* Calibration stillness (Welford mean/variance over the window).
+ * The old test required max - min <= 0.04 g on every axis across all 200
+ * samples: one noisy sample anywhere restarted the 2 s window, so a car
+ * standing still on a desk could take minutes to calibrate.
+ *   - noise: per-axis standard deviation over the window <= 12 mg
+ *     (LSM303DLHC noise is a few mg; a hand on the car is far more);
+ *   - jolt:  a sample > 0.10 g from the window mean is movement and
+ *     restarts the window at once;
+ *   - level: X and Y within 0.15 g, Z within 0.85..1.15 g (sensor Z up). */
+#define IMU_CAL_NOISE_STD_G      (0.012f)
+#define IMU_CAL_JOLT_G           (0.10f)
+#define IMU_CAL_LEVEL_XY_G       (0.15f)
+#define IMU_CAL_LEVEL_Z_MIN_G    (0.85f)
+#define IMU_CAL_LEVEL_Z_MAX_G    (1.15f)
 #define IMU_ATTITUDE_TAU_S       (0.15f)
 #define IMU_HUMP_TRIGGER_COUNT   (3U)
 #define IMU_HUMP_QUIET_COUNT     (15U)
@@ -85,55 +98,115 @@ imu_reset_tracking (imu_processor_t * p_processor)
     p_processor->hump_duration_s = 0.0f;
 }
 
-static bool
-imu_calibrate (imu_processor_t * p_processor, imu_sample_t const * p_sample)
+static void
+imu_calibration_restart (imu_processor_t * p_processor)
 {
-    float values[3];
-    bool b_still = (rmath_absf(p_sample->acceleration[0]) < 0.15f) &&
-                   (rmath_absf(p_sample->acceleration[1]) < 0.15f) &&
-                   (p_sample->acceleration[2] > 0.85f) &&
-                   (p_sample->acceleration[2] < 1.15f);
     uint32_t idx;
 
+    p_processor->calibration_count = 0U;
     for (idx = 0U; idx < 3U; idx++)
     {
-        values[idx] = p_sample->acceleration[idx];
+        p_processor->cal_mean[idx] = 0.0f;
+        p_processor->cal_m2[idx]   = 0.0f;
     }
-    for (idx = 0U; idx < 3U; idx++)
-    {
-        if (0U == p_processor->calibration_count)
-        {
-            p_processor->minimum[idx] = values[idx];
-            p_processor->maximum[idx] = values[idx];
-            p_processor->sum[idx] = 0.0f;
-        }
-        p_processor->minimum[idx] =
-            rmath_minf(p_processor->minimum[idx], values[idx]);
-        p_processor->maximum[idx] =
-            rmath_maxf(p_processor->maximum[idx], values[idx]);
-        b_still = b_still &&
-            ((p_processor->maximum[idx] - p_processor->minimum[idx]) <=
-             IMU_CAL_ACCEL_SPAN_G);
-        p_processor->sum[idx] += values[idx];
-    }
-    if (!b_still)
-    {
-        p_processor->calibration_count = 0U;
-    }
-    else
-    {
-        p_processor->calibration_count++;
-    }
-    if (p_processor->calibration_count == IMU_CALIBRATION_SAMPLES)
+}
+
+/*!
+ * @brief Largest per-axis standard deviation of the current calibration
+ *        window, in g (0 with fewer than two samples).  Diagnostics.
+ */
+float
+imu_calibration_noise_g (imu_processor_t const * p_processor)
+{
+    float    worst = 0.0f;
+    uint32_t idx;
+
+    if (p_processor->calibration_count >= 2U)
     {
         for (idx = 0U; idx < 3U; idx++)
         {
-            p_processor->bias[idx] =
-                p_processor->sum[idx] / (float) IMU_CALIBRATION_SAMPLES;
+            worst = rmath_maxf(worst, p_processor->cal_m2[idx] /
+                               (float) (p_processor->calibration_count - 1U));
         }
-        p_processor->bias[2] -= 1.0f;
-        p_processor->output.b_calibrated = true;
+        worst = rmath_sqrtf(worst);
     }
+
+    return (worst);
+}
+
+/*!
+ * @brief Feed one sample to the start-up calibration.
+ *
+ * @return true once calibrated (bias = window mean, minus 1 g on Z).
+ */
+static bool
+imu_calibrate (imu_processor_t * p_processor, imu_sample_t const * p_sample)
+{
+    float const * const p_g = p_sample->acceleration;
+    bool const b_level = (rmath_absf(p_g[0]) < IMU_CAL_LEVEL_XY_G) &&
+                         (rmath_absf(p_g[1]) < IMU_CAL_LEVEL_XY_G) &&
+                         (p_g[2] > IMU_CAL_LEVEL_Z_MIN_G) &&
+                         (p_g[2] < IMU_CAL_LEVEL_Z_MAX_G);
+    bool     b_jolt = false;
+    bool     b_quiet = true;
+    float    delta;
+    uint32_t idx;
+    uint32_t count;
+
+    if (!b_level)
+    {
+        imu_calibration_restart(p_processor);
+        return (false);
+    }
+
+    /* Movement: far from the mean of the samples so far. */
+    for (idx = 0U; (idx < 3U) && (p_processor->calibration_count > 0U);
+         idx++)
+    {
+        b_jolt = b_jolt || (rmath_absf(p_g[idx] - p_processor->cal_mean[idx])
+                            > IMU_CAL_JOLT_G);
+    }
+    if (b_jolt)
+    {
+        imu_calibration_restart(p_processor);   /* this sample starts it */
+    }
+
+    /* Welford: running mean and squared deviations, stable in float. */
+    p_processor->calibration_count++;
+    count = p_processor->calibration_count;
+    for (idx = 0U; idx < 3U; idx++)
+    {
+        delta = p_g[idx] - p_processor->cal_mean[idx];
+        p_processor->cal_mean[idx] += delta / (float) count;
+        p_processor->cal_m2[idx] += delta *
+                                    (p_g[idx] - p_processor->cal_mean[idx]);
+    }
+
+    if (count >= IMU_CALIBRATION_SAMPLES)
+    {
+        for (idx = 0U; idx < 3U; idx++)
+        {
+            b_quiet = b_quiet &&
+                ((p_processor->cal_m2[idx] / (float) (count - 1U)) <=
+                 (IMU_CAL_NOISE_STD_G * IMU_CAL_NOISE_STD_G));
+        }
+
+        if (b_quiet)
+        {
+            for (idx = 0U; idx < 3U; idx++)
+            {
+                p_processor->bias[idx] = p_processor->cal_mean[idx];
+            }
+            p_processor->bias[2] -= 1.0f;
+            p_processor->output.b_calibrated = true;
+        }
+        else
+        {
+            /* Small but continuous vibration: try a fresh window. */
+            imu_calibration_restart(p_processor);
+        }
+    }
+
     return (p_processor->output.b_calibrated);
 }
 
@@ -505,7 +578,7 @@ imu_processor_update (imu_processor_t * p_processor,
         imu_reset_tracking(p_processor);
         imu_filter_init(&p_processor->vertical_filter);
         imu_filter_init(&p_processor->horizontal_filter);
-        p_processor->calibration_count = 0U;
+        imu_calibration_restart(p_processor);
         p_processor->b_attitude_initialized = false;
         p_processor->motion = MOTION_UNKNOWN;
         p_processor->candidate = MOTION_UNKNOWN;
@@ -524,7 +597,8 @@ imu_processor_update (imu_processor_t * p_processor,
     }
     if (!p_output->b_calibrated && p_output->b_timing_gap)
     {
-        p_processor->calibration_count = 0U;
+        /* A late sample (a busy core, not movement): skip it and keep
+           the window; movement is caught by the jolt test. */
         return;
     }
     if ((!p_output->b_calibrated) && (!imu_calibrate(p_processor, p_sample)))

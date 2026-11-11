@@ -38,11 +38,26 @@
  * backoff for as long as the link is down. */
 #define WIFI_REJOIN_DELAY_US (5 * 1000 * 1000ull)
 
+/* A join can also stall without failing: associated (JOIN/NOIP) but DHCP
+ * never answers (a phone hotspot that is asleep or full), or a link that
+ * later drops to DOWN.  Those states are not negative, so the retry above
+ * never fired and the radio waited forever.  Any state other than UP that
+ * lasts this long now leaves the network and joins again. */
+#define WIFI_LINK_TIMEOUT_US (15 * 1000 * 1000ull)
+#define WIFI_LEAVE_DELAY_US  (1 * 1000 * 1000ull)
+
 /* Overridable from the makefile if an AP needs something else. MIXED accepts
  * both TKIP and AES; the driver treats it the same as WPA2_AES_PSK for a
  * pure-AES AP, so it is a strictly wider match than AES-only. */
 #ifndef WIFI_AUTH_MODE
 #define WIFI_AUTH_MODE       CYW43_AUTH_WPA2_MIXED_PSK
+#endif
+
+/* After "authentication rejected" the next join tries the other mode:
+ * an iPhone hotspot with "Maximize Compatibility" off runs WPA2/WPA3
+ * transition mode, which can reject a WPA2-only join. */
+#ifndef WIFI_AUTH_MODE_ALT
+#define WIFI_AUTH_MODE_ALT   CYW43_AUTH_WPA3_WPA2_AES_PSK
 #endif
 
 extern volatile uint32_t cyw43_utk_poll_requested;
@@ -168,16 +183,20 @@ static void run_diagnostic_scan(void)
  * SSID. Where two of them are in range (a mesh or a repeater), that choice can
  * change between the association and the handshake and the join fails. Pass a
  * six-byte BSSID here instead of NULL to pin it to one radio. */
+static uint32_t wifi_auth_mode = WIFI_AUTH_MODE;
+
 static int32_t wifi_try_join(void)
 {
     int32_t err;
 
-    tm_printf((UB*)"wifi: joining \"%s\" ...\n", WIFI_SSID);
+    tm_printf((UB*)"wifi: joining \"%s\" (%s) ...\n", WIFI_SSID,
+              (wifi_auth_mode == WIFI_AUTH_MODE_ALT) ? "WPA2/WPA3"
+                                                     : "WPA2");
 
     err = cyw43_wifi_join(&cyw43_state,
                           strlen(WIFI_SSID), (const uint8_t*)WIFI_SSID,
                           strlen(WIFI_PASSWORD), (const uint8_t*)WIFI_PASSWORD,
-                          WIFI_AUTH_MODE, NULL, CYW43_CHANNEL_NONE);
+                          wifi_auth_mode, NULL, CYW43_CHANNEL_NONE);
     if(err != 0) {
         tm_printf((UB*)"wifi: cyw43_wifi_join() request rejected, err=%d\n",
                   (int)err);
@@ -276,6 +295,7 @@ void cyw43_utk_task(int32_t stacd, void *exinf)
 #if TM_NET_LWIP
     int32_t  prev_link_status = radio_status.link_status;
     uint64_t rejoin_at = 0;
+    uint64_t not_up_since = time_us_64();   /* first join was just issued */
 #endif
 
     for(;;) {
@@ -302,14 +322,45 @@ void cyw43_utk_task(int32_t stacd, void *exinf)
 
             /* Negative == the association attempt is over and lost. Arm a
              * retry; a positive-but-not-UP status (JOIN/NOIP) is still making
-             * progress, so leave it alone and let DHCP finish. */
-            rejoin_at = (radio_status.link_status < 0)?
-                        time_us_64() + WIFI_REJOIN_DELAY_US: 0;
+             * progress, so give DHCP until WIFI_LINK_TIMEOUT_US (below). */
+            if(radio_status.link_status < 0) {
+                rejoin_at = time_us_64() + WIFI_REJOIN_DELAY_US;
+            } else if(radio_status.link_status == CYW43_LINK_UP) {
+                rejoin_at = 0;
+            } else {
+                /* JOIN/NOIP/DOWN: keep any rejoin the watchdog armed. */
+            }
+
+            if(radio_status.link_status == CYW43_LINK_BADAUTH) {
+                wifi_auth_mode = (wifi_auth_mode == WIFI_AUTH_MODE_ALT)?
+                                 (uint32_t)WIFI_AUTH_MODE:
+                                 (uint32_t)WIFI_AUTH_MODE_ALT;
+            }
+            if(radio_status.link_status == CYW43_LINK_UP) {
+                not_up_since = 0;
+            } else if(not_up_since == 0) {
+                not_up_since = time_us_64();    /* link just dropped */
+            }
+        }
+
+        /* Watchdog: stuck in DOWN/JOIN/NOIP (no negative verdict, so no
+         * retry armed) for too long: leave and join again. */
+        if(radio_status.link_status != CYW43_LINK_UP && rejoin_at == 0 &&
+           not_up_since != 0 &&
+           (time_us_64() - not_up_since) >= WIFI_LINK_TIMEOUT_US) {
+            tm_printf((UB*)"wifi: no IP after %d s (status %d: %s); "
+                      "leaving and joining again\n",
+                      (int)(WIFI_LINK_TIMEOUT_US / 1000000ull),
+                      (int)radio_status.link_status,
+                      link_status_str(radio_status.link_status));
+            (void)cyw43_wifi_leave(&cyw43_state, CYW43_ITF_STA);
+            rejoin_at = time_us_64() + WIFI_LEAVE_DELAY_US;
         }
 
         if(rejoin_at != 0 && time_us_64() >= rejoin_at) {
             rejoin_at = 0;
-            if(radio_status.link_status < 0) {
+            if(radio_status.link_status != CYW43_LINK_UP) {
+                not_up_since = time_us_64();
                 (void)wifi_try_join();
                 /* Force the next iteration to treat whatever comes back as a
                  * change, so the new outcome is always reported. Must be a

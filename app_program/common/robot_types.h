@@ -225,6 +225,10 @@ typedef struct
     uint8_t         fault_mask;     /* 5-bit snapshot, fault_mask.h */
     bool            b_start_pending;    /* START countdown running      */
     bool            b_imu_ready;        /* controller's IMU health gate */
+    bool            b_simulation;       /* SIM=1 build: motors not driven */
+    char            last_junction_char;   /* barcode used at last junction */
+    uint8_t         last_junction_action; /* barcode_command_t chosen      */
+    uint8_t         junction_count;       /* junctions acted on, wraps     */
     imu_event_t     imu;
     bool            b_height_trace;
     uint32_t        trace_sequence;

@@ -37,6 +37,17 @@
 #define MOTION_INTEGRAL_LIMIT   (1.0f)
 #define MOTION_PI               (3.14159265f)
 #define MOTION_STRAIGHT_GAIN    (0.1f)  /* speed error feedback for straight-line */
+/* Straight correction only when both targets match (same speed, same
+   direction) within this: a pivot or a steering command is meant to
+   have different wheel speeds and must not be "corrected". */
+#define MOTION_STRAIGHT_MATCH_M_S (0.005f)
+
+/* Breakaway kick: a wheel told to move that is (still) at rest gets at
+ * least MOTOR_KICK_DUTY, so it starts at once instead of waiting seconds
+ * for the slow integral to beat static friction (a pivot from standstill
+ * at a junction was the worst case).  The encoder stall watchdog still
+ * stops a wheel that is truly blocked. */
+#define MOTION_KICK_SPEED_M_S   (0.02f)   /* "at rest" below this */
 
 static bool
 motion_float_is_finite (float value)
@@ -181,6 +192,35 @@ motion_pid_step (motion_pid_t * p_pid, float target, float measured,
     return (rmath_clampf(output, -1.0f, 1.0f));
 }
 
+/*!
+ * @brief Breakaway kick: a wheel commanded to move but still at rest gets
+ *        at least MOTOR_KICK_DUTY in the commanded direction.
+ *
+ * @param[in] output    PID output, -1..+1.
+ * @param[in] target    Commanded wheel speed, m/s.
+ * @param[in] measured  Measured wheel speed, m/s.
+ */
+static float
+motion_kick (float output, float target, float measured)
+{
+    float result = output;
+
+    if ((rmath_absf(target) > 0.001f) &&
+        (rmath_absf(measured) < MOTION_KICK_SPEED_M_S))
+    {
+        if (target > 0.0f)
+        {
+            result = rmath_maxf(output, MOTOR_KICK_DUTY);
+        }
+        else
+        {
+            result = rmath_minf(output, -MOTOR_KICK_DUTY);
+        }
+    }
+
+    return (result);
+}
+
 /* Commands drained since the last 20 ms cycle (early wake-ups drain
    too).  A STOP/BRAKE wins over later drive commands until the cycle. */
 typedef struct
@@ -261,19 +301,34 @@ motion_mission_running (void)
 }
 
 /*!
- * @brief Early wake-up (before the 20 ms period): drain commands and,
- *        for a STOP/BRAKE, a new TURN or a cleared mission bit, zero the
- *        motors now.  For a TURN this stops the forward roll at once, so
- *        the car does not run past the junction while the pivot waits
- *        (at most 20 ms) for the next PID cycle.
+ * @brief Early wake-up (before the 20 ms period): drain commands; for a
+ *        STOP/BRAKE or a cleared mission bit zero the motors now, and for
+ *        a new TURN start pivoting now (the PID takes over at the next
+ *        20 ms cycle).
  */
 static void
 motion_early_halt (motion_inbox_t * p_inbox)
 {
     motion_collect(p_inbox);
 
-    if (p_inbox->b_stop || !motion_mission_running() ||
-        (p_inbox->b_have && (MOTION_TURN == p_inbox->command.type)))
+    if ((!p_inbox->b_stop) && motion_mission_running() &&
+        p_inbox->b_have && (MOTION_TURN == p_inbox->command.type))
+    {
+        /* Junction TURN: start the pivot now, at breakaway power, instead
+           of coasting until the next 20 ms PID cycle takes over. */
+        float const direction =
+            (p_inbox->command.turn_angle_deg > 0.0f) ? 1.0f : -1.0f;
+
+#if (!ROBOT_SIMULATION) && (!S2_ENCODER_CALIBRATION)
+        motor_set(PIN_MOTOR_LEFT_PWM, PIN_MOTOR_LEFT_DIR,
+                  -direction * MOTOR_KICK_DUTY);
+        motor_set(PIN_MOTOR_RIGHT_PWM, PIN_MOTOR_RIGHT_DIR,
+                  direction * MOTOR_KICK_DUTY);
+#else
+        (void) direction;
+#endif
+    }
+    else if (p_inbox->b_stop || !motion_mission_running())
     {
 #if (!ROBOT_SIMULATION) && (!S2_ENCODER_CALIBRATION)
         motor_set(PIN_MOTOR_LEFT_PWM, PIN_MOTOR_LEFT_DIR, 0.0f);
@@ -714,10 +769,15 @@ motion_task (INT stacd, void * p_exinf)
         if ((MOTION_DRIVE == requested.type) || (MOTION_TURN == requested.type) ||
             (MOTION_MOVE_DISTANCE == requested.type))
         {
-            /* Straight-line correction: compare wheel speeds and adjust
-             * targets to keep the car pointing straight. If one wheel is
-             * going faster, reduce its target slightly. */
-            float speed_error = left_speed - right_speed;
+            /* Straight-line correction: when both wheels are meant to run
+             * at the same speed and direction, pull the faster one back.
+             * Not in a pivot (opposite directions) or while steering
+             * (different speeds): there a speed difference is intended,
+             * and "correcting" it slowed every junction turn. */
+            bool const b_straight =
+                (rmath_absf(left_target - right_target) <=
+                 MOTION_STRAIGHT_MATCH_M_S);
+            float speed_error = b_straight ? (left_speed - right_speed) : 0.0f;
             float correction = speed_error * MOTION_STRAIGHT_GAIN;
             float left_target_corrected = rmath_clampf(left_target - correction,
                                                        -1.0f, 1.0f);
@@ -728,6 +788,8 @@ motion_task (INT stacd, void * p_exinf)
                                        interval_s);
             right_out = motion_pid_step(&right_pid, right_target_corrected, right_speed,
                                         interval_s);
+            left_out  = motion_kick(left_out, left_target, left_speed);
+            right_out = motion_kick(right_out, right_target, right_speed);
         }
 
         /* Recheck immediately before writing motor outputs. A STOP may

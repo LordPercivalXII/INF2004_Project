@@ -11,9 +11,11 @@ HOST = os.getenv('MQTT_BROKER_HOST', '192.168.137.1')
 PORT = int(os.getenv('MQTT_BROKER_PORT', '1883'))
 TELEMETRY = 'inf2004/car/telemetry'
 ROUTE = 'inf2004/car/route'
+ROUTE_ACTIVE = 'inf2004/car/route/active'   # the table the robot is using
 CONTROL = 'inf2004/car/control'
 lock = threading.Lock()
-state = {'connected': False, 'latest': None, 'received_at': None, 'error': None}
+state = {'connected': False, 'latest': None, 'received_at': None, 'error': None,
+         'route_active': None}
 history = deque(maxlen=120)
 # The robot keeps its last barcode until reboot, so after a reset the first
 # value seen is treated as old and hidden until a different one arrives.
@@ -26,16 +28,18 @@ def on_connect(c, userdata, flags, reason_code, properties):
         state['error'] = None if state['connected'] else str(reason_code)
     if not reason_code.is_failure:
         c.subscribe(TELEMETRY, qos=0)
+        c.subscribe(ROUTE_ACTIVE, qos=1)
 
 def on_disconnect(c, userdata, disconnect_flags, reason_code, properties):
     with lock:
         state['connected'] = False
 
-PACKET_SIZES = (4, 5)     # 4: before the barcode byte was added
+PACKET_SIZES = (4, 5, 7)  # older firmware sent 4 or 5 bytes
+ACTIONS = ('STRAIGHT', 'LEFT', 'RIGHT', 'U-TURN')
 
 
 def decode_packet(payload, previous):
-    """Decode the robot's 5-byte binary telemetry packet.
+    """Decode the robot's 7-byte binary telemetry packet.
 
     Layout (app_program/subsystem1/telemetry_codec.h, bit 0 = LSB):
       byte 0: bits 0-2 state (0 idle, 1 following, 2 avoiding, 3 fault,
@@ -43,7 +47,11 @@ def decode_packet(payload, previous):
       byte 1: commanded speed, cm/s
       byte 2: line error, offset-binary (128 = centre), error = (b-128)/128
       byte 3: bit 7 = 1 obstacle (bits 0-6 x 2 cm), 0 hump (bits 0-6 mm)
-      byte 4: last decoded barcode character (ASCII), 0 = none
+      byte 4: bits 0-6 last decoded barcode character (ASCII), 0 = none;
+              bit 7 = simulation build (the motors are not driven)
+      byte 5: barcode used at the last junction (ASCII), 0 = none stored
+      byte 6: bits 0-1 action chosen there (0 S, 1 L, 2 R, 3 U),
+              bits 2-7 junction counter (mod 64)
     Byte 3 alternates between hump and obstacle, so the other value is
     carried over from the previous packet.
     """
@@ -58,7 +66,12 @@ def decode_packet(payload, previous):
         'binary': True,
     }
     if len(payload) >= 5:
-        value['barcode'] = payload[4]     # number, as in the JSON payload
+        value['barcode'] = payload[4] & 0x7F   # number, as in the JSON payload
+        value['simulation'] = bool(payload[4] & 0x80)
+    if len(payload) >= 7:
+        value['junction_char'] = chr(payload[5]) if payload[5] else ''
+        value['junction_action'] = ACTIONS[payload[6] & 0x03]
+        value['junction_count'] = payload[6] >> 2
     if b3 & 0x80:
         value['obstacle_cm'] = (b3 & 0x7F) * 2.0
     else:
@@ -68,6 +81,10 @@ def decode_packet(payload, previous):
 
 def on_message(c, userdata, msg):
     print('MQTT MESSAGE RECEIVED:', msg.topic, repr(msg.payload), flush=True)
+    if msg.topic == ROUTE_ACTIVE:
+        with lock:
+            state['route_active'] = msg.payload.decode('ascii', 'replace')
+        return
     if len(msg.payload) in PACKET_SIZES:
         with lock:
             previous = state['latest']

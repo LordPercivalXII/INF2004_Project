@@ -60,6 +60,15 @@
 #define CTRL_BETWEEN_STEER      (0.55f) /* steer while line is between sensors */
 #define CTRL_CENTRE_HOLD_CYCLES (40U)   /* x 10 ms to drive straight on both-white */
 #define CTRL_LOST_CYCLES        (8U)    /* x 10 ms lost before pivoting   */
+
+/* After a junction pivot the sensors usually straddle the new branch and
+   read white-white: that is "centred", not "lost".  If the line still is
+   not found, sweep gently around the turn's end point (+-45 deg, widening)
+   instead of the full-speed lost-line spin, which carried a correct turn
+   on round past its branch (a U-turn became ~360 deg). */
+#define CTRL_POSTTURN_SPIN_SPEED (0.12f) /* m/s per wheel, ~110 deg/s     */
+#define CTRL_POSTTURN_SWEEP_MS  (400U)  /* first sweep, ~45 deg           */
+#define CTRL_POSTTURN_MS        (3000U) /* post-turn search mode at most  */
 #define CTRL_LINE_DT_S          ((float) ROBOT_LINE_PERIOD_MS / 1000.0f)
 /* Ramp handling (S4 pitch: negative = nose up, positive = nose down). */
 #define CTRL_RAMP_ENTER_DEG     (6.0f)
@@ -74,9 +83,11 @@
 #define CTRL_SHOCK_FACTOR       (0.7f)
 
 /* NFR10: a +-3 g shock stops the motors (0 = only slow down, the
-   behaviour before Tribunal 1).  The car resumes after the hold. */
+   behaviour before Tribunal 1).  The car resumes after the hold.
+   Off in SIM=1 builds: the simulated IMU injects a shock every 8 s,
+   which would fault the simulated car every 8 s. */
 #ifndef CTRL_SHOCK_STOP_ENABLED
-#define CTRL_SHOCK_STOP_ENABLED (1)
+#define CTRL_SHOCK_STOP_ENABLED (!ROBOT_SIMULATION)
 #endif
 #define CTRL_SHOCK_STOP_MS      (2000U)
 
@@ -169,6 +180,12 @@ typedef struct
     bool                b_height_trace_have_motion;
     ctrl_flags_t        flags;
     float               junction_lock_m;     /* odometer when locked */
+    char                last_junction_char;  /* barcode used, '\0' none */
+    bool                b_post_turn;         /* just finished a junction
+                                                pivot: gentle search      */
+    uint32_t            post_turn_ms;
+    uint8_t             last_junction_action;/* barcode_command_t       */
+    uint8_t             junction_count;      /* junctions acted on      */
 } ctrl_state_t;
 
 /* ------------------------------------------------------------------ */
@@ -641,6 +658,11 @@ ctrl_handle_command (ctrl_state_t * p_ctrl,
                 ctrl_stop_motion();
                 tm_printf((UB *) "CTRL: START received, waiting 3 seconds%s\n",
                           p_ctrl->b_imu_healthy ? "" : " (IMU not ready yet)");
+#if ROBOT_SIMULATION
+                tm_printf((UB *) "CTRL: *** SIMULATION build (SIM=1): the "
+                          "motors are NOT driven. Rebuild with "
+                          "make SIM=0 for the real car ***\n");
+#endif
             }
             else
             {
@@ -797,12 +819,28 @@ ctrl_junction_turn_done (ctrl_state_t * p_ctrl)
 
     p_ctrl->b_junction_turn = false;
     p_ctrl->junction_lock_m = p_ctrl->distance_m;   /* lock from here */
-    p_ctrl->last_side       = side;
+
+    /* Assume the pivot landed on the new branch: white-white now means
+       "line between the sensors" (drive straight onto it).  Seeding the
+       error with the turn side instead made the steering keep turning
+       that way, past the branch.  The side is only remembered for the
+       search, should the line really not be there. */
+    p_ctrl->last_side       = 0.0f;
     p_ctrl->last_side_any   = side;
-    p_ctrl->last_seen_error = side;
+    p_ctrl->last_seen_error = 0.0f;
     p_ctrl->centred_cycles  = 0U;
     p_ctrl->lost_cycles     = 0U;
     p_ctrl->lost_start_ms   = board_millis();
+    p_ctrl->b_post_turn     = true;
+    p_ctrl->post_turn_ms    = board_millis();
+
+    /* The decoded barcode has been carried out: drop it (dashboard). */
+    if ('\0' != p_ctrl->last_junction_char)
+    {
+        tm_printf((UB *) "CTRL: barcode '%c' executed; cleared\n",
+                  p_ctrl->last_junction_char);
+        p_ctrl->barcode = 0U;
+    }
 }
 
 static void
@@ -822,6 +860,7 @@ ctrl_handle_line (ctrl_state_t * p_ctrl, line_event_t const * p_line)
     }
     else if (p_line->b_line_detected)
     {
+        p_ctrl->b_post_turn = false;    /* found the branch */
         p_ctrl->lost_cycles = 0U;
         p_ctrl->last_seen_error = p_line->line_error;
         float const abs_error = rmath_absf(p_line->line_error);
@@ -896,8 +935,13 @@ ctrl_handle_line (ctrl_state_t * p_ctrl, line_event_t const * p_line)
     {
         /* The stored barcode decides (S3 resolved it; none stored or
            "straight" = BARCODE_CMD_NONE): straight carries on following
-           the line, a turn first drives to the junction centre. */
+           the line, a turn pivots at once. */
         float const angle_deg = ctrl_junction_angle(p_ctrl->pending_turn);
+
+        /* Reported in telemetry: what the robot decided, and why. */
+        p_ctrl->last_junction_char   = p_line->junction_char;
+        p_ctrl->last_junction_action = (uint8_t) p_ctrl->pending_turn;
+        p_ctrl->junction_count++;
 
         p_ctrl->pending_turn = (uint16_t) BARCODE_CMD_NONE;
         ctrl_junction_lock(p_ctrl);
@@ -909,6 +953,10 @@ ctrl_handle_line (ctrl_state_t * p_ctrl, line_event_t const * p_line)
             tm_printf((UB *) "CTRL: junction -> STRAIGHT (%s)\n",
                       ('\0' != p_line->junction_char) ? "barcode"
                                                        : "no barcode stored");
+            if ('\0' != p_line->junction_char)
+            {
+                p_ctrl->barcode = 0U;   /* executed: drop it */
+            }
         }
         else
         {
@@ -940,21 +988,27 @@ ctrl_handle_line (ctrl_state_t * p_ctrl, line_event_t const * p_line)
                wrong guess is corrected and the car never circles. */
             /* Each sweep is longer than the last (1x, 2x, 3x...), so the
                search widens until it reaches the line. */
+            bool const b_gentle = p_ctrl->b_post_turn &&
+                ((board_millis() - p_ctrl->post_turn_ms) < CTRL_POSTTURN_MS);
+            uint32_t const first = b_gentle ? CTRL_POSTTURN_SWEEP_MS
+                                            : CTRL_LOST_FIRST_MS;
+            float const spin = b_gentle ? CTRL_POSTTURN_SPIN_SPEED
+                                        : CTRL_SEARCH_SPIN_SPEED;
             uint32_t phase = 0U;
-            uint32_t span  = CTRL_LOST_FIRST_MS;
+            uint32_t span  = first;
             uint32_t t     = lost_ms;
             while (t >= span)
             {
                 t -= span;
                 phase++;
-                span = CTRL_LOST_FIRST_MS * (phase + 1U);
+                span = first * (phase + 1U);
             }
             float const side = (0U == (phase & 1U))
                 ? p_ctrl->last_side_any : -p_ctrl->last_side_any;
             /* Rotate on the spot so the car stays over the lost corner
                instead of driving across to a different part of the track. */
-            float const outer =  CTRL_SEARCH_SPIN_SPEED;
-            float const inner = -CTRL_SEARCH_SPIN_SPEED;
+            float const outer =  spin;
+            float const inner = -spin;
 
             ctrl_set_motion_slewed((side > 0.0f) ? outer : inner,
                                    (side > 0.0f) ? inner : outer, true);
@@ -1593,6 +1647,10 @@ ctrl_publish_telemetry (ctrl_state_t * p_ctrl, uint32_t now_ms)
         telemetry.last_barcode         = p_ctrl->barcode;
         telemetry.b_start_pending      = p_ctrl->b_start_pending;
         telemetry.b_imu_ready          = p_ctrl->b_imu_healthy;
+        telemetry.b_simulation         = (0 != ROBOT_SIMULATION);
+        telemetry.last_junction_char   = p_ctrl->last_junction_char;
+        telemetry.last_junction_action = p_ctrl->last_junction_action;
+        telemetry.junction_count       = p_ctrl->junction_count;
         telemetry.fault_code           = p_ctrl->fault_code;
         telemetry.fault_mask           = fault_mask_take(FAULT_MASK_ALL);
         telemetry.imu                  = p_ctrl->imu;

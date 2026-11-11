@@ -1,8 +1,9 @@
 /** @file telemetry_codec.h
  *
- * @brief 5-byte binary MQTT telemetry packet (Tribunal 1 curveball;
+ * @brief 7-byte binary MQTT telemetry packet (Tribunal 1 curveball;
  *        replaces the 256+ byte JSON text payload).  The tribunal's
- *        4 bytes plus one byte for the decoded barcode character.
+ *        4 bytes, plus the decoded barcode character and the last
+ *        junction decision (character and action).
  *
  * Serialised with explicit shifts and masks, never C bit-fields, so the
  * byte and bit layout is identical on the RP2040 and on the laptop that
@@ -20,8 +21,14 @@
  *                            gap 3); error = (byte - 128) / 128
  *   3    0-6   value         hump: mm 0..127; obstacle: cm / 2, 0..254 cm
  *   3    7     kind          0 = hump height, 1 = obstacle distance
- *   4    0-7   barcode       last decoded character, ASCII 0x21..0x7E;
+ *   4    0-6   barcode       last decoded character, ASCII 0x21..0x7E;
  *                            0 = none since START
+ *   4    7     simulation    1 = SIM=1 build: the motors are not driven
+ *   5    0-6   junction char barcode used at the last junction (ASCII,
+ *                            0 = none stored, so it went straight)
+ *   6    0-1   junction act  0 straight, 1 left, 2 right, 3 U-turn
+ *   6    2-7   junction no.  junctions acted on since boot, mod 64; a
+ *                            change means a new junction decision
  *
  * The bump/obstacle byte alternates between the two kinds on successive
  * packets; the dashboard keeps the last value of each.
@@ -35,7 +42,10 @@
 
 #include "../common/robot_types.h"
 
-#define TELEMETRY_PACKED_SIZE       (5U)
+#define TELEMETRY_PACKED_SIZE       (7U)
+#define TELEMETRY_ACTION_MASK       (0x03U)
+#define TELEMETRY_JUNCTION_SHIFT    (2U)
+#define TELEMETRY_JUNCTION_MASK     (0x3FU)
 
 /* Byte 0 state values beyond mission_state_t (only on the wire). */
 #define TELEMETRY_STATE_STARTING    (4U)
@@ -43,6 +53,7 @@
 
 #define TELEMETRY_ASCII_FIRST       (0x21U)     /* '!' */
 #define TELEMETRY_ASCII_LAST        (0x7EU)     /* '~' */
+#define TELEMETRY_SIMULATION_BIT    (0x80U)
 
 #define TELEMETRY_STATE_MASK        (0x07U)
 #define TELEMETRY_FAULT_MASK        (0x1FU)

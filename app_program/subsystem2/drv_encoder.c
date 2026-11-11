@@ -111,7 +111,8 @@ encoder_isr (uint32_t pin, uint32_t events)
         g_have_left_edge = true;
         g_last_left_us = now_us;
         encoder_count(&g_left_ticks, &g_left_dir, &g_left_reversed,
-                      board_gpio_read(PIN_ENCODER_LEFT_B) ? 1 : -1);
+                      board_gpio_read(PIN_ENCODER_LEFT_B)
+                      ? ENCODER_LEFT_B_HIGH_STEP : -ENCODER_LEFT_B_HIGH_STEP);
     }
     else if (PIN_ENCODER_RIGHT_A == pin)
     {
@@ -125,7 +126,8 @@ encoder_isr (uint32_t pin, uint32_t events)
         g_have_right_edge = true;
         g_last_right_us = now_us;
         encoder_count(&g_right_ticks, &g_right_dir, &g_right_reversed,
-                      board_gpio_read(PIN_ENCODER_RIGHT_B) ? -1 : 1);
+                      board_gpio_read(PIN_ENCODER_RIGHT_B)
+                      ? ENCODER_RIGHT_B_HIGH_STEP : -ENCODER_RIGHT_B_HIGH_STEP);
     }
     else
     {
