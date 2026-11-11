@@ -285,3 +285,278 @@ If START still does nothing, the serial log shows where it stopped:
   it (broker address or WiFi);
 - `CTRL: START ignored ...`: received, with the reason;
 - `CTRL: START received` but no `Countdown complete`: waiting for the IMU.
+
+## "START does nothing": the firmware was a SIM=1 build
+
+The field log shows `simulation=1` in the boot banner. START worked end
+to end (`mqtt: RX ... "START"` -> `CTRL: START received` ->
+`Countdown complete, mission STARTED` -> FOLLOW, with the distance
+rising), but in a simulation build `motor_set()` is compiled out, so the
+real wheels never turn. `SIM ?= 1` is the documented default
+(`pico_rp2040.mk`, README), so a plain `make` builds the simulator.
+
+**Build the real car with `make SIM=0`** (the binary name has no `_sim`
+suffix and the banner says `simulation=0`).
+
+So a simulation build is never mistaken for a broken START again:
+- on START, a SIM=1 build prints `*** SIMULATION build (SIM=1): the
+  motors are NOT driven ... ***`;
+- MQTT byte 4 bit 7 is a simulation flag; the dashboard's status line
+  shows "SIMULATION firmware: motors not driven (rebuild with make SIM=0)".
+
+The simulated IMU injects a shock every 8 s. With the NFR10 shock-stop
+that faulted the simulated car every 8 s (`FAULT code 5` in the log), so
+`CTRL_SHOCK_STOP_ENABLED` now defaults to on for SIM=0 and off for SIM=1.
+
+## IMU start-up calibration took minutes (or never finished)
+
+Symptom: `S4: calibration waiting ... cal=56/200`, then `cal=10`, `22`,
+`103`, `37`... with the car still, and START held with
+`CTRL: START waiting for IMU calibration`.
+
+Cause (`subsystem4/imu_analysis.c`, `imu_calibrate()`): the window had
+to reach 200 consecutive samples whose peak-to-peak span stayed within
+0.04 g on every axis. A single noisy sample anywhere in the 2 s restarted
+the window from zero. A late sample (timing gap) also restarted it.
+The logged still-car samples wander about 20 mg in Z.
+
+Fix:
+- **Noise:** per-axis standard deviation over the window <= 12 mg
+  (Welford running mean/variance), instead of peak-to-peak <= 40 mg.
+- **Movement:** a sample more than 0.10 g from the window mean restarts
+  the window at once. Picking the car up or touching it still blocks
+  calibration.
+- **Level:** unchanged (X, Y within 0.15 g, Z 0.85..1.15 g).
+- **Timing gaps:** a late sample is skipped, not treated as movement.
+- **Bias:** the window mean, as before.
+- **Waiting message:** now shows the window count and measured noise, e.g.
+  `(window 140/200, noise 6 mg, limit 12 mg)`.
+
+Host simulation (`testing/integration/test_imu_calibration_host.c`, 20
+runs each, Gaussian noise on a still car):
+
+| Noise (rms) | Old rule | New rule |
+|---|---|---|
+| 3-5 mg | 2.0-2.3 s | 2.0 s |
+| 7 mg | 3.8-4.9 s | 2.0 s |
+| 9 mg | never (0/20 within 10 min) | 2.0 s |
+
+A car being handled, or tilted, never calibrates under either rule.
+
+## Barcode turned the wrong way ("F = right" turned left)
+
+The firmware chain is consistent end to end (`F:R` -> `BARCODE_CMD_RIGHT`
+-> -90 deg -> left wheel forward, right wheel back = clockwise). The logs
+show the robot was not using the dashboard's table: it received
+`"A:L,B:R,C:S,D:U"` (here **B = right**). The dashboard always sends
+`CLEAR,...`, so that was a stale retained message from another publisher.
+The dashboard form only shows what it *would* send.
+
+Now visible on the dashboard:
+- **Route echo:** the robot publishes the table it is using, retained, on
+  `inf2004/car/route/active` (e.g. `A:L,B:R,C:S,D:U,*:S`; `*` = any
+  other character). It is sent after every change and every reconnect.
+  The dashboard shows it under "Route table on the robot" and flags when
+  it differs from the form.
+- **Last junction decision:** telemetry bytes 5-6 (packet is now 7 B)
+  carry the barcode used at the last junction, the action chosen and a
+  junction counter, e.g. `#3: 'F' -> RIGHT`.
+
+To clear a stale retained route: press **Publish route settings** once
+the robot is connected (it is retained, so it replaces the old one), or
+`mosquitto_pub -h <broker> -t inf2004/car/route -r -n`.
+
+If the dashboard shows `'F' -> RIGHT` and the serial log shows
+`CTRL: junction -> barcode 'F' -> turn -90 deg`, but the car physically
+turns left, then the left/right wheel wiring is mirrored. Check that
+`PIN_MOTOR_LEFT_*` and `PIN_ENCODER_LEFT_*` really are the left wheel.
+
+## Barcode reads: capture robustness
+
+The decoder already corrects threshold bias, normalises speed and reads
+both directions. The capture around it lost reads:
+- **Overflow:** 99 elements of line-tape junk before a barcode set
+  `b_overflow` and the decode was skipped. Now the oldest bar/space pair
+  is dropped instead, so the newest elements are always kept.
+- **Late decode:** decoding waited for 150 ms-1 s of silence, so a
+  barcode followed by more edges could decode after the junction had
+  passed. Now a space wider than `BARCODE_QUIET_FACTOR` (8) x the
+  narrowest element, after at least one complete `*X*`, triggers an
+  immediate decode.
+- **Sensor hint:** a failed read now prints `narrowest bar X us, space Y
+  us: space/bar = R`. Code 39 narrow bars and spaces are printed equally
+  wide, so R measures the sensor: about 1.0 is ideal; above about 2.5
+  narrow bars vanish. Your logs show about 1.8 (13 ms bars, 23-25 ms
+  spaces). Lower the sensor (TCRT5000-type modules focus at a few mm) or
+  turn the GP28 pot towards black, and watch R come down.
+
+Host test: `testing/integration/test_barcode_session_host.c` (early
+decode at a quiet zone, junk before a barcode, 120 junk elements =
+former overflow, 5 ms bar/space bias, partial code not decoded).
+
+## WiFi stuck at "joined AP, no IP yet"
+
+`lib/libwifi/.../cyw43_utk.c` only retried after a *negative* link status
+(`FAILED`, `SSID not found`, `authentication rejected`). A join that got
+as far as `JOIN (1)`/`NOIP (2)` while the hotspot never answered DHCP, or
+a link that later fell to `DOWN (0)`, waited forever.
+
+Fixes:
+- **Watchdog:** any state other than UP for 15 s
+  (`WIFI_LINK_TIMEOUT_US`) prints `wifi: no IP after 15 s ...; leaving
+  and joining again`, calls `cyw43_wifi_leave()` and rejoins 1 s later.
+- **Auth fallback:** after `authentication rejected`, the next join
+  switches between WPA2 (`CYW43_AUTH_WPA2_MIXED_PSK`) and WPA2/WPA3
+  transition (`CYW43_AUTH_WPA3_WPA2_AES_PSK`). The join line now shows
+  which mode it is trying.
+
+iPhone hotspot checklist:
+- **Maximize Compatibility ON:** 2.4 GHz and WPA2; the Pico W is
+  2.4 GHz only.
+- **Keep the Personal Hotspot screen open while the robot joins:** iOS
+  stops advertising the hotspot when nobody is connected.
+- **SSID exactly as on the phone:** some logs show `Wicus Phangs 1Phone 17`
+  (digit 1), which gives `SSID not found`.
+
+## Junction detected late, turn executed seconds later
+
+**Late detection.** A junction needs both line sensors >= 0.80 of
+calibrated black for 2 cycles (20 ms). The boot sweep (1 s) only
+calibrates if the car is swept across the line; otherwise the fixed
+defaults (white 230, black 2200) are used, as in every log so far. A
+tape that really reads 1500 counts then normalises to 0.64 and only
+crosses 0.80 when the sensors sit squarely on it.
+
+Fix (`line.c`): while a mission runs, each sensor's steady minimum and
+maximum (held >= 3 cycles, so spikes are ignored) are tracked and used as
+white/black once they span `IR_MIN_CONTRAST_COUNTS`. The console prints
+`S3: line sensor left learned while driving: white W, black B counts`.
+A boot sweep is still best: it makes the very first junction exact too.
+
+**Late execution.** Two problems in `motion.c`:
+1. **No breakaway power.** The TURN stops the forward drive at once, so
+   the pivot starts from rest. The wheel PID uses the target speed as its
+   feed-forward duty (0.12 m/s -> ~19 % PWM with P) and its integral adds
+   only ~1 %/s, so a pivot that needs more torque sat for seconds. Now a
+   wheel commanded to move but at rest (< 0.02 m/s) gets at least
+   `MOTOR_KICK_DUTY` (0.40) in the commanded direction. The encoder stall
+   watchdog still stops a truly blocked wheel.
+2. **Straight correction fought turns.** The correction compared raw
+   left/right speeds in every mode, so in a pivot (opposite directions)
+   and while steering it pulled the wheels towards equal speed. It now
+   applies only when both targets are equal.
+
+Tuning: raise `MOTOR_KICK_DUTY` if a pivot still hesitates; lower it if
+the car jerks at START.
+
+Host test: `testing/integration/test_line_learn_host.c`.
+
+## Junction turns: overshoot, U-turn spin, start latency, barcode reuse
+
+**Overshoot / U-turn spinning ~360 deg / "turns left when it should turn
+right".** `ctrl_junction_turn_done()` seeded the line memory with
+`last_seen_error = +-1` (line fully off to the turn side). The line
+sensors straddle the line, so a pivot that lands centred on the new
+branch reads white-white. The "line between the sensors" steering then
+kept turning towards the turn side for 400 ms, followed by the
+full-speed lost-line spin (1.3 s, ~250 deg). A correct right turn could
+carry on round onto the left branch; a U-turn became ~360 deg.
+
+Now after a junction pivot:
+- `last_seen_error = 0`: white-white means centred; drive straight onto
+  the branch.
+- If the line is really not there, a gentle search sweep runs
+  (`CTRL_POSTTURN_*`: 0.12 m/s, first sweep ~45 deg towards the turn
+  side, then alternating and widening) for up to 3 s, before the normal
+  lost-line search takes over.
+
+**Start latency.** The TURN's early wake-up now drives both motors into
+the pivot at `MOTOR_KICK_DUTY` immediately, instead of zeroing them and
+coasting until the next 20 ms cycle.
+
+**Barcode dropped after execution.** Once a junction action has been
+carried out (turn finished, or straight on), the decoded barcode is
+cleared (`CTRL: barcode 'F' executed; cleared`), and the dashboard's
+"Last barcode scanned" returns to `--`. S3 also no longer consumes a
+stored barcode at a junction seen while no mission is running (car
+carried by hand).
+
+## Junction never detected (car drives straight through the crossing)
+
+Video and dashboard: barcode `F` read, route `F:R`, "No junction yet".
+The car crossed a full 4-way junction without S3 reporting it, so
+nothing was executed; what happened later was line following and the
+lost-line search, not a late junction action.
+
+Cause: the black level learned while driving took the darkest steady
+reading. When the ramp lifts the front, the IR sensors see no floor and
+read near maximum, and the dense printed barcode is darker than the tape.
+Either set "black" far darker than the tape, so a crossing normalised
+below `LINE_JUNCTION_LEVEL` and was never confirmed.
+
+Fixes (`line.c`, `robot_config.h`):
+- A sensor's black level is learned only while the other sensor reads
+  white (< 0.30). One sensor over the tape is normal following; both dark
+  at once (junction, lifted front, barcode) no longer moves "black".
+- `LINE_JUNCTION_LEVEL` 0.80 -> 0.70, `LINE_JUNCTION_RELEASE` 0.65 -> 0.55,
+  for more margin.
+- `[S3 junction] near miss: ...` is printed whenever both sensors get
+  dark (>= 0.40) without a confirmed junction, with the percentages, raw
+  counts and calibrated black, so a missed junction is never silent.
+
+## Left/right wheels were mirrored ("F = right" turned left)
+
+Serial log of the failing run:
+```
+[S3 route] barcode "F" (right-to-left) stored: 'F' -> RIGHT at next junction
+S3: junction: 'F' -> RIGHT
+CTRL: junction -> barcode 'F' -> turn -90 deg now
+```
+Barcode, route and decision were all correct. -90 deg drives the wheel
+named LEFT forward and the one named RIGHT backward (clockwise); the car
+pivoted left. So the motor + encoder on GP10/11 + GP12/13 (named LEFT)
+drive the physical RIGHT wheel. Line following worked only because the
+line sensors are mirrored the same way and the two cancelled.
+
+Also explained by this: "B turns right / F turns left" earlier; the
+encoder log calling the left wheel slow while the physical left wheel ran
+fast; the avoidance bypass side (servo angles are physical).
+
+Fix (`robot_config.h`, `drv_encoder.c`): `ROBOT_WHEELS_SWAPPED` (1 on
+hardware, 0 in simulation) assigns the pins as the wheels really are:
+
+| | LEFT (physical) | RIGHT (physical) |
+|---|---|---|
+| Motor pins | GP8/GP9, sign -1 | GP10/GP11, sign +1 |
+| Encoder pins | GP14/GP19, B high = -1 | GP12/GP13, B high = +1 |
+
+The direction sign and encoder convention move with their pins, so each
+physical motor behaves exactly as before. `LINE_ERROR_SIGN` becomes -1
+so line following is unchanged.
+
+Check on the car: a junction mapped RIGHT pivots clockwise (seen from
+above), and line following still tracks. If line following steers away
+from the line, the line sensors were not mirrored after all: set
+`LINE_ERROR_SIGN` back to 1.0f for the swapped case and report it.
+
+## Pivot at the junction centre (axle offset)
+
+A junction is detected when the line sensors reach the crossing, but the
+car pivots about its wheel axle, about 13.5 cm behind them. Pivoting at
+detection put the turn centre that far short of the junction, so after a
+90-degree turn the car sat beside the new branch, facing away from it.
+
+Now (`controller.c`, `robot_config.h`): on a junction turn the car keeps
+driving straight at full speed, with line steering suspended so the
+crossing tape cannot pull it sideways, until the odometer has covered
+`JUNCTION_PIVOT_OFFSET_M` (0.130 m). The pivot is then commanded on that
+motion event (20 ms granularity, ~3 mm at 0.15 m/s), and the motion task
+starts it at once (no stop in between). Safety timeout:
+`JUNCTION_APPROACH_TIMEOUT_MS` (2.5 s). STRAIGHT junctions are unaffected.
+
+Console:
+`CTRL: junction -> barcode 'F' -> turn -90 deg after 130 mm (axle to centre)`
+then `CTRL: pivot -90 deg at junction centre (barcode 'F', drove 131 mm)`.
+
+Tuning: if the car ends beside the new branch, increase the offset; if it
+ends past it, decrease it (1 cm steps).

@@ -201,7 +201,12 @@ imu_task (INT stacd, void * p_exinf)
             ((now_ms - last_notice_ms) >= IMU_CALIBRATION_WARN_MS))
         {
             tm_printf((UB *) "S4: calibration waiting: hold car still, "
-                      "level, sensor Z up\n");
+                      "level, sensor Z up (window %u/%u, noise %u mg, "
+                      "limit 12 mg)\n",
+                      (unsigned int) processor.calibration_count,
+                      (unsigned int) IMU_CALIBRATION_SAMPLES,
+                      (unsigned int) (imu_calibration_noise_g(&processor) *
+                                      1000.0f + 0.5f));
             last_notice_ms = now_ms;
         }
         if (processor.output.b_hump_rejected)

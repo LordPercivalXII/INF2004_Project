@@ -54,9 +54,9 @@ typedef struct
 
 typedef struct
 {
-    float sum[3];
-    float minimum[3];
-    float maximum[3];
+    float cal_mean[3];        /* calibration window: running mean, g    */
+    float cal_m2[3];          /* calibration window: sum of squared
+                                 deviations (Welford), g^2              */
     float bias[3];
     uint32_t calibration_count;
     float gravity[3];
@@ -91,6 +91,8 @@ float imu_filter_update(imu_filter_t * p_filter, float value);
 void imu_tilt_angles(float ax_g, float ay_g, float az_g,
                      float * p_roll_deg, float * p_pitch_deg);
 void imu_processor_init(imu_processor_t * p_processor);
+/* Largest per-axis std dev of the calibration window, g (diagnostics). */
+float imu_calibration_noise_g(imu_processor_t const * p_processor);
 void imu_processor_update(imu_processor_t * p_processor,
                            imu_sample_t const * p_sample, bool b_valid,
                            uint32_t timestamp_ms);

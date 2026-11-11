@@ -9,9 +9,9 @@
  * MQTT telemetry is passed through a non-blocking micro T-Kernel
  * message buffer and retrieved by the Wi-Fi task.
  *
- * Tribunal 1: with USE_BIT_PACKING the MQTT payload is the 5-byte binary
+ * Tribunal 1: with USE_BIT_PACKING the MQTT payload is the 7-byte binary
  * packet of telemetry_codec.h (no snprintf on the MQTT path) and the
- * MQTT message buffer holds 5-byte packets instead of whole snapshots.
+ * MQTT message buffer holds 7-byte packets instead of whole snapshots.
  * The USB console keeps the readable text.
  */
 

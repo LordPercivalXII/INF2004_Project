@@ -39,6 +39,30 @@
 /* ---- Cytron Robo Pico pin map (Group 19 Design Review) ----
  * Measured on the car: motor channel GP10/GP11 drives the physical left
  * wheel and GP8/GP9 the physical right wheel, so they are swapped here. */
+/* Physical wheel mapping.  Field log: barcode 'F' -> RIGHT, the
+ * controller commanded "turn -90 deg" (clockwise: the wheel called LEFT
+ * forward, RIGHT backward) and the car pivoted LEFT: the motor + encoder
+ * on GP10/11 + GP12/13 drive the car's RIGHT wheel.  Driving straight and
+ * line following hid it (the line sensors are mirrored the same way, so
+ * the two cancelled); junction turns, the avoidance bypass side (servo
+ * angles are physical) and the heading were mirrored.  The encoder logs
+ * agreed: "left" read slow while the physical left wheel ran fast.
+ * ROBOT_WHEELS_SWAPPED 1 names the wheels as they really are; with it the
+ * line error sign flips too, so line following is unchanged. */
+#ifndef ROBOT_WHEELS_SWAPPED
+#define ROBOT_WHEELS_SWAPPED            (!ROBOT_SIMULATION)
+#endif
+
+#if ROBOT_WHEELS_SWAPPED
+#define PIN_MOTOR_LEFT_PWM              (8U)
+#define PIN_MOTOR_LEFT_DIR              (9U)
+#define PIN_MOTOR_RIGHT_PWM             (10U)
+#define PIN_MOTOR_RIGHT_DIR             (11U)
+#define PIN_ENCODER_LEFT_A              (14U)
+#define PIN_ENCODER_LEFT_B              (19U)
+#define PIN_ENCODER_RIGHT_A             (12U)
+#define PIN_ENCODER_RIGHT_B             (13U)
+#else
 #define PIN_MOTOR_LEFT_PWM              (10U)
 #define PIN_MOTOR_LEFT_DIR              (11U)
 #define PIN_MOTOR_RIGHT_PWM             (8U)
@@ -47,6 +71,7 @@
 #define PIN_ENCODER_LEFT_B              (13U)
 #define PIN_ENCODER_RIGHT_A             (14U)
 #define PIN_ENCODER_RIGHT_B             (19U)
+#endif
 #define PIN_IR_LEFT                     (26U)
 #define PIN_IR_CENTER                   (27U)
 #define PIN_IR_BARCODE                  (28U)
@@ -113,12 +138,28 @@
 #define S2_MOTOR_DIR_TEST               (0)
 #endif
 /* Motor direction: 1.0 = normal, -1.0 = wired/mounted the other way round. */
+/* Direction signs and encoder conventions belong to the physical motor
+   and encoder, so they move with the pins (GP10/11 + GP12/13: +1, B high
+   = forward; GP8/9 + GP14/19: -1, B high = backward). */
+#if ROBOT_WHEELS_SWAPPED
+#define MOTOR_LEFT_DIR_SIGN             (-1.0f)
+#define MOTOR_RIGHT_DIR_SIGN            (1.0f)
+#define ENCODER_LEFT_B_HIGH_STEP        (-1)
+#define ENCODER_RIGHT_B_HIGH_STEP       (1)
+#else
 #define MOTOR_LEFT_DIR_SIGN             (1.0f)
 #define MOTOR_RIGHT_DIR_SIGN            (-1.0f)
+#define ENCODER_LEFT_B_HIGH_STEP        (1)
+#define ENCODER_RIGHT_B_HIGH_STEP       (-1)
+#endif
 /* Cap on motor PWM duty (0..1); lower = slower wheels. */
 #define MOTOR_MAX_DUTY                  (0.70f)
 /* Smallest duty that still overcomes motor friction (0 = disabled). */
 #define MOTOR_MIN_DUTY                  (0.0f)
+#define MOTOR_KICK_DUTY                 (0.40f)  /* breakaway from rest:
+                                                    raise if a pivot still
+                                                    hesitates, lower if the
+                                                    car jerks at START    */
 /* TEST ONLY.  Milliseconds after power-up at which a SIM=0 car starts
  * following the line by itself, as if it had received CONTROL_START;
  * 0 = off.  Nothing else sends START yet.  Set back to 0 before
@@ -164,21 +205,32 @@
  *   junction both black        a crossing line covers both sensors
  * The right sensor (GP28) is for barcodes only. */
 #define LINE_LOST_LEVEL                 (0.06f)  /* both below: lost      */
-#define LINE_JUNCTION_LEVEL             (0.80f)  /* both above: junction  */
-#define LINE_JUNCTION_RELEASE           (0.65f)  /* re-arm when one below:
+#define LINE_JUNCTION_LEVEL             (0.70f)  /* both above: junction  */
+#define LINE_JUNCTION_RELEASE           (0.55f)  /* re-arm when one below:
                                                     > 0.5 so a centred car
                                                     (L + M ~ 1) re-arms */
 #define LINE_JUNCTION_MIN_CYCLES        (2U)     /* x 10 ms: an 18 mm
                                                     crossing at 0.6 m/s
                                                     gives ~3 cycles     */
+/* -1 with ROBOT_WHEELS_SWAPPED: line following worked only because the
+   motor and line-sensor mirrors cancelled; un-mirroring the motors needs
+   the error flipped to keep it working (and "+ = line to the right" then
+   holds physically, which the lost-line and post-turn searches assume). */
+#if ROBOT_WHEELS_SWAPPED
+#define LINE_ERROR_SIGN                 (-1.0f)
+#else
 #define LINE_ERROR_SIGN                 (1.0f)   /* -1.0f if the car steers
                                                     away from the line  */
+#endif
 
-/* Junction turns (controller.c).  The pivot is commanded on the junction
- * event itself, with no drive forward first: the line sensors sit at the
- * wheel axle (~0 mm in the photos), so the car pivots on the crossing.
- * If the sensors are ever moved well ahead of the axle, the car will
- * pivot before reaching the crossing line. */
+/* Junction turns (controller.c).  A junction is detected when the LINE
+ * SENSORS reach the crossing, but the car pivots about its WHEEL AXLE,
+ * about 13.5 cm behind them (measured on the car).  So it drives straight
+ * on, at full speed, until the axle is over the junction centre, then
+ * pivots at once.  Too little: the car ends beside the new branch facing
+ * away from it; too much: it ends past it.  Tune on the track. */
+#define JUNCTION_PIVOT_OFFSET_M         (0.130f) /* sensors -> axle, m    */
+#define JUNCTION_APPROACH_TIMEOUT_MS    (2500U)  /* turn anyway if stuck  */
 
 /* 1 = read the REAL line sensors (ADC, boot calibration) even in a
  * SIM=1 build, to check polarity and steering sign by hand while the
@@ -201,6 +253,9 @@
 #define BARCODE_END_GAP_MIN_MS          (150U)
 #define BARCODE_END_GAP_FACTOR          (4U)
 #define BARCODE_END_GAP_MAX_MS          (1000U)  /* cap: slow scans end */
+#define BARCODE_QUIET_FACTOR            (8U)     /* a space this many x the
+                                                    narrowest element is a
+                                                    quiet zone: decode now */
 #define BARCODE_EDGE_QUEUE_LENGTH       (512U)   /* absorbs comparator chatter */
 
 /* ---- Buddy 3: junction routing from MQTT (subsystem3/route.c) ----

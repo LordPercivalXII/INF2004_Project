@@ -48,6 +48,13 @@ static route_table_t    g_table;
 static route_status_t   g_status;
 static volatile uint32_t g_config_drops = 0U;
 
+/* Text of the table in use, for the dashboard (route echo).  Written by
+   line_task and read by the WiFi task, both under gh_route_mtx. */
+#define ROUTE_ECHO_MAX      (128U)
+static char     g_echo[ROUTE_ECHO_MAX] = "*:S";
+static uint32_t g_echo_length  = 3U;
+static uint32_t g_echo_version = 1U;
+
 /* ------------------------------------------------------------------ */
 /* Pure helpers (unit-tested in subsystem3_test.c)                     */
 /* ------------------------------------------------------------------ */
@@ -361,6 +368,66 @@ route_count_mapped (route_table_t const * p_table)
     return (count);
 }
 
+/*!
+ * @brief Rebuild the echo text from the table (caller holds gh_route_mtx).
+ *        Entries that do not fit are dropped; the default always fits.
+ */
+static void
+route_echo_update (route_table_t const * p_table)
+{
+    uint32_t used = 0U;
+    uint32_t idx;
+
+    for (idx = 0U; idx < ROUTE_TABLE_SIZE; idx++)
+    {
+        /* "X:A," per entry, and room left for "*:A". */
+        if ((ROUTE_UNMAPPED != p_table->action[idx]) &&
+            ((used + 4U + 3U) < ROUTE_ECHO_MAX))
+        {
+            g_echo[used]      = (char) idx;
+            g_echo[used + 1U] = ':';
+            g_echo[used + 2U] = route_action_name(p_table->action[idx])[0];
+            g_echo[used + 3U] = ',';
+            used += 4U;
+        }
+    }
+
+    g_echo[used]      = '*';
+    g_echo[used + 1U] = ':';
+    g_echo[used + 2U] = route_action_name(p_table->default_action)[0];
+    g_echo[used + 3U] = '\0';
+    g_echo_length     = used + 3U;
+    g_echo_version++;
+}
+
+/*!
+ * @brief The route table in use, for the dashboard (see subsystem3.h).
+ */
+uint32_t
+mqtt_utk_route_echo_read (char * p_buffer, uint32_t buffer_size,
+                          uint32_t * p_version)
+{
+    uint32_t length = 0U;
+    uint32_t idx;
+
+    if ((NULL != p_buffer) && (NULL != p_version) && (gh_route_mtx > 0) &&
+        (E_OK == tk_loc_mtx(gh_route_mtx, TMO_POL)))
+    {
+        if (g_echo_length < buffer_size)
+        {
+            for (idx = 0U; idx <= g_echo_length; idx++)
+            {
+                p_buffer[idx] = g_echo[idx];
+            }
+            length     = g_echo_length;
+            *p_version = g_echo_version;
+        }
+        (void) tk_unl_mtx(gh_route_mtx);
+    }
+
+    return (length);
+}
+
 static void
 route_print_table (route_table_t const * p_table)
 {
@@ -404,6 +471,7 @@ route_poll_config (void)
         if (E_OK == tk_loc_mtx(gh_route_mtx, TMO_FEVR))
         {
             route_table_parse(&g_table, text, (uint32_t) length, &result);
+            route_echo_update(&g_table);
             g_status.mapped_count   = route_count_mapped(&g_table);
             g_status.default_action = g_table.default_action;
             g_status.config_count++;

@@ -52,10 +52,47 @@ typedef struct
     bool     b_calibrated;
 } ir_calibration_t;
 
+/* Calibration learned while driving (S3_LINE_HW).  The boot sweep needs
+ * the car swept across the line; when it was not, the fixed defaults made
+ * a junction (both sensors >= LINE_JUNCTION_LEVEL) register only when the
+ * sensors sat squarely on the tape, i.e. late.  While a mission runs, the
+ * extremes each sensor holds for LINE_LEARN_HOLD cycles are tracked and,
+ * once they span IR_MIN_CONTRAST_COUNTS, used as white and black. */
+#define LINE_LEARN_HOLD         (3U)        /* cycles: rejects spikes      */
+/* Black is only learned while the OTHER sensor reads white (below this):
+   one sensor over the tape is normal line following, whereas both dark
+   at once is a junction, the ramp lifting the front (no floor = very
+   "black"), or the barcode - learning from those set black far darker
+   than the tape, so junctions stopped registering. */
+#define LINE_LEARN_OTHER_WHITE  (0.30f)
+
+/* Junction near-miss report: both sensors at least this dark without a
+   junction being confirmed prints the values (diagnostics). */
+#define LINE_NEAR_MISS_LEVEL    (0.40f)
+#define LINE_LEARN_REPORT_PCT   (10U)       /* print when span grows this  */
+
+typedef struct
+{
+    uint16_t lo;                            /* steady minimum, ADC counts */
+    uint16_t hi;                            /* steady maximum             */
+    uint16_t recent[LINE_LEARN_HOLD];
+    uint32_t count;
+    uint16_t reported_span;
+} ir_learn_t;
+
 typedef struct
 {
     ir_calibration_t cal_left;
     ir_calibration_t cal_center;
+    ir_learn_t       learn_left;
+    ir_learn_t       learn_center;
+    bool             b_near_active;     /* both sensors darkish now     */
+    bool             b_near_junction;   /* ...and a junction confirmed  */
+    float            near_peak;         /* peak of min(left, center)    */
+    float            near_left;
+    float            near_center;
+    uint16_t         near_raw_left;
+    uint16_t         near_raw_center;
     float            last_error;
     line_junction_t  junction;
     uint16_t         held_left;
@@ -137,6 +174,55 @@ line_compute_error (float left, float center, float last_error,
     }
 
     return (error);
+}
+
+/*!
+ * @brief Report a crossing where both sensors got dark but no junction
+ *        was confirmed (values and calibration), so a missed junction is
+ *        never silent.  Printed once, when the dark patch ends.
+ */
+static void
+line_near_miss (line_ctx_t * p_ctx, float left, float center,
+                uint16_t raw_left, uint16_t raw_center, bool b_junction)
+{
+    float const both = (left < center) ? left : center;
+
+    if (both >= LINE_NEAR_MISS_LEVEL)
+    {
+        if ((!p_ctx->b_near_active) || (both > p_ctx->near_peak))
+        {
+            p_ctx->near_peak       = both;
+            p_ctx->near_left       = left;
+            p_ctx->near_center     = center;
+            p_ctx->near_raw_left   = raw_left;
+            p_ctx->near_raw_center = raw_center;
+        }
+        p_ctx->b_near_active   = true;
+        p_ctx->b_near_junction = p_ctx->b_near_junction || b_junction;
+    }
+    else if (p_ctx->b_near_active)
+    {
+        if (!p_ctx->b_near_junction)
+        {
+            tm_printf((UB *) "[S3 junction] near miss: both sensors dark "
+                      "but below %u%%: left %u%% (raw %u, black %u), "
+                      "middle %u%% (raw %u, black %u)\n",
+                      (unsigned int) (LINE_JUNCTION_LEVEL * 100.0f),
+                      (unsigned int) (p_ctx->near_left * 100.0f),
+                      (unsigned int) p_ctx->near_raw_left,
+                      (unsigned int) p_ctx->cal_left.black,
+                      (unsigned int) (p_ctx->near_center * 100.0f),
+                      (unsigned int) p_ctx->near_raw_center,
+                      (unsigned int) p_ctx->cal_center.black);
+        }
+        p_ctx->b_near_active   = false;
+        p_ctx->b_near_junction = false;
+        p_ctx->near_peak       = 0.0f;
+    }
+    else
+    {
+        /* Not near a crossing. */
+    }
 }
 
 /*!
@@ -240,6 +326,96 @@ line_calibrate (line_ctx_t * p_ctx)
     tm_printf((UB *) "S3: line calibration: sweep done\n");
     line_calibration_apply(&p_ctx->cal_left, left_min, left_max);
     line_calibration_apply(&p_ctx->cal_center, center_min, center_max);
+}
+
+/*!
+ * @brief Start learning from the boot result (if it was valid) so the
+ *        learned range can only widen it.
+ */
+static void
+line_learn_init (ir_learn_t * p_learn, ir_calibration_t const * p_cal)
+{
+    *p_learn = (ir_learn_t) {0};
+    p_learn->lo = LINE_ADC_MAX;
+    p_learn->hi = 0U;
+
+    if (p_cal->b_calibrated)
+    {
+        p_learn->lo = (p_cal->white < p_cal->black) ? p_cal->white
+                                                    : p_cal->black;
+        p_learn->hi = (p_cal->white < p_cal->black) ? p_cal->black
+                                                    : p_cal->white;
+        p_learn->reported_span = (uint16_t) (p_learn->hi - p_learn->lo);
+    }
+}
+
+static bool
+line_mission_running (void)
+{
+    T_RFLG status = {0};
+
+    return ((gh_system_flg > 0) &&
+            (E_OK == tk_ref_flg(gh_system_flg, &status)) &&
+            (0U != (status.flgptn & SYSTEM_BIT_MISSION_RUN)));
+}
+
+/*!
+ * @brief Learn one sensor's white/black from what it reads while driving.
+ *
+ * @param[in] raw  This cycle's averaged ADC reading.
+ */
+static void
+line_learn (ir_learn_t * p_learn, ir_calibration_t * p_cal, uint16_t raw,
+            float other, char const * p_name)
+{
+    uint16_t steady_hi = LINE_ADC_MAX;
+    uint16_t steady_lo = 0U;
+    uint16_t span;
+    uint32_t idx;
+
+    p_learn->recent[p_learn->count % LINE_LEARN_HOLD] = raw;
+    p_learn->count++;
+
+    if (p_learn->count < LINE_LEARN_HOLD)
+    {
+        return;
+    }
+
+    /* A level counts only if it held for LINE_LEARN_HOLD cycles. */
+    for (idx = 0U; idx < LINE_LEARN_HOLD; idx++)
+    {
+        steady_hi = (p_learn->recent[idx] < steady_hi) ? p_learn->recent[idx]
+                                                       : steady_hi;
+        steady_lo = (p_learn->recent[idx] > steady_lo) ? p_learn->recent[idx]
+                                                       : steady_lo;
+    }
+
+    if (other < LINE_LEARN_OTHER_WHITE)
+    {
+        p_learn->hi = (steady_hi > p_learn->hi) ? steady_hi : p_learn->hi;
+    }
+    p_learn->lo = (steady_lo < p_learn->lo) ? steady_lo : p_learn->lo;
+
+    if (p_learn->hi <= p_learn->lo)
+    {
+        return;
+    }
+
+    span = (uint16_t) (p_learn->hi - p_learn->lo);
+
+    if ((span >= IR_MIN_CONTRAST_COUNTS) &&
+        ((!p_cal->b_calibrated) ||
+         (((uint32_t) span * 100U) >=
+          ((uint32_t) p_learn->reported_span * (100U + LINE_LEARN_REPORT_PCT)))))
+    {
+        p_cal->white = IR_ANALOG_BLACK_IS_HIGH ? p_learn->lo : p_learn->hi;
+        p_cal->black = IR_ANALOG_BLACK_IS_HIGH ? p_learn->hi : p_learn->lo;
+        p_cal->b_calibrated = true;
+        p_learn->reported_span = span;
+        tm_printf((UB *) "S3: line sensor %s learned while driving: "
+                  "white %u, black %u counts\n", p_name,
+                  (unsigned int) p_cal->white, (unsigned int) p_cal->black);
+    }
 }
 
 /*!
@@ -405,7 +581,7 @@ line_debug (line_ctx_t * p_ctx, uint32_t now_ms, uint16_t raw_left,
 
 /*!
  * @brief true while the controller is still acting on the last junction
- *        (IF-05 SYSTEM_BIT_JUNCTION_BUSY).
+ *        (IF-05 SYSTEM_BIT_JUNCTION_BUSY), or while no mission runs.
  */
 static bool
 line_junction_busy (void)
@@ -414,7 +590,8 @@ line_junction_busy (void)
 
     return ((gh_system_flg > 0) &&
             (E_OK == tk_ref_flg(gh_system_flg, &status)) &&
-            (0U != (status.flgptn & SYSTEM_BIT_JUNCTION_BUSY)));
+            ((0U != (status.flgptn & SYSTEM_BIT_JUNCTION_BUSY)) ||
+             (0U == (status.flgptn & SYSTEM_BIT_MISSION_RUN))));
 }
 
 /*!
@@ -462,10 +639,11 @@ line_publish (line_ctx_t * p_ctx, float error, bool b_detected,
     if (b_junction && line_junction_busy())
     {
         /* The controller is still acting on the previous junction (its
-           turn, or the same tape seen again after the pivot).  Do not
-           consume the stored barcode: it belongs to the next junction. */
+           turn, or the same tape seen again after the pivot), or no
+           mission is running (car carried by hand).  Do not consume the
+           stored barcode: it belongs to the next junction driven. */
         tm_printf((UB *) "[S3 route] junction ignored: controller busy "
-                  "with the last one; waypoint kept\n");
+                  "or not running; waypoint kept\n");
     }
     else if (b_junction)
     {
@@ -507,6 +685,7 @@ line_task (INT stacd, void * p_exinf)
     float             center;
     float             error;
     bool              b_detected;
+    bool              b_junction;
 
     (void) stacd;
     (void) p_exinf;
@@ -530,6 +709,8 @@ line_task (INT stacd, void * p_exinf)
     line_calibrate(&ctx);
     line_calibration_report("left", &ctx.cal_left);
     line_calibration_report("middle", &ctx.cal_center);
+    line_learn_init(&ctx.learn_left, &ctx.cal_left);
+    line_learn_init(&ctx.learn_center, &ctx.cal_center);
 #endif
 
     /* Discard wake-ups queued during calibration. */
@@ -543,6 +724,21 @@ line_task (INT stacd, void * p_exinf)
 
         now_ms = board_millis();
         line_read(&ctx, now_ms, &raw_left, &raw_center);
+
+#if S3_LINE_HW
+        if (line_mission_running())
+        {
+            float const other_center = line_normalise(raw_center,
+                                                      &ctx.cal_center);
+            float const other_left   = line_normalise(raw_left,
+                                                      &ctx.cal_left);
+
+            line_learn(&ctx.learn_left, &ctx.cal_left, raw_left,
+                       other_center, "left");
+            line_learn(&ctx.learn_center, &ctx.cal_center, raw_center,
+                       other_left, "middle");
+        }
+#endif
 
         left   = line_normalise(raw_left, &ctx.cal_left);
         center = line_normalise(raw_center, &ctx.cal_center);
@@ -559,9 +755,10 @@ line_task (INT stacd, void * p_exinf)
                    b_detected);
 #endif
 
-        line_publish(&ctx, error, b_detected,
-                     line_junction_update(&ctx.junction, left, center),
-                     now_ms);
+        b_junction = line_junction_update(&ctx.junction, left, center);
+        line_near_miss(&ctx, left, center, raw_left, raw_center,
+                       b_junction);
+        line_publish(&ctx, error, b_detected, b_junction, now_ms);
     }
 }
 

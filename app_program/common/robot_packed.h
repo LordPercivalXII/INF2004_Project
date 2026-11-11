@@ -33,7 +33,7 @@
  *                                              the sensor reads 250 cm;
  *                                              needs signed offset and
  *                                              scan time
- *   MQTT payload     4 B       5 B   ~800 B    + 1 B barcode character
+ *   MQTT payload     4 B       7 B   ~800 B    + barcode, last junction
  *
  * USE_BIT_PACKING (make PACK=0|1, default 1) builds the unpacked
  * structs instead, for the Week 13 before/after RAM and size comparison.
