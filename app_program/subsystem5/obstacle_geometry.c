@@ -29,8 +29,8 @@
  * so a reading that wobbles by a cm cannot split it in two. */
 #define OBSTACLE_BAND_CM        (10.0f)
 
-/* The car's path: half its 13 cm width plus 3 cm each side. */
-#define OBSTACLE_PATH_HALF_CM   (9.5f)
+/* The car's path: half its 15 cm width plus a 4 cm clearance each side. */
+#define OBSTACLE_PATH_HALF_CM   (11.5f)
 
 /* Closer than this the car backs up before deciding: turning on the spot
  * swings the front corners out about as far as the nose. */
@@ -38,7 +38,7 @@
 
 #define OBSTACLE_OFFSET_MIN_CM  (10.0f)
 #define OBSTACLE_OFFSET_MAX_CM  (30.0f) /* stays on the track mat */
-#define OBSTACLE_CLEARANCE_MARGIN_CM (5.0f)
+#define OBSTACLE_CLEARANCE_MARGIN_CM (4.0f)
 
 /* The beam is about 15 deg wide, so it starts to see an edge half a beam
  * before pointing at it; each reading covers half a step either side. */
@@ -291,8 +291,8 @@ obstacle_profile_build (obstacle_scan_t const * p_scan,
  *                 margin: back up and scan again.
  * TURN_LEFT/RIGHT in the path: go round the side with room (both: the
  *                 side that needs the smaller sideways move).  The offset
- *                 puts the car's side OBSTACLE_CLEARANCE_MARGIN_CM clear
- *                 of that edge.
+ *                 puts the car's side 4 cm clear of that edge (the
+ *                 clearance is in OBSTACLE_PATH_HALF_CM).
  */
 void
 obstacle_plan_build (obstacle_profile_t const * p_profile,
@@ -339,12 +339,10 @@ obstacle_plan_build (obstacle_profile_t const * p_profile,
 
     p_plan->action           = b_go_left ? OBSTACLE_ACTION_TURN_LEFT
                                          : OBSTACLE_ACTION_TURN_RIGHT;
-    /* The edge offset alone puts the car's side exactly on the estimated
-       edge (zero gap), and the ultrasonic edge estimate can be several cm
-       short: add the same margin the room check above already assumes. */
-    p_plan->bypass_offset_cm = rmath_clampf((b_go_left ? left_offset
-                                                       : right_offset) +
-                                            OBSTACLE_CLEARANCE_MARGIN_CM,
+    /* OBSTACLE_PATH_HALF_CM already holds the clearance, so the offset
+       puts the car's side 4 cm clear of the edge. */
+    p_plan->bypass_offset_cm = rmath_clampf(b_go_left ? left_offset
+                                                      : right_offset,
                                             OBSTACLE_OFFSET_MIN_CM,
                                             OBSTACLE_OFFSET_MAX_CM);
 }

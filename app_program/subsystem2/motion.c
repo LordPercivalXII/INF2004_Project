@@ -359,6 +359,36 @@ motion_turn_speed (float remaining_deg)
 }
 
 /*!
+ * @brief On-the-spot turns only: at least MOTOR_TURN_MIN_DUTY in the
+ *        wheel's turn direction.  A pivot drags the wheels sideways, so
+ *        the speed PID's output (~0.19 at 0.12 m/s) leaves a wheel
+ *        stalled until the encoder watchdog stops the car.
+ *
+ * @param[in] duty    PID output for the wheel.
+ * @param[in] target  The wheel's turn speed target (sign = direction).
+ */
+static float
+motion_turn_duty (float duty, float target)
+{
+    float result = duty;
+
+    if (target > 0.001f)
+    {
+        result = rmath_maxf(duty, MOTOR_TURN_MIN_DUTY);
+    }
+    else if (target < -0.001f)
+    {
+        result = rmath_minf(duty, -MOTOR_TURN_MIN_DUTY);
+    }
+    else
+    {
+        /* No target: leave it. */
+    }
+
+    return (result);
+}
+
+/*!
  * @brief Motion task (20 ms, woken by its cyclic handler).
  */
 void
@@ -716,8 +746,11 @@ motion_task (INT stacd, void * p_exinf)
         {
             /* Straight-line correction: compare wheel speeds and adjust
              * targets to keep the car pointing straight. If one wheel is
-             * going faster, reduce its target slightly. */
-            float speed_error = left_speed - right_speed;
+             * going faster, reduce its target slightly.  Not in a turn:
+             * there the wheels run opposite on purpose, and the
+             * correction would slow both. */
+            float speed_error = (MOTION_TURN == requested.type)
+                                ? 0.0f : (left_speed - right_speed);
             float correction = speed_error * MOTION_STRAIGHT_GAIN;
             float left_target_corrected = rmath_clampf(left_target - correction,
                                                        -1.0f, 1.0f);
@@ -728,6 +761,12 @@ motion_task (INT stacd, void * p_exinf)
                                        interval_s);
             right_out = motion_pid_step(&right_pid, right_target_corrected, right_speed,
                                         interval_s);
+
+            if (MOTION_TURN == requested.type)
+            {
+                left_out  = motion_turn_duty(left_out, left_target);
+                right_out = motion_turn_duty(right_out, right_target);
+            }
         }
 
         /* Recheck immediately before writing motor outputs. A STOP may

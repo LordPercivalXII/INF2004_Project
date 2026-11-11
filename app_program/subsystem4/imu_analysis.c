@@ -4,7 +4,7 @@
 #include "imu_processing.h"
 #include "../common/rmath.h"
 
-#define IMU_CAL_ACCEL_SPAN_G     (0.04f)
+#define IMU_CAL_ACCEL_SPAN_G     (0.10f)
 #define IMU_ATTITUDE_TAU_S       (0.15f)
 #define IMU_HUMP_TRIGGER_COUNT   (3U)
 #define IMU_HUMP_QUIET_COUNT     (15U)
