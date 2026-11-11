@@ -1,6 +1,6 @@
 /** @file telemetry_codec.c
  *
- * @brief 4-byte binary MQTT telemetry encoder (layout in the header).
+ * @brief 5-byte binary MQTT telemetry encoder (layout in the header).
  *        Pure C, no kernel calls: also built by test_telemetry_codec.c.
  */
 
@@ -14,7 +14,7 @@
 #define TELEMETRY_HUMP_SCALE        (1000.0f)   /* m -> mm      */
 
 /*!
- * @brief Encode a telemetry snapshot into the 4-byte MQTT payload.
+ * @brief Encode a telemetry snapshot into the 5-byte MQTT payload.
  *
  * @param[in]  p_telemetry      Snapshot from the controller.
  * @param[in]  b_obstacle_slot  true: byte 3 carries the obstacle distance;
@@ -40,9 +40,20 @@ telemetry_encode (telemetry_message_t const * p_telemetry,
     }
 
     state = (uint32_t) p_telemetry->mission_state;
-    if (state > TELEMETRY_STATE_MASK)
+    if (state > (uint32_t) MISSION_FAULT)
     {
         state = (uint32_t) MISSION_FAULT;
+    }
+    else if ((MISSION_IDLE == p_telemetry->mission_state) &&
+             p_telemetry->b_start_pending)
+    {
+        /* Tell the dashboard START arrived and why the car is not moving. */
+        state = p_telemetry->b_imu_ready ? TELEMETRY_STATE_STARTING
+                                         : TELEMETRY_STATE_WAIT_IMU;
+    }
+    else
+    {
+        /* A plain mission state. */
     }
 
     /* Same 12-bit offset-binary code as nav_q_line; the unsigned shift
@@ -72,6 +83,9 @@ telemetry_encode (telemetry_message_t const * p_telemetry,
                                            TELEMETRY_SPEED_MAX_CM_S);
     p_payload[2] = (uint8_t) (line_q12 >> TELEMETRY_LINE_SHIFT);
     p_payload[3] = (uint8_t) value;
+    p_payload[4] = ((p_telemetry->last_barcode >= TELEMETRY_ASCII_FIRST) &&
+                    (p_telemetry->last_barcode <= TELEMETRY_ASCII_LAST))
+                   ? (uint8_t) p_telemetry->last_barcode : 0U;
 
     return (true);
 }

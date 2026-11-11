@@ -254,3 +254,34 @@ rejected edges or reversed glitches. If the left counters keep climbing,
 reseat the left encoder connector, keep its wires away from the motor
 leads, and consider 4.7 kOhm external pull-ups on GP12/GP13 (the internal
 pull-ups are about 50 kOhm).
+
+## Dashboard: barcode over MQTT, and START that did nothing
+
+**Barcode byte.** The MQTT packet is now 5 bytes: the tribunal's 4 plus
+byte 4, the last decoded barcode character (ASCII 0x21..0x7E, 0 = none
+since START). `dashboard/server.py` decodes 4- and 5-byte packets and puts
+the character in the same `barcode` field the page already shows.
+
+**START ignored.** `CONTROL_START` was only accepted in `IDLE`. After any
+fault that does not auto-resume (encoder stall 7, line not reacquired 3,
+boxed in 4, motion command 6, external 1), every START printed
+`START ignored: state=3` and the dashboard timed out; only a reboot
+cleared it, because nothing on the dashboard sends `CLEAR_FAULT`.
+A START sent before the IMU had calibrated also waited silently.
+
+Fixes:
+- START from FAULT clears the fault (`ctrl_clear_fault()`, the operator's
+  acknowledgement) and starts the 3 s countdown, if the IMU is healthy.
+  If the cause is still there (a blocked wheel), the fault comes back.
+- A START held for the IMU prints `CTRL: START waiting for IMU
+  calibration` every 2 s.
+- The packet's 3-bit state field uses two spare values: 4 = countdown
+  running, 5 = START held for the IMU. The dashboard shows
+  "Robot received START. Countdown running..." or "waiting for IMU
+  calibration" instead of timing out.
+
+If START still does nothing, the serial log shows where it stopped:
+- no `mqtt: RX [inf2004/car/control] "START"`: the robot never received
+  it (broker address or WiFi);
+- `CTRL: START ignored ...`: received, with the reason;
+- `CTRL: START received` but no `Countdown complete`: waiting for the IMU.

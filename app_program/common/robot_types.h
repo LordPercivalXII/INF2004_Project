@@ -223,6 +223,8 @@ typedef struct
     uint32_t        last_barcode;
     uint32_t        fault_code;
     uint8_t         fault_mask;     /* 5-bit snapshot, fault_mask.h */
+    bool            b_start_pending;    /* START countdown running      */
+    bool            b_imu_ready;        /* controller's IMU health gate */
     imu_event_t     imu;
     bool            b_height_trace;
     uint32_t        trace_sequence;

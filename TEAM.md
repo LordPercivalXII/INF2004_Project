@@ -105,7 +105,7 @@ Packed wire formats (Tribunal 1) live in `common/robot_packed.h`; build
 with `make PACK=0` for the unpacked "before" version. IF-01 messages are
 variable-length (header + the payload actually used); line and obstacle
 payloads travel packed (4 B and 9 B). IF-03 travels packed (4 B) and a
-STOP/BRAKE wakes `motion_task` at once. MQTT telemetry is a 4-byte binary
+STOP/BRAKE wakes `motion_task` at once. MQTT telemetry is a 5-byte binary
 packet (`subsystem1/telemetry_codec.h`).
 
 Shared fault mask (`common/fault_mask.h`, 5 bits): S4 IMU, S2 encoder,

@@ -8,7 +8,17 @@ let commandSequence = 0;
 const COMMAND_TIMEOUT_MS = 10000;
 const TELEMETRY_FRESH_MS = 10000;
 
-const missions = ["Idle", "Following", "Avoiding", "Fault"];
+// 4 and 5 exist only in the binary packet: START received, not moving yet.
+const missions = [
+  "Idle",
+  "Following",
+  "Avoiding",
+  "Fault",
+  "Starting (3 s countdown)",
+  "Waiting for IMU calibration",
+];
+const MISSION_STARTING = 4;
+const MISSION_WAIT_IMU = 5;
 
 const motionNames = {
   0: "Stationary",
@@ -75,6 +85,22 @@ function checkCommandConfirmation(telemetry, receivedAt) {
     typeof receivedAt !== "number" ||
     receivedAt <= pending.sentAt
   ) {
+    return;
+  }
+
+  // START reached the robot: report progress, keep waiting for a run.
+  if (pending.type === "START" && telemetry.mission === MISSION_STARTING) {
+    feedback("Robot received START. Countdown running...");
+    pending.startedAt = Date.now();   // countdown is not a timeout
+    return;
+  }
+
+  if (pending.type === "START" && telemetry.mission === MISSION_WAIT_IMU) {
+    feedback(
+      "Robot received START but is waiting for IMU calibration. " +
+      "Keep the car still and level."
+    );
+    pending.startedAt = Date.now();
     return;
   }
 

@@ -89,6 +89,7 @@
 
 #define CTRL_IMU_BAD_MS         (1000U) /* IMU must be bad this long to fault */
 #define CTRL_FAULT_RETRY_MS     (1500U) /* auto-resume after a fault       */
+#define CTRL_START_WAIT_REPORT_MS (2000U) /* START held for the IMU: say so */
 
 #define FAULT_EXTERNAL          (1U)
 #define FAULT_IMU               (2U)
@@ -530,6 +531,25 @@ ctrl_turn_motion (float angle_deg, uint32_t turn_id)
 }
 
 /*!
+ * @brief Leave FAULT for IDLE (CONTROL_CLEAR_FAULT, or START from FAULT).
+ */
+static void
+ctrl_clear_fault (ctrl_state_t * p_ctrl)
+{
+    p_ctrl->fault_code         = 0U;
+    p_ctrl->b_start_pending    = false;
+    p_ctrl->start_requested_ms = 0U;
+    p_ctrl->state              = MISSION_IDLE;
+    p_ctrl->b_turn_in_progress = false;
+    p_ctrl->b_junction_turn    = false;
+    p_ctrl->active_turn_id     = 0U;
+    p_ctrl->pending_turn       = (uint16_t) BARCODE_CMD_NONE;
+    ctrl_junction_unlock(p_ctrl);
+    fault_mask_clear(FAULT_MASK_ALL);
+    ctrl_clear_bits(SYSTEM_BIT_FAULT | SYSTEM_BIT_MISSION_RUN);
+}
+
+/*!
  * @brief Next turn ID, 1..MOTION_TURN_ID_MAX (5 bits on cmd_q_motion).
  */
 static uint32_t
@@ -591,6 +611,26 @@ ctrl_handle_command (ctrl_state_t * p_ctrl,
     switch (p_command->type)
     {
         case CONTROL_START:
+            /* START from FAULT is the operator's acknowledgement: clear
+               the latched fault (encoder stall, line not reacquired,
+               boxed in ...) and start the countdown, as CLEAR_FAULT
+               would.  Without this, only a reboot left FAULT. */
+            if (MISSION_FAULT == p_ctrl->state)
+            {
+                if (p_ctrl->b_imu_healthy)
+                {
+                    tm_printf((UB *) "CTRL: START clears fault %u\n",
+                              (unsigned int) p_ctrl->fault_code);
+                    ctrl_clear_fault(p_ctrl);
+                }
+                else
+                {
+                    tm_printf((UB *) "CTRL: START ignored: fault %u and "
+                              "IMU not ready (keep the car still)\n",
+                              (unsigned int) p_ctrl->fault_code);
+                }
+            }
+
             if ((MISSION_IDLE == p_ctrl->state) &&
                 (!p_ctrl->b_start_pending))
             {
@@ -633,12 +673,7 @@ ctrl_handle_command (ctrl_state_t * p_ctrl,
         case CONTROL_CLEAR_FAULT:
             if (p_ctrl->b_imu_healthy)
             {
-                p_ctrl->fault_code = 0U;
-                p_ctrl->b_start_pending = false;
-                p_ctrl->start_requested_ms = 0U;
-                p_ctrl->state      = MISSION_IDLE;
-                fault_mask_clear(FAULT_MASK_ALL);
-                ctrl_clear_bits(SYSTEM_BIT_FAULT | SYSTEM_BIT_MISSION_RUN);
+                ctrl_clear_fault(p_ctrl);
             }
             break;
 
@@ -1556,6 +1591,8 @@ ctrl_publish_telemetry (ctrl_state_t * p_ctrl, uint32_t now_ms)
         telemetry.hump_height_m        = p_ctrl->hump_m;
         telemetry.obstacle_distance_cm = p_ctrl->obstacle_cm;
         telemetry.last_barcode         = p_ctrl->barcode;
+        telemetry.b_start_pending      = p_ctrl->b_start_pending;
+        telemetry.b_imu_ready          = p_ctrl->b_imu_healthy;
         telemetry.fault_code           = p_ctrl->fault_code;
         telemetry.fault_mask           = fault_mask_take(FAULT_MASK_ALL);
         telemetry.imu                  = p_ctrl->imu;
@@ -1662,6 +1699,7 @@ controller_task (INT stacd, void * p_exinf)
 #if (CTRL_AUTO_START_MS > 0U)
     bool b_auto_started = false;
 #endif
+    uint32_t start_wait_report_ms = 0U;
 
     for (;;)
     {
@@ -1730,6 +1768,18 @@ controller_task (INT stacd, void * p_exinf)
                 ctrl.state = MISSION_FOLLOWING;
                 ctrl_set_bits(SYSTEM_BIT_MISSION_RUN);
                 tm_printf((UB *) "CTRL: Countdown complete, mission STARTED\n");
+            }
+            else if ((board_millis() - start_wait_report_ms) >=
+                     CTRL_START_WAIT_REPORT_MS)
+            {
+                /* Not silent: the dashboard shows "waiting for IMU" too. */
+                start_wait_report_ms = board_millis();
+                tm_printf((UB *) "CTRL: START waiting for IMU calibration "
+                          "(keep the car still and level)\n");
+            }
+            else
+            {
+                /* Still waiting for the IMU. */
             }
         }
 

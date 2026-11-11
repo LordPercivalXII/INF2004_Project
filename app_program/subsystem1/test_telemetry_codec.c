@@ -1,6 +1,6 @@
 /** @file test_telemetry_codec.c
  *
- * @brief PC test for the 4-byte binary MQTT packet (not in the firmware;
+ * @brief PC test for the 5-byte binary MQTT packet (not in the firmware;
  *        the makefile filters this file out).
  *
  *   gcc -std=c99 -Wall -Wextra test_telemetry_codec.c telemetry_codec.c \
@@ -43,7 +43,32 @@ main (void)
     assert(telemetry_encode(&telemetry, true, payload, sizeof(payload)));
     assert(128U == payload[2]);
 
-    assert(!telemetry_encode(&telemetry, true, payload, 3U));
+    assert(!telemetry_encode(&telemetry, true, payload, 4U));
+
+    /* Byte 4: barcode character. */
+    telemetry.last_barcode = 'A';
+    assert(telemetry_encode(&telemetry, true, payload, sizeof(payload)));
+    assert('A' == payload[4]);
+    telemetry.last_barcode = 0U;            /* none */
+    assert(telemetry_encode(&telemetry, true, payload, sizeof(payload)));
+    assert(0U == payload[4]);
+    telemetry.last_barcode = ' ';           /* not printable: none */
+    assert(telemetry_encode(&telemetry, true, payload, sizeof(payload)));
+    assert(0U == payload[4]);
+
+    /* Byte 0 state: START countdown and START held for the IMU. */
+    telemetry.mission_state   = MISSION_IDLE;
+    telemetry.fault_mask      = 0U;
+    telemetry.b_start_pending = true;
+    telemetry.b_imu_ready     = true;
+    assert(telemetry_encode(&telemetry, true, payload, sizeof(payload)));
+    assert(TELEMETRY_STATE_STARTING == payload[0]);
+    telemetry.b_imu_ready = false;
+    assert(telemetry_encode(&telemetry, true, payload, sizeof(payload)));
+    assert(TELEMETRY_STATE_WAIT_IMU == payload[0]);
+    telemetry.mission_state = MISSION_FAULT;    /* fault wins */
+    assert(telemetry_encode(&telemetry, true, payload, sizeof(payload)));
+    assert((uint8_t) MISSION_FAULT == payload[0]);
 
     printf("test_telemetry_codec: all tests passed\n");
 
