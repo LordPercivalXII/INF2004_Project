@@ -200,6 +200,8 @@ avoid_status_t avoid_step(avoid_t * p_avoid, avoid_input_t const * p_input,
                           avoid_output_t * p_output);
 bool           avoid_is_following(avoid_t const * p_avoid);
 avoid_look_t   avoid_look(avoid_t const * p_avoid);
+int8_t         avoid_last_direction(avoid_t const * p_avoid);
+uint8_t        avoid_junction_hint(avoid_t const * p_avoid);
 char const *   avoid_phase_name(avoid_phase_t phase);
 
 #endif /* AVOIDANCE_H */

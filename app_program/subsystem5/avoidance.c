@@ -375,10 +375,9 @@ avoid_line_candidate_phase (avoid_phase_t phase)
 static void
 avoid_begin_verify (avoid_t * p_avoid, avoid_input_t const * p_input)
 {
-    /* Keep the heading and let the line controller capture the tape. A
-       fixed advance followed by an alignment turn can swing the sensors
-       back off a line that was only just detected. */
-    avoid_enter(p_avoid, AVOID_PHASE_VERIFY, p_input);
+    /* When the line is detected early, still run ALIGN to correct the
+       heading back to the original direction (0 deg) before following. */
+    avoid_enter(p_avoid, AVOID_PHASE_ALIGN, p_input);
 }
 
 /*!
@@ -571,6 +570,47 @@ avoid_look (avoid_t const * p_avoid)
     }
 
     return (look);
+}
+
+/*!
+ * @brief The side the last avoidance went to: -1 = LEFT, 0 = none, +1 = RIGHT.
+ *        Use this to help route.c pick the correct line branch at a
+ *        no-barcode junction: the route should prefer the branch that
+ *        continues away from the obstacle side (i.e., the original direction).
+ */
+int8_t
+avoid_last_direction (avoid_t const * p_avoid)
+{
+    return (p_avoid->direction);
+}
+
+/*!
+ * @brief Hint for junction routing after avoidance: maps the last avoidance
+ *        direction to a barcode_command_t.  This helps the controller choose
+ *        the correct line branch when there is no barcode at the junction.
+ *        - If avoided LEFT, return BARCODE_CMD_RIGHT to continue original path
+ *        - If avoided RIGHT, return BARCODE_CMD_LEFT to continue original path
+ *        - If no avoidance, return BARCODE_CMD_NONE (go straight)
+ */
+uint8_t
+avoid_junction_hint (avoid_t const * p_avoid)
+{
+    uint8_t hint = (uint8_t) BARCODE_CMD_NONE;
+
+    if (-1 == p_avoid->direction)
+    {
+        hint = (uint8_t) BARCODE_CMD_RIGHT;
+    }
+    else if (1 == p_avoid->direction)
+    {
+        hint = (uint8_t) BARCODE_CMD_LEFT;
+    }
+    else
+    {
+        /* No avoidance: go straight. */
+    }
+
+    return (hint);
 }
 
 char const *

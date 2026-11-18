@@ -10,6 +10,17 @@
  * controller, which owns the motors, then runs avoidance.c: the bypass
  * and the line recovery (stage 5), and hands back to line following.
  *
+ * Junction routing after avoidance: when no barcode is present at a
+ * junction, Buddy 3's route_take_junction_action() defaults to STRAIGHT.
+ * To reacquire the original line (Tribunal 1 requirement), the controller
+ * should check avoid_junction_hint(p_avoid) after avoidance completes
+ * (AVOID_DONE). This function returns a barcode_command_t value that
+ * indicates which way to turn to continue the original path:
+ *   - BARCODE_CMD_LEFT/RIGHT: branch that continues away from obstacle
+ *   - BARCODE_CMD_NONE: no specific hint (no avoidance was done)
+ * Alternatively, query avoid_last_direction(p_avoid) for the raw direction
+ * the car took to bypass (-1 = LEFT, 0 = none, +1 = RIGHT).
+ *
  * Files:
  *   obstacle.c           the task: driving watch, scans, events
  *   obstacle_geometry.c  stages 1-4 as pure functions
