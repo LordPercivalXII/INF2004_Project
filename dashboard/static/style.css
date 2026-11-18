@@ -876,3 +876,14 @@ h2 {
 .mission-run-button { display: block; width: 100%; text-align: left; padding: 11px 13px; color: #d9edf0; background: #0b1b24; border: 1px solid #25404b; border-radius: 8px; font-size: 12px; line-height: 1.5; }
 .mission-run-button.selected { background: #15483e; border-color: #4bd0aa; color: #e9fff6; }
 .mission-run-button:focus-visible { outline: 2px solid #4bd0aa; outline-offset: 2px; }
+
+/* Mission History enhancements */
+.history-toolbar { margin: 12px 0; }
+.history-toolbar input { width: 100%; max-width: 420px; padding: 11px 14px; border: 1px solid #294451; border-radius: 9px; background: #091a24; color: #eaf5f8; text-transform: none; font-size: 13px; }
+.history-filters { display: flex; gap: 7px; flex-wrap: wrap; margin: 12px 0 16px; }
+.history-filters button { border: 1px solid #2d4853; background: #0a1b25; color: #a9c3ce; padding: 7px 11px; border-radius: 8px; font-size: 12px; }
+.history-filters button.active { border-color: #5ad9b7; background: #19493e; color: #a2f9dc; }
+.demo-banner { display:flex; align-items:center; justify-content:space-between; flex-wrap:wrap; gap:12px; padding:14px 18px; margin-bottom:15px; border:1px solid #a78645; border-radius:12px; background:#332a19; color:#f3d58c; font-size:12px; font-weight:700; }
+.demo-banner[hidden] {display:none;}
+.demo-banner button { background:#f3d58c; color:#2b2517; border:none; }
+@media(max-width:650px) { .history-toolbar input {max-width:none;} }

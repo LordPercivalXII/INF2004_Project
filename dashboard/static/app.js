@@ -576,12 +576,8 @@ async function poll() {
 // Start polling
 // --------------------------------------------------
 
-fetch("/api/reset", { method: "POST" })
-  .catch(() => {})
-  .finally(() => {
-    poll();
-    setInterval(poll, 1000);
-  });
+poll();
+setInterval(poll, 1000);
 
 
 // --------------------------------------------------
@@ -740,11 +736,13 @@ async function refreshMissionHistory() {
     if (!response.ok) throw new Error(`Mission API returned ${response.status}`);
     const data = await response.json();
     lastMissionData = data;
-    const runs = Array.isArray(data.missions) ? data.missions : [];
-    setText("mh-run-count", `${runs.length} run${runs.length === 1 ? "" : "s"}`);
+    const allRuns = Array.isArray(data.missions) ? data.missions : [];
+    const searchTerm = ($("mh-search")?.value || "").trim().toLowerCase();
+    const runs = allRuns.filter(r => (`run ${r.id} ${new Date(r.started_at * 1000).toLocaleString()}`).toLowerCase().includes(searchTerm));
+    setText("mh-run-count", `${allRuns.length} run${allRuns.length === 1 ? "" : "s"}`);
     const runList = $("mh-runs");
     runList.replaceChildren();
-    if (!runs.length) runList.textContent = "No missions recorded yet. Start a robot mission to create the first record.";
+    if (!runs.length) runList.textContent = allRuns.length ? "No matching runs." : "No missions recorded yet. Start a robot mission to create the first record.";
     const selectedId = data.mission?.id ?? null;
     for (const run of runs) {
       const button = document.createElement("button");
@@ -774,7 +772,12 @@ async function refreshMissionHistory() {
     const timeline = $("mh-events");
     timeline.replaceChildren();
     if (!events.length) timeline.textContent = "No mission events recorded yet.";
-    else events.forEach(e => timeline.append(missionEventRow(e)));
+    else {
+      const chosen = window.missionEventFilter || "ALL";
+      const filtered = events.filter(e => chosen === "ALL" || e.type === chosen || (chosen === "OBSTACLE" && e.type === "ERROR"));
+      if (!filtered.length) timeline.textContent = "No matching events in this run.";
+      else filtered.forEach(e => timeline.append(missionEventRow(e)));
+    }
     const barcodeList = $("mh-barcode-list");
     barcodeList.replaceChildren();
     const barcodes = events.filter(e => e.type === "BARCODE");
@@ -798,3 +801,31 @@ $("download-mission").addEventListener("click", () => {
   a.click();
   setTimeout(() => URL.revokeObjectURL(url), 1000);
 });
+
+// Mission History UI controls. These only filter presentation, not stored data.
+$("mh-search")?.addEventListener("input", () => refreshMissionHistory());
+$("mh-filters")?.addEventListener("click", (event) => {
+  const button = event.target.closest("button[data-event-filter]");
+  if (!button) return;
+  window.missionEventFilter = button.dataset.eventFilter;
+  $("mh-filters").querySelectorAll("button").forEach(b => b.classList.toggle("active", b === button));
+  refreshMissionHistory();
+});
+fetch("/api/dev/info", {cache:"no-store"}).then(r=>r.ok?r.json():null).then(info=>{
+  if (!info?.demo_mode) return;
+  const banner = $("demo-banner");
+  if (banner) banner.hidden = false;
+  const trigger = $("demo-trigger");
+  if (trigger) trigger.addEventListener("click", async () => {
+    trigger.disabled = true;
+    trigger.textContent = "Starting demo...";
+    try {
+      const response = await fetch("/api/dev/simulate", {method:"POST"});
+      const data = await response.json();
+      if (!response.ok) throw new Error(data.error || "Unable to start demo");
+      trigger.textContent = "▶ Simulate another mission";
+      refreshMissionHistory();
+    } catch (e) { trigger.textContent = e.message; }
+    finally { trigger.disabled = false; }
+  });
+}).catch(()=>{});

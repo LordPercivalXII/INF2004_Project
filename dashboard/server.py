@@ -20,7 +20,9 @@ state = {'connected': False, 'latest': None, 'received_at': None, 'error': None,
          'route_active': None}
 history = deque(maxlen=120)
 mission_events = deque(maxlen=100)
-DB_PATH = Path(os.getenv("MISSION_DB_PATH", str(Path(__file__).resolve().parent / "mission_history.sqlite3")))
+DEMO_MODE = os.getenv('ROBO_DEMO_MODE') == '1'
+DEFAULT_DB_NAME = 'mission_history_demo.sqlite3' if DEMO_MODE else 'mission_history.sqlite3'
+DB_PATH = Path(os.getenv('MISSION_DB_PATH', str(Path(__file__).resolve().parent / DEFAULT_DB_NAME)))
 MAX_MISSIONS = 30
 _last_mission_save = 0.0
 mission = {'id': 0, 'status': 'No mission recorded', 'started_at': None, 'ended_at': None, 'initial_speed': None, 'last_speed': None, 'final_distance_m': None, 'peak_hump_m': None, 'barcode_count': 0, 'obstacle_count': 0, 'hump_count': None}
@@ -363,7 +365,8 @@ def mqtt_loop():
             time.sleep(3)
 
 
-threading.Thread(target=mqtt_loop, daemon=True).start()
+if not DEMO_MODE:
+    threading.Thread(target=mqtt_loop, daemon=True).start()
 
 
 @app.get('/')
@@ -417,9 +420,9 @@ def mission_history():
             else:
                 events = []
         return jsonify({'missions': missions, 'mission': selected, 'events': events,
-                        'source': 'received MQTT telemetry',
+                        'source': 'local simulator' if os.getenv('ROBO_DEMO_MODE') == '1' else 'received MQTT telemetry',
                         'limits': {'missions': MAX_MISSIONS, 'events_per_mission': 100},
-                        'note': 'Saved in local SQLite. Only reported telemetry is recorded; unknown values remain unknown.'})
+                        'note': 'Saved in local SQLite. Demo records are synthetic when ROBO_DEMO_MODE=1; unknown values remain unknown.'})
 
 
 @app.post('/api/reset')
@@ -440,6 +443,8 @@ def no_cache(response):
 
 
 def publish(topic, payload, retain=False):
+    if DEMO_MODE:
+        return jsonify({'error': 'Robot commands are disabled in local demo mode'}), 503
     with lock:
         connected = state['connected']
     if not connected:
@@ -530,6 +535,11 @@ def _demo_mission():
         emit(0, 0.0, 7.8, None, 2, hump_count=1, peak=0.038, height_valid=True)
     finally:
         _simulation_busy.clear()
+
+
+@app.get('/api/dev/info')
+def dev_info():
+    return jsonify({'demo_mode': DEMO_MODE, 'simulation_running': _simulation_busy.is_set()})
 
 
 @app.post('/api/dev/simulate')

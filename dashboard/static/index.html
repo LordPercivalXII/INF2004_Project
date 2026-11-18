@@ -77,7 +77,7 @@
 </h2>
 
               <div class="speed-display">
-                <strong id="speed-value">0.15</strong> <span>m/s</span>
+                <strong id="speed-value">0.35</strong> <span>m/s</span>
               </div>
             </div>
             <input
@@ -86,7 +86,7 @@
               min="0.10"
               max="0.70"
               step="0.05"
-              value="0.15"
+              value="0.35"
             />
             <div class="range"><span>0.10</span><span>0.70 m/s</span></div>
             <div class="speed-bottom">
@@ -287,9 +287,11 @@
         <p id="network-error" class="network-error" role="status"></p>
       </section>
       <section id="page-diagnostics" class="page-view" hidden>
+        <div id="demo-banner" class="demo-banner" hidden><span>LOCAL SIMULATION MODE · Synthetic data, not robot telemetry</span><button type="button" id="demo-trigger" class="secondary-button">▶ Simulate a mission</button></div>
         <div class="page-intro"><div><p class="eyebrow">WIRELESS MISSION RECORD</p><h1>Mission History</h1><p>Events captured from real MQTT telemetry. Unknown readings remain unavailable.</p></div><button type="button" id="download-mission" class="secondary-button" disabled>Download JSON</button></div>
         <section class="panel mission-run-panel">
           <div class="mission-run-heading"><div><h2>Recorded missions</h2><p class="panel-subtitle">Select a run to review its complete event history. Most recent first.</p></div><span id="mh-run-count" class="mission-run-count">0 runs</span></div>
+          <div class="history-toolbar"><input id="mh-search" type="search" placeholder="Search runs by number or date" aria-label="Search recorded missions" /></div>
           <div id="mh-runs" class="mission-run-list">No missions recorded yet.</div>
         </section>
         <div class="mission-stats">
@@ -303,7 +305,7 @@
           <div class="panel mission-stat"><small>AVOIDANCE ENTRIES</small><strong id="mh-obstacles">--</strong></div>
         </div>
         <div class="network-grid mission-history-grid">
-          <section class="panel network-card"><h2>Mission event timeline</h2><p class="panel-subtitle">Only detected state changes and events, not every telemetry packet.</p><div id="mh-events" class="event-list">No mission events recorded.</div></section>
+          <section class="panel network-card"><h2>Mission event timeline</h2><p class="panel-subtitle">Only detected state changes and events, not every telemetry packet.</p><div class="history-filters" id="mh-filters"><button type="button" class="active" data-event-filter="ALL">All</button><button type="button" data-event-filter="MISSION">Mission</button><button type="button" data-event-filter="BARCODE">Barcode</button><button type="button" data-event-filter="RAMP">Ramp</button><button type="button" data-event-filter="OBSTACLE">Obstacle</button><button type="button" data-event-filter="SPEED">Speed</button></div><div id="mh-events" class="event-list">No mission events recorded.</div></section>
           <section class="panel network-card"><h2>Barcode sequence</h2><p class="panel-subtitle">Reported barcode detections, with timestamps and actions when available.</p><div id="mh-barcode-list" class="event-list">No barcode events recorded.</div></section>
           <section class="panel network-card"><h2>Connection diagnostics</h2><div class="network-list"><div><span>Broker status</span><strong id="diag-broker">--</strong></div><div><span>Telemetry</span><strong id="diag-telemetry">--</strong></div><div><span>Last error</span><strong id="diag-error">--</strong></div></div></section>
           <section class="panel network-card"><h2>Recent MQTT events</h2><div id="diag-events" class="event-list">Waiting for events...</div></section>
