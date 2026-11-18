@@ -285,10 +285,14 @@ obstacle_profile_build (obstacle_scan_t const * p_scan,
     p_profile->width_cm           =
         obstacle_lateral_cm(right_edge, p_profile->closest_cm) -
         obstacle_lateral_cm(left_edge, p_profile->closest_cm);
-    p_profile->left_clearance_cm  = (0U == first) ? 0.0f :
+    p_profile->b_left_edge_out    = (0U == first);
+    p_profile->b_right_edge_out   = ((last + 1U) == p_scan->count);
+    p_profile->left_clearance_cm  = p_profile->b_left_edge_out ? 0.0f :
         obstacle_nearest_cm(p_scan, 0U, first - 1U);
-    p_profile->right_clearance_cm = ((last + 1U) == p_scan->count) ? 0.0f :
+    p_profile->right_clearance_cm = p_profile->b_right_edge_out ? 0.0f :
         obstacle_nearest_cm(p_scan, last + 1U, p_scan->count - 1U);
+    p_profile->left_edge_cm       = p_scan->points[first].distance_cm;
+    p_profile->right_edge_cm      = p_scan->points[last].distance_cm;
 }
 
 /*!
@@ -296,21 +300,28 @@ obstacle_profile_build (obstacle_scan_t const * p_scan,
  *
  * CONTINUE        nothing there, or it is beside the car's path.
  * REVERSE_RETRY   in the path, and closer than OBSTACLE_TOO_CLOSE_CM, or
- *                 neither side has room for the required offset plus a
- *                 margin: back up and scan again.
+ *                 something measured on both sides leaves no room for the
+ *                 required offset plus a margin: back up and scan again.
  * TURN_LEFT/RIGHT in the path: go round the side with room (both: the
  *                 side that needs the smaller sideways move).  The offset
  *                 puts the car's side 4 cm clear of that edge (the
  *                 clearance is in OBSTACLE_PATH_HALF_CM).
+ *
+ * An obstacle running past the scan's edge (+-30 deg) does not block that
+ * side: beyond the edge is unseen, and treating unseen as blocked turned
+ * bypassable boxes into 3 reverses and a boxed-in fault.  The offset for
+ * such a side is taken from the last seen reading, so it is at least as
+ * wide; the stop while manoeuvring (AVOID_PHASE_BLOCKED, 9 cm) protects
+ * the car if that side turns out to be occupied.
  */
 void
 obstacle_plan_build (obstacle_profile_t const * p_profile,
                      obstacle_plan_t * p_plan)
 {
     float const left_cm  = obstacle_lateral_cm(p_profile->left_edge_deg,
-                                               p_profile->closest_cm);
+                                               p_profile->left_edge_cm);
     float const right_cm = obstacle_lateral_cm(p_profile->right_edge_deg,
-                                               p_profile->closest_cm);
+                                               p_profile->right_edge_cm);
     float const left_offset  = OBSTACLE_PATH_HALF_CM - left_cm;
     float const right_offset = OBSTACLE_PATH_HALF_CM + right_cm;
     float const left_need_cm = rmath_clampf(left_offset,
@@ -321,10 +332,15 @@ obstacle_plan_build (obstacle_profile_t const * p_profile,
                                              OBSTACLE_OFFSET_MIN_CM,
                                              OBSTACLE_OFFSET_MAX_CM) +
                                 OBSTACLE_CLEARANCE_MARGIN_CM;
+    /* A side is usable when the readings beside the obstacle leave room,
+       or when the obstacle runs past the scan's edge there (unseen, not
+       measured as blocked). */
     bool const  b_left_room  =
-        (p_profile->left_clearance_cm > left_need_cm);
+        (p_profile->left_clearance_cm > left_need_cm) ||
+        p_profile->b_left_edge_out;
     bool const  b_right_room =
-        (p_profile->right_clearance_cm > right_need_cm);
+        (p_profile->right_clearance_cm > right_need_cm) ||
+        p_profile->b_right_edge_out;
     bool        b_go_left;
 
     p_plan->action           = OBSTACLE_ACTION_CONTINUE;

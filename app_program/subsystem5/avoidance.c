@@ -829,11 +829,24 @@ avoid_step (avoid_t * p_avoid, avoid_input_t const * p_input,
             break;
 
         case AVOID_PHASE_ALIGN:
-            /* Face the original direction before line following. Do not
-             * stop at the first black sample: the sensors can touch the
-             * tape while the chassis is still angled across it. */
-            avoid_step_turn(p_avoid, p_input, p_output, 0.0f,
-                            AVOID_PHASE_VERIFY);
+            /* Align with the line using IR sensor feedback instead of heading
+               alone. The line sensor indicates if the car is centered on tape.
+               This tolerates motor imbalance that would otherwise cause heading
+               to drift during the alignment turn. */
+            if (p_input->b_line_detected &&
+                (rmath_absf(p_input->line_error) <=
+                 AVOID_VERIFY_CENTER_ERROR))
+            {
+                /* Line is centered: good enough alignment. Go to VERIFY. */
+                avoid_enter(p_avoid, AVOID_PHASE_VERIFY, p_input);
+            }
+            else
+            {
+                /* Still turning to 0° heading. If heading reaches target and
+                   line is at least detected, also advance. */
+                avoid_step_turn(p_avoid, p_input, p_output, 0.0f,
+                                AVOID_PHASE_VERIFY);
+            }
             break;
 
         case AVOID_PHASE_BLOCKED:
