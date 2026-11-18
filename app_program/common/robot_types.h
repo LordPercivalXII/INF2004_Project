@@ -111,6 +111,7 @@ typedef struct
     float           turn_rate_dps;
     float           estimated_hump_height_m;
     bool            b_shock_detected;
+    bool            b_pickup_detected;
     bool            b_sensor_valid;
     motion_class_t  motion_state;
     float           tilt_roll_deg;

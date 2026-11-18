@@ -108,6 +108,7 @@
 #define FAULT_BOXED_IN          (4U)
 #define FAULT_SHOCK             (5U)    /* recoverable: CTRL_SHOCK_STOP_MS */
 #define FAULT_MOTION_COMMAND    (6U)
+#define FAULT_PICKUP            (8U)    /* operator acknowledgement required */
 
 ID gh_event_mbf   = E_ID;
 ID gh_control_mbf = E_ID;
@@ -143,6 +144,7 @@ typedef struct
     uint32_t            barcode;
     uint32_t            fault_code;
     bool                b_imu_healthy;
+    bool                b_pickup_latched;
     imu_event_t         imu;
     imu_height_t        height;
     uint32_t            imu_ms;
@@ -559,6 +561,8 @@ static void
 ctrl_clear_fault (ctrl_state_t * p_ctrl)
 {
     p_ctrl->fault_code         = 0U;
+    p_ctrl->b_pickup_latched   = false;
+    p_ctrl->imu.b_pickup_detected = false;
     p_ctrl->b_start_pending    = false;
     p_ctrl->start_requested_ms = 0U;
     p_ctrl->state              = MISSION_IDLE;
@@ -1161,6 +1165,19 @@ ctrl_handle_imu (ctrl_state_t * p_ctrl, imu_event_t const * p_imu)
         ((p_imu->sample_interval_ms < 5U) ||
          (p_imu->sample_interval_ms > IMU_RECOVERABLE_INTERVAL_MS));
     p_ctrl->imu = *p_imu;
+    if (p_imu->b_pickup_detected)
+    {
+        p_ctrl->b_pickup_latched = true;
+    }
+    p_ctrl->imu.b_pickup_detected = p_ctrl->b_pickup_latched;
+    if (p_ctrl->b_pickup_latched &&
+        ((MISSION_FOLLOWING == p_ctrl->state) ||
+         (MISSION_AVOIDING == p_ctrl->state)))
+    {
+        tm_printf((UB *) "[SAFETY] pickup detected: stopping motors; "
+                  "place robot down, then press START\n");
+        ctrl_enter_fault(p_ctrl, FAULT_PICKUP);
+    }
     if (p_imu->b_sensor_valid)
     {
         p_ctrl->b_imu_healthy = p_imu->b_calibrated &&
@@ -1861,6 +1878,7 @@ controller_task (INT stacd, void * p_exinf)
         if ((MISSION_FAULT == ctrl.state) && ctrl.b_imu_healthy &&
             (FAULT_MOTION_COMMAND != ctrl.fault_code) &&
             (SYSTEM_FAULT_ENCODER_STALL != ctrl.fault_code) &&
+            (FAULT_PICKUP != ctrl.fault_code) &&
             (FAULT_EXTERNAL != ctrl.fault_code) &&
             (FAULT_BOXED_IN != ctrl.fault_code) &&
             (FAULT_REACQUIRE != ctrl.fault_code) &&

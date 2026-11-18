@@ -199,6 +199,10 @@
           <div>Distance travelled <b id="travelled">--</b></div>
           <div>Fault code <b id="fault">--</b></div>
         </div>
+        <div class="collision-status" id="collision-status" role="status" aria-live="polite">
+          <span>Pickup / collision status</span>
+          <strong id="collision-state">Waiting for telemetry</strong>
+        </div>
         <p class="hint">
           Detailed avoidance steps require an additional firmware telemetry
           field. "Avoiding" is the confirmed mission state, not a specific

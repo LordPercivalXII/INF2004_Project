@@ -278,6 +278,7 @@ imu_update_heading (imu_processor_t * p_processor,
 
     if (!b_valid)
     {
+        p_processor->b_pickup_candidate = false;
         imu_invalidate_heading(p_processor, true);
         return;
     }
@@ -551,6 +552,7 @@ imu_processor_update (imu_processor_t * p_processor,
     p_output->b_hump_complete = false;
     p_output->b_hump_rejected = false;
     p_output->b_shock_detected = false;
+    p_output->b_pickup_detected = false;
     p_output->b_saturated = false;
     p_output->b_tilt_valid = false;
     p_output->sample_interval_ms = p_processor->b_have_time ? interval_ms : 0U;
@@ -615,6 +617,28 @@ imu_processor_update (imu_processor_t * p_processor,
     p_output->acceleration_z_g = corrected.acceleration[2];
     total = imu_norm(corrected.acceleration);
     p_output->b_shock_detected = (total > IMU_SHOCK_THRESHOLD_G);
+    /* Lifting can unload the chassis or accelerate it upward. Detect a
+       sustained departure from 1 g in either direction; debounce to reject
+       isolated noise. Hard impacts retain their separate 3 g detector. */
+    if ((total < IMU_PICKUP_LOW_G_THRESHOLD) ||
+        (total > IMU_PICKUP_HIGH_G_THRESHOLD))
+    {
+        if (!p_processor->b_pickup_candidate)
+        {
+            p_processor->b_pickup_candidate = true;
+            p_processor->pickup_candidate_ms = timestamp_ms;
+        }
+        else if ((timestamp_ms - p_processor->pickup_candidate_ms) >=
+                 IMU_PICKUP_DEBOUNCE_MS)
+        {
+            p_output->b_pickup_detected = true;
+            p_processor->b_pickup_candidate = false;
+        }
+    }
+    else
+    {
+        p_processor->b_pickup_candidate = false;
+    }
     if (p_output->b_shock_detected && (!p_processor->b_was_shock))
     {
         p_output->shock_count++;
@@ -622,6 +646,7 @@ imu_processor_update (imu_processor_t * p_processor,
     p_processor->b_was_shock = p_output->b_shock_detected;
     if (p_output->b_timing_gap)
     {
+        p_processor->b_pickup_candidate = false;
         /* A successful late read is not a failed sensor. Preserve calibrated
            gravity, but do not integrate acceleration or update tilt across
            missing samples. Height fusion owns bounded wheel-gap recovery. */

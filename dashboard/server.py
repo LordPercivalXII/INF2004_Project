@@ -89,6 +89,7 @@ def decode_packet(payload, previous):
             'hump_count': b3,
             'height_approx': bool(b0 & 0x20),
             'height_gap_pending': bool(b0 & 0x40),
+            'pickup_detected': bool(b0 & 0x80),
             'binary': True,
         })
         return value
