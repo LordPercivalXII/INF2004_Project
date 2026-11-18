@@ -217,6 +217,31 @@ input[type=range] {
     color: #fff;
 }
 
+.collision-status {
+    display: flex;
+    justify-content: space-between;
+    gap: 12px;
+    margin-top: 14px;
+    padding: 14px;
+    border: 1px solid #39785e;
+    border-radius: 9px;
+    background: rgba(100, 215, 173, 0.08);
+    color: #a6b7b9;
+}
+
+.collision-status strong {
+    color: #64d7ad;
+}
+
+.collision-status.detected {
+    border-color: #a43f46;
+    background: rgba(190, 55, 65, 0.18);
+}
+
+.collision-status.detected strong {
+    color: #ff969c;
+}
+
 #feedback {
     min-height: 24px;
     color: #64d7ad;

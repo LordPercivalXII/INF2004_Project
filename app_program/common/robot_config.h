@@ -104,6 +104,9 @@
 #define IMU_SAMPLE_RATE_HZ              (100U)
 #define IMU_GRAVITY_M_S2                (9.80665f)
 #define IMU_SHOCK_THRESHOLD_G           (3.0f)      /* FR10                 */
+#define IMU_PICKUP_LOW_G_THRESHOLD      (0.85f)     /* lift/unloading       */
+#define IMU_PICKUP_HIGH_G_THRESHOLD     (1.15f)     /* lift acceleration    */
+#define IMU_PICKUP_DEBOUNCE_MS          (30U)
 #define IMU_HUMP_THRESHOLD_G            (0.08f)     /* world vertical       */
 #define IMU_FILTER_WINDOW_SIZE          (5U)        /* moving average taps  */
 /* Temporary terrain commissioning trace, up to 50 Hz while moving.

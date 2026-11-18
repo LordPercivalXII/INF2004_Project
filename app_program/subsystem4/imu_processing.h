@@ -64,6 +64,8 @@ typedef struct
     bool b_have_time;
     bool b_odometry_height;
     bool b_was_shock;
+    uint32_t pickup_candidate_ms;
+    bool b_pickup_candidate;
     uint32_t last_ms;
     uint32_t candidate_ms;
     uint32_t impact_ms;
