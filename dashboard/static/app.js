@@ -1,4 +1,3 @@
-
 const $ = (id) => document.getElementById(id);
 
 let brokerConnected = false;
@@ -31,44 +30,90 @@ const motionNames = {
 };
 
 const number = (v, digits = 2) =>
-  typeof v === "number" && Number.isFinite(v)
-    ? v.toFixed(digits)
-    : "--";
+  typeof v === "number" && Number.isFinite(v) ? v.toFixed(digits) : "--";
 
 const hasNumber = (value) =>
   typeof value === "number" && Number.isFinite(value);
 
-const isTrue = (value) =>
-  value === 1 || value === true;
+const isTrue = (value) => value === 1 || value === true;
 
 const formatCm = (value) =>
-  hasNumber(value)
-    ? `${(value * 100).toFixed(2)} cm`
-    : "--";
+  hasNumber(value) ? `${(value * 100).toFixed(2)} cm` : "--";
 
 const formatDegrees = (value) =>
-  hasNumber(value)
-    ? `${value.toFixed(1)}°`
-    : "--";
+  hasNumber(value) ? `${value.toFixed(1)}°` : "--";
 
 const setText = (id, value) => {
   const element = $(id);
-
-  if (element) {
-    element.textContent = value;
-  }
+  if (element) element.textContent = value;
 };
 
 const feedback = (message) => {
   $("feedback").textContent = message;
 };
 
+// --------------------------------------------------
+// Speed control, default 0.15 m/s
+// --------------------------------------------------
+
 const slider = $("speed-slider");
+let speedUserEdited = false;
+
+// Match the firmware's configured default until live telemetry arrives.
+slider.value = "0.15";
+setText("speed-value", "0.15");
+
+function syncSpeedControl(t, fresh) {
+  if (!fresh || !t || !hasNumber(t.speed)) return;
+
+  const speed = t.speed;
+  const min = Number(slider.min);
+  const max = Number(slider.max);
+
+  if (speed < min || speed > max) return;
+
+  // Keep a manually selected value until the robot reports that speed.
+  if (speedUserEdited) {
+    if (Math.abs(Number(slider.value) - speed) > 0.005) {
+      return;
+    }
+    speedUserEdited = false;
+  }
+
+  if (document.activeElement === slider) return;
+
+  slider.value = String(speed);
+  setText("speed-value", speed.toFixed(2));
+}
 
 slider.addEventListener("input", () => {
-  $("speed-value").textContent =
-    Number(slider.value).toFixed(2);
+  speedUserEdited = true;
+  setText("speed-value", Number(slider.value).toFixed(2));
 });
+
+// --------------------------------------------------
+// Obstacle width
+// --------------------------------------------------
+
+function updateObstacleWidth(t, fresh) {
+  const width = t && (t.obstacle_width_cm ?? t.estimated_width_cm);
+  const valid =
+    t &&
+    (t.obstacle_width_valid === undefined || isTrue(t.obstacle_width_valid));
+
+  if (fresh && valid && hasNumber(width) && width >= 0) {
+    setText("obstacle-width", `${width.toFixed(1)} cm`);
+    setText("width-detail", "Reported by robot telemetry");
+  } else {
+    setText("obstacle-width", "Unavailable");
+    setText(
+      "width-detail",
+      fresh
+        ? "No valid width measurement received"
+        : "Waiting for fresh telemetry",
+    );
+  }
+}
 
 // --------------------------------------------------
 // START / STOP command confirmation
@@ -79,32 +124,26 @@ function checkCommandConfirmation(telemetry, receivedAt) {
 
   const pending = pendingCommand;
 
-  // Do not confirm using telemetry received before
-  // the command was sent.
-  if (
-    typeof receivedAt !== "number" ||
-    receivedAt <= pending.sentAt
-  ) {
+  // Do not confirm using telemetry received before the command was sent.
+  if (typeof receivedAt !== "number" || receivedAt <= pending.sentAt) {
     return;
   }
 
-  // START reached the robot: report progress, keep waiting for a run.
   if (pending.type === "START" && telemetry.mission === MISSION_STARTING) {
     feedback("Robot received START. Countdown running...");
-    pending.startedAt = Date.now();   // countdown is not a timeout
+    pending.startedAt = Date.now();
     return;
   }
 
   if (pending.type === "START" && telemetry.mission === MISSION_WAIT_IMU) {
     feedback(
       "Robot received START but is waiting for IMU calibration. " +
-      "Keep the car still and level."
+        "Keep the car still and level.",
     );
     pending.startedAt = Date.now();
     return;
   }
 
-  // START is confirmed by a running mission state.
   if (
     pending.type === "START" &&
     (telemetry.mission === 1 || telemetry.mission === 2)
@@ -114,11 +153,7 @@ function checkCommandConfirmation(telemetry, receivedAt) {
     return;
   }
 
-  // STOP is confirmed by the robot reporting IDLE.
-  if (
-    pending.type === "STOP" &&
-    telemetry.mission === 0
-  ) {
+  if (pending.type === "STOP" && telemetry.mission === 0) {
     feedback("Robot STOP confirmed. Mission is idle.");
     pendingCommand = null;
   }
@@ -127,17 +162,13 @@ function checkCommandConfirmation(telemetry, receivedAt) {
 function checkCommandTimeout() {
   if (!pendingCommand) return;
 
-  if (
-    Date.now() - pendingCommand.startedAt >=
-    COMMAND_TIMEOUT_MS
-  ) {
+  if (Date.now() - pendingCommand.startedAt >= COMMAND_TIMEOUT_MS) {
     const type = pendingCommand.type;
-
     pendingCommand = null;
 
     feedback(
       `${type} command sent, but robot confirmation timed out. ` +
-      "Check MQTT reception and robot telemetry."
+        "Check MQTT reception and robot telemetry.",
     );
   }
 }
@@ -166,7 +197,6 @@ async function post(path, body = {}) {
 
     const payload = result.payload;
 
-    // Do not overwrite feedback from a newer request.
     if (sequence !== commandSequence) return;
 
     if (payload === "START" || payload === "STOP") {
@@ -176,13 +206,9 @@ async function post(path, body = {}) {
         startedAt: Date.now(),
       };
 
-      feedback(
-        `${payload} command sent. Waiting for robot confirmation...`
-      );
+      feedback(`${payload} command sent. Waiting for robot confirmation...`);
     } else {
-      feedback(
-        `Published ${payload} to ${result.topic}.`
-      );
+      feedback(`Published ${payload} to ${result.topic}.`);
     }
   } catch (error) {
     if (sequence !== commandSequence) return;
@@ -204,7 +230,6 @@ $("route-form").addEventListener("submit", (event) => {
   }
 
   const form = new FormData(event.currentTarget);
-
   post("/api/route", Object.fromEntries(form.entries()));
 });
 
@@ -266,15 +291,9 @@ function clearRampTelemetry(status = "Waiting for telemetry") {
 
 function updateRampTelemetry(t, isFresh = true) {
   if (!t || !isFresh) {
-    clearRampTelemetry(
-      t ? "Telemetry stale" : "Waiting for telemetry"
-    );
+    clearRampTelemetry(t ? "Telemetry stale" : "Waiting for telemetry");
     return;
   }
-
-  // IMU motion classification from robot_types.h.
-  // This is different from the controller's
-  // smoothed ramp_state.
 
   const sensorValid = isTrue(t.imu_valid);
   const tiltValid = isTrue(t.tilt_valid);
@@ -282,55 +301,27 @@ function updateRampTelemetry(t, isFresh = true) {
   let motionLabel = "--";
 
   if (hasNumber(t.motion)) {
-    motionLabel =
-      motionNames[t.motion] ?? "Unknown";
+    motionLabel = motionNames[t.motion] ?? "Unknown";
 
-    if (
-      t.imu_valid !== undefined &&
-      !sensorValid
-    ) {
+    if (t.imu_valid !== undefined && !sensorValid) {
       motionLabel = "IMU unavailable";
     }
   }
 
   setText("ramp-direction", motionLabel);
 
-  // Pitch angle
-  setText(
-    "ramp-pitch",
-    tiltValid
-      ? formatDegrees(t.pitch_deg)
-      : "--"
-  );
+  setText("ramp-pitch", tiltValid ? formatDegrees(t.pitch_deg) : "--");
 
-  // Terrain height estimates
   setText("ramp-rise", formatCm(t.rise_m));
+  setText("ramp-peak", formatCm(t.terrain_peak_m));
+  setText("ramp-height", formatCm(t.hump_m));
 
-  setText(
-    "ramp-peak",
-    formatCm(t.terrain_peak_m)
-  );
-
-  setText(
-    "ramp-height",
-    formatCm(t.hump_m)
-  );
-
-  // Height measurement state
   const active = isTrue(t.hump_active);
   const valid = isTrue(t.hump_valid);
-
-  const tracking =
-    isTrue(t.height_tracking_valid);
-
-  const calibrated =
-    isTrue(t.imu_calibrated);
-
-  const approximate =
-    isTrue(t.height_approx);
-
-  const gapPending =
-    isTrue(t.height_gap_pending);
+  const tracking = isTrue(t.height_tracking_valid);
+  const calibrated = isTrue(t.imu_calibrated);
+  const approximate = isTrue(t.height_approx);
+  const gapPending = isTrue(t.height_gap_pending);
 
   setText(
     "ramp-validity",
@@ -340,7 +331,7 @@ function updateRampTelemetry(t, isFresh = true) {
         ? "Valid"
         : active
           ? "Measurement in progress"
-          : "Not validated"
+          : "Not validated",
   );
 
   setText(
@@ -349,7 +340,7 @@ function updateRampTelemetry(t, isFresh = true) {
       ? "Unknown"
       : tracking
         ? "Tracking valid"
-        : "Not tracking"
+        : "Not tracking",
   );
 
   setText(
@@ -358,49 +349,32 @@ function updateRampTelemetry(t, isFresh = true) {
       ? "Unknown"
       : calibrated
         ? "Calibrated"
-        : "Not calibrated"
+        : "Not calibrated",
   );
 
-  setText(
-    "ramp-count",
-    hasNumber(t.hump_count)
-      ? String(t.hump_count)
-      : "--"
-  );
+  setText("ramp-count", hasNumber(t.hump_count) ? String(t.hump_count) : "--");
 
-  // Measurement quality indicators
   setText(
     "ramp-quality",
-    t.height_gap_pending === undefined ||
-    t.height_approx === undefined
+    t.height_gap_pending === undefined || t.height_approx === undefined
       ? "Unknown"
       : gapPending
         ? "Timing gap pending"
         : approximate
           ? "Approximate estimate"
-          : "No quality warning"
+          : "No quality warning",
   );
 
-  // Overall ramp status
-  if (
-    t.imu_valid !== undefined &&
-    !sensorValid
-  ) {
+  if (t.imu_valid !== undefined && !sensorValid) {
     setText("ramp-status", "IMU unavailable");
   } else if (active) {
     setText("ramp-status", "Hump crossing active");
   } else if (valid) {
-    setText(
-      "ramp-status",
-      "Height measurement available"
-    );
+    setText("ramp-status", "Height measurement available");
   } else if (hasNumber(t.motion)) {
     setText("ramp-status", "Monitoring terrain");
   } else {
-    setText(
-      "ramp-status",
-      "Waiting for ramp telemetry"
-    );
+    setText("ramp-status", "Waiting for ramp telemetry");
   }
 }
 
@@ -408,7 +382,12 @@ function updateRampTelemetry(t, isFresh = true) {
 // Poll robot telemetry
 // --------------------------------------------------
 
-const ROUTE_LETTER = { straight: "S", left: "L", right: "R", uturn: "U" };
+const ROUTE_LETTER = {
+  straight: "S",
+  left: "L",
+  right: "R",
+  uturn: "U",
+};
 
 function showRouteActive(active) {
   const element = $("route-active");
@@ -420,14 +399,15 @@ function showRouteActive(active) {
   }
 
   const entries = active.split(",").filter((e) => e && !e.startsWith("*:"));
+
   if (entries.length === 0) {
     element.textContent =
       "EMPTY: every junction goes straight. Press Publish route settings.";
     return;
   }
 
-  // Does the robot's table match what this form would send?
   const form = new FormData($("route-form"));
+
   const mismatched = Object.entries(ROUTE_LETTER).some(([field, letter]) => {
     const symbol = String(form.get(field) || "").toUpperCase();
     return !entries.includes(`${symbol}:${letter}`);
@@ -452,24 +432,14 @@ async function poll() {
 
     brokerConnected = !!data.connected;
 
-    // Flask server.py reports received_at as a
-    // Unix timestamp in seconds.
     const receivedAt =
-      typeof data.received_at === "number"
-        ? data.received_at
-        : null;
+      typeof data.received_at === "number" ? data.received_at : null;
 
     const ageMs =
-      receivedAt !== null
-        ? Date.now() - receivedAt * 1000
-        : Infinity;
+      receivedAt !== null ? Date.now() - receivedAt * 1000 : Infinity;
 
-    const recent =
-      brokerConnected &&
-      ageMs >= 0 &&
-      ageMs < TELEMETRY_FRESH_MS;
+    const recent = brokerConnected && ageMs >= 0 && ageMs < TELEMETRY_FRESH_MS;
 
-    // Connection status
     $("connection").textContent = brokerConnected
       ? recent
         ? "Live telemetry"
@@ -479,45 +449,41 @@ async function poll() {
     $("connection").className =
       `status ${brokerConnected ? "online" : "offline"}`;
 
-    // A SIM=1 firmware runs the whole mission but never drives the motors.
     if (data.latest && data.latest.simulation) {
       $("connection").textContent +=
         " · SIMULATION firmware: motors not driven (rebuild with make SIM=0)";
       $("connection").className = "status offline";
     }
 
-    // Enable or disable controls
     $("send-speed").disabled = !brokerConnected;
     $("start-robot").disabled = !brokerConnected;
     $("stop-robot").disabled = !brokerConnected;
 
-    $("route-form").querySelector("button").disabled =
-      !brokerConnected;
+    $("route-form").querySelector("button").disabled = !brokerConnected;
 
-    // The route table the robot is actually using (echoed back by the
-    // robot), compared with this form: the form is only what WOULD be sent.
     showRouteActive(data.route_active);
 
     const t = data.latest;
 
     if (!t) {
       clearRampTelemetry();
+      updateObstacleWidth(null, false);
       checkCommandTimeout();
       return;
     }
 
+    updateObstacleWidth(t, recent);
+    syncSpeedControl(t, recent);
+
     // --------------------------------------------------
-    // Existing robot telemetry
+    // Robot telemetry
     // --------------------------------------------------
 
-    $("current-speed").textContent =
-      number(t.speed, 3);
+    $("current-speed").textContent = number(t.speed, 3);
 
-    $("distance").textContent =
-      number(t.obstacle_cm, 1);
+    $("distance").textContent = number(t.obstacle_cm, 1);
 
-    const mission =
-      missions[t.mission] || "Unknown";
+    const mission = missions[t.mission] || "Unknown";
 
     $("mission").textContent = mission;
 
@@ -532,15 +498,14 @@ async function poll() {
               ? "No active avoidance"
               : "Unknown";
 
-    // What the robot decided at its last junction (bytes 5-6).
     if (typeof t.junction_action === "string") {
       setText(
         "junction-decision",
         t.junction_count
           ? `#${t.junction_count}: ` +
-            (t.junction_char ? `'${t.junction_char}'` : "no barcode") +
-            ` → ${t.junction_action}`
-          : "No junction yet"
+              (t.junction_char ? `'${t.junction_char}'` : "no barcode") +
+              ` → ${t.junction_action}`
+          : "No junction yet",
       );
     }
 
@@ -554,29 +519,27 @@ async function poll() {
         ? `Robot uptime: ${(t.t_ms / 1000).toFixed(1)} s`
         : "No uptime";
 
-    $("line").textContent =
-      number(t.line, 3);
+    $("line").textContent = number(t.line, 3);
 
-    $("travelled").textContent =
-      `${number(t.distance, 2)} m`;
+    $("travelled").textContent = `${number(t.distance, 2)} m`;
 
-    // Firmware sends the decoded character as its ASCII code.
     $("barcode").textContent =
       hasNumber(t.barcode) && t.barcode >= 33 && t.barcode < 127
         ? String.fromCharCode(t.barcode)
         : "--";
 
-    $("fault").textContent =
-      t.fault ?? "--";
+    $("fault").textContent = t.fault ?? "--";
 
     const pickupDetected = isTrue(t.pickup_detected) || t.fault_code === 8;
+
     $("collision-state").textContent = pickupDetected
-      ? "Collision detected — robot lifted / stopped"
+      ? "Collision detected: robot lifted / stopped"
       : "No collision detected";
+
     $("collision-status").classList.toggle("detected", pickupDetected);
 
     // --------------------------------------------------
-    // New Ramp Detection & Height telemetry
+    // Ramp Detection & Height
     // --------------------------------------------------
 
     updateRampTelemetry(t, recent);
@@ -590,24 +553,20 @@ async function poll() {
     }
 
     checkCommandTimeout();
-
   } catch (error) {
     brokerConnected = false;
 
-    $("connection").textContent =
-      "Server unavailable";
-
-    $("connection").className =
-      "status offline";
+    $("connection").textContent = "Server unavailable";
+    $("connection").className = "status offline";
 
     $("send-speed").disabled = true;
     $("start-robot").disabled = true;
     $("stop-robot").disabled = true;
 
-    $("route-form").querySelector("button").disabled =
-      true;
+    $("route-form").querySelector("button").disabled = true;
 
     clearRampTelemetry("Server unavailable");
+    updateObstacleWidth(null, false);
 
     checkCommandTimeout();
   }
@@ -617,10 +576,256 @@ async function poll() {
 // Start polling
 // --------------------------------------------------
 
-// Clear server-side cached telemetry so a refresh starts from a clean state.
-fetch("/api/reset", { method: "POST" })
-  .catch(() => {})
-  .finally(() => {
-    poll();
-    setInterval(poll, 1000);
+poll();
+setInterval(poll, 1000);
+
+
+// --------------------------------------------------
+// Navigation and live Network & MQTT information
+// --------------------------------------------------
+const pages = ["dashboard", "network", "diagnostics"];
+let activePage = "dashboard";
+function navigate(page) {
+  if (!pages.includes(page)) return;
+  activePage = page;
+  pages.forEach((name) => {
+    $("page-" + name).hidden = name !== page;
   });
+  document.querySelectorAll(".nav-link").forEach((button) => {
+    const selected = button.dataset.page === page;
+    button.classList.toggle("active", selected);
+    if (selected) button.setAttribute("aria-current", "page");
+    else button.removeAttribute("aria-current");
+  });
+  if (page === "network" || page === "diagnostics") refreshNetwork();
+  if (page === "diagnostics") refreshMissionHistory();
+}
+document.querySelectorAll(".nav-link").forEach((button) => {
+  button.addEventListener("click", () => navigate(button.dataset.page));
+});
+$("sidebar-toggle").addEventListener("click", () => {
+  const collapsed = $("sidebar").classList.toggle("collapsed");
+  $("sidebar-toggle").setAttribute("aria-label", collapsed ? "Expand sidebar" : "Collapse sidebar");
+});
+$("refresh-network").addEventListener("click", refreshNetwork);
+
+function formatReceivedTime(value) {
+  if (typeof value !== "number" || !Number.isFinite(value)) return "Never received";
+  return new Date(value * 1000).toLocaleString();
+}
+function telemetryHealth(data) {
+  if (!data.connected) return "Broker disconnected";
+  if (typeof data.received_at !== "number") return "Waiting for robot";
+  const age = Date.now() - data.received_at * 1000;
+  return age >= 0 && age < TELEMETRY_FRESH_MS ? "Receiving live telemetry" : "Telemetry stale";
+}
+function updateSidebarConnection(connected, healthy) {
+  $("sidebar-status-dot").classList.toggle("online", !!connected);
+  setText("sidebar-status-text", connected ? (healthy ? "MQTT · live telemetry" : "MQTT · connected") : "MQTT disconnected");
+}
+let networkFetchPending = false;
+async function refreshNetwork() {
+  if (networkFetchPending) return;
+  networkFetchPending = true;
+  try {
+    const response = await fetch("/api/network", { cache: "no-store" });
+    if (!response.ok) throw new Error(`Network API returned ${response.status}`);
+    const data = await response.json();
+    const broker = data.broker || {};
+    const robot = data.robot_wifi || {};
+    const telem = data.telemetry || {};
+    setText("net-broker-status", broker.connected ? "Connected" : "Disconnected");
+    setText("net-broker-host", broker.host || "Not configured");
+    setText("net-broker-port", broker.port ?? "--");
+    setText("net-client-id", broker.client_id || "--");
+    setText("net-error", broker.error || "None reported");
+    setText("net-robot-ssid", robot.ssid ?? "Not reported");
+    setText("net-robot-ip", robot.ip ?? "Not reported");
+    setText("net-robot-rssi", typeof robot.rssi_dbm === "number" ? `${robot.rssi_dbm} dBm` : "Not reported");
+    setText("net-telemetry-status", telemetryHealth({ connected: broker.connected, received_at: telem.received_at }));
+    setText("net-last-received", formatReceivedTime(telem.received_at));
+    setText("net-telemetry-age", typeof telem.received_at === "number" ? `${Math.max(0, (Date.now() / 1000 - telem.received_at)).toFixed(1)} s` : "--");
+    setText("net-packet-count", telem.packet_count ?? "--");
+    setText("net-last-topic", telem.last_topic || "None received");
+    const topics = $("net-topics");
+    if (activePage === "network") {
+    topics.replaceChildren();
+    Object.entries(data.topics || {}).forEach(([key, value]) => {
+      const entry = document.createElement("div");
+      entry.className = "topic-entry";
+      const label = document.createElement("small");
+      label.textContent = key.replaceAll("_", " ");
+      const code = document.createElement("code");
+      code.textContent = value;
+      entry.append(label, code);
+      topics.append(entry);
+    });
+    }
+    setText("diag-broker", broker.connected ? "Connected" : "Disconnected");
+    setText("diag-telemetry", telemetryHealth({ connected: broker.connected, received_at: telem.received_at }));
+    setText("diag-error", broker.error || "None reported");
+    const events = $("diag-events");
+    if (activePage === "diagnostics") {
+    events.replaceChildren();
+    if (!Array.isArray(data.events) || data.events.length === 0) {
+      events.textContent = "No connection events recorded yet.";
+    } else {
+      [...data.events].reverse().forEach((event) => {
+        const item = document.createElement("div");
+        item.className = "event-entry";
+        const time = document.createElement("time");
+        time.textContent = formatReceivedTime(event.at);
+        const detail = document.createElement("span");
+        detail.textContent = `${event.type}: ${event.message}`;
+        item.append(time, detail);
+        events.append(item);
+      });
+    }
+    }
+    setText("network-error", "");
+  } catch (error) {
+    setText("network-error", `Cannot fetch live network information: ${error.message}`);
+    setText("net-broker-status", "Server unavailable");
+    setText("diag-broker", "Server unavailable");
+  } finally {
+    networkFetchPending = false;
+  }
+}
+// Refresh background network status independently of the existing dashboard poll.
+setInterval(() => {
+  updateSidebarConnection(brokerConnected, $("connection").textContent.startsWith("Live telemetry"));
+  if (activePage === "network" || activePage === "diagnostics") refreshNetwork();
+  if (activePage === "diagnostics") refreshMissionHistory();
+}, 2000);
+// Network details load when their page is opened.
+
+
+
+// Mission history is recorded by Flask from incoming MQTT telemetry.
+// The page only renders when opened, and never generates fake readings.
+let missionFetchPending = false;
+let lastMissionData = null;
+let selectedMissionId = null;
+function missionTime(seconds) {
+  if (typeof seconds !== "number" || !Number.isFinite(seconds)) return "--";
+  const s = Math.max(0, Math.floor(seconds));
+  return `${String(Math.floor(s / 60)).padStart(2, "0")}:${String(s % 60).padStart(2, "0")}`;
+}
+function missionEventRow(e) {
+  const row = document.createElement("div");
+  row.className = "event-entry";
+  const when = document.createElement("time");
+  when.textContent = typeof e.at === "number" ? new Date(e.at * 1000).toLocaleTimeString() : "Time unavailable";
+  const label = document.createElement("span");
+  const extra = e.details || {};
+  const details = [];
+  if (typeof extra.speed_m_s === "number") details.push(`${extra.speed_m_s.toFixed(2)} m/s`);
+  if (typeof extra.height_m === "number") details.push(`${(extra.height_m * 100).toFixed(2)} cm`);
+  if (extra.action) details.push(`Action: ${extra.action}`);
+  if (typeof extra.distance_m === "number") details.push(`${extra.distance_m.toFixed(2)} m`);
+  label.textContent = `${e.type}: ${e.message}${details.length ? " · " + details.join(" · ") : ""}`;
+  row.append(when, label);
+  return row;
+}
+async function refreshMissionHistory() {
+  if (activePage !== "diagnostics" || missionFetchPending) return;
+  missionFetchPending = true;
+  try {
+    const query = selectedMissionId === null ? "" : `?id=${encodeURIComponent(selectedMissionId)}`;
+    const response = await fetch(`/api/mission-history${query}`, { cache: "no-store" });
+    if (!response.ok) throw new Error(`Mission API returned ${response.status}`);
+    const data = await response.json();
+    lastMissionData = data;
+    const allRuns = Array.isArray(data.missions) ? data.missions : [];
+    const searchTerm = ($("mh-search")?.value || "").trim().toLowerCase();
+    const runs = allRuns.filter(r => (`run ${r.id} ${new Date(r.started_at * 1000).toLocaleString()}`).toLowerCase().includes(searchTerm));
+    setText("mh-run-count", `${allRuns.length} run${allRuns.length === 1 ? "" : "s"}`);
+    const runList = $("mh-runs");
+    runList.replaceChildren();
+    if (!runs.length) runList.textContent = allRuns.length ? "No matching runs." : "No missions recorded yet. Start a robot mission to create the first record.";
+    const selectedId = data.mission?.id ?? null;
+    for (const run of runs) {
+      const button = document.createElement("button");
+      button.type = "button";
+      button.className = `mission-run-button${run.id === selectedId ? " selected" : ""}`;
+      const start = typeof run.started_at === "number" ? new Date(run.started_at * 1000).toLocaleString() : "Time unknown";
+      const duration = typeof run.started_at === "number"
+        ? missionTime((typeof run.ended_at === "number" ? run.ended_at : Date.now() / 1000) - run.started_at)
+        : "--";
+      // Keep the run list factual and simple. Do not infer completion or success.
+      button.textContent = `Run #${String(run.id).padStart(3, "0")}  ·  ${start}  ·  ${duration}  ·  ${run.barcode_count ?? 0} barcode events`;
+      button.addEventListener("click", () => { selectedMissionId = run.id; refreshMissionHistory(); });
+      runList.append(button);
+    }
+    const m = data.mission || {};
+    const started = typeof m.started_at === "number";
+    setText("mh-status", m.status || "No mission recorded");
+    const end = typeof m.ended_at === "number" ? m.ended_at : Date.now() / 1000;
+    setText("mh-duration", started ? missionTime(end - m.started_at) : "--");
+    setText("mh-speed", typeof m.initial_speed === "number" ? `${m.initial_speed.toFixed(2)} m/s` : "--");
+    setText("mh-distance", typeof m.final_distance_m === "number" ? `${m.final_distance_m.toFixed(2)} m` : "--");
+    setText("mh-barcodes", started ? m.barcode_count : "--");
+    setText("mh-peak", typeof m.peak_hump_m === "number" ? `${(m.peak_hump_m * 100).toFixed(2)} cm` : "--");
+    setText("mh-humps", m.hump_count ?? "--");
+    setText("mh-obstacles", started ? m.obstacle_count : "--");
+    const events = Array.isArray(data.events) ? data.events : [];
+    const timeline = $("mh-events");
+    timeline.replaceChildren();
+    if (!events.length) timeline.textContent = "No mission events recorded yet.";
+    else {
+      const chosen = window.missionEventFilter || "ALL";
+      const filtered = events.filter(e => chosen === "ALL" || e.type === chosen || (chosen === "OBSTACLE" && e.type === "ERROR"));
+      if (!filtered.length) timeline.textContent = "No matching events in this run.";
+      else filtered.forEach(e => timeline.append(missionEventRow(e)));
+    }
+    const barcodeList = $("mh-barcode-list");
+    barcodeList.replaceChildren();
+    const barcodes = events.filter(e => e.type === "BARCODE");
+    if (!barcodes.length) barcodeList.textContent = "No barcode events recorded yet.";
+    else barcodes.forEach(e => barcodeList.append(missionEventRow(e)));
+    $("download-mission").disabled = !started;
+    setText("mh-error", "");
+  } catch (error) {
+    setText("mh-error", `Unable to load mission history: ${error.message}`);
+  } finally {
+    missionFetchPending = false;
+  }
+}
+$("download-mission").addEventListener("click", () => {
+  if (!lastMissionData) return;
+  const blob = new Blob([JSON.stringify(lastMissionData, null, 2)], { type: "application/json" });
+  const url = URL.createObjectURL(blob);
+  const a = document.createElement("a");
+  a.href = url;
+  a.download = `robot-mission-${lastMissionData.mission?.id || "history"}.json`;
+  a.click();
+  setTimeout(() => URL.revokeObjectURL(url), 1000);
+});
+
+// Mission History UI controls. These only filter presentation, not stored data.
+$("mh-search")?.addEventListener("input", () => refreshMissionHistory());
+$("mh-filters")?.addEventListener("click", (event) => {
+  const button = event.target.closest("button[data-event-filter]");
+  if (!button) return;
+  window.missionEventFilter = button.dataset.eventFilter;
+  $("mh-filters").querySelectorAll("button").forEach(b => b.classList.toggle("active", b === button));
+  refreshMissionHistory();
+});
+fetch("/api/dev/info", {cache:"no-store"}).then(r=>r.ok?r.json():null).then(info=>{
+  if (!info?.demo_mode) return;
+  const banner = $("demo-banner");
+  if (banner) banner.hidden = false;
+  const trigger = $("demo-trigger");
+  if (trigger) trigger.addEventListener("click", async () => {
+    trigger.disabled = true;
+    trigger.textContent = "Starting demo...";
+    try {
+      const response = await fetch("/api/dev/simulate", {method:"POST"});
+      const data = await response.json();
+      if (!response.ok) throw new Error(data.error || "Unable to start demo");
+      trigger.textContent = "▶ Simulate another mission";
+      refreshMissionHistory();
+    } catch (e) { trigger.textContent = e.message; }
+    finally { trigger.disabled = false; }
+  });
+}).catch(()=>{});
