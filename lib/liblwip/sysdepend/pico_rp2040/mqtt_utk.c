@@ -32,6 +32,12 @@
 #define MQTT_CONTROL_QOS 1
 
 /* Buddy 1: wireless robot telemetry topic. */
+/* Route table the robot is using, echoed back for the dashboard. */
+#ifndef MQTT_ROUTE_ACTIVE_TOPIC
+#define MQTT_ROUTE_ACTIVE_TOPIC "inf2004/car/route/active"
+#endif
+#define MQTT_UTK_ROUTE_ECHO_MAX 128
+
 #ifndef MQTT_TELEMETRY_TOPIC
 #define MQTT_TELEMETRY_TOPIC "inf2004/car/telemetry"
 #endif
@@ -57,6 +63,7 @@ static u16_t rx_len;
 static u8_t rx_truncated;
 
 static void heartbeat_timeout(void *arg);
+static void publish_done_cb(void *arg, err_t result);
 
 /*
  * Weak default so the library links without subsystem 3.
@@ -74,6 +81,46 @@ void mqtt_utk_control_rx(const char *payload, uint32_t length)
 {
     (void)payload;
     (void)length;
+}
+
+/* Weak default: no route echo without subsystem 3. */
+__attribute__((weak))
+uint32_t mqtt_utk_route_echo_read(char *buffer, uint32_t buffer_size,
+                                  uint32_t *p_version)
+{
+    (void)buffer;
+    (void)buffer_size;
+    (void)p_version;
+    return 0U;
+}
+
+/* Version last published on this connection; 0 = publish on next poll. */
+static uint32_t route_echo_published;
+
+/*
+ * Publish the route table in use (retained) whenever it changes, and once
+ * after every (re)connect, so the dashboard shows what the robot will do.
+ */
+static void route_echo_poll(void)
+{
+    char text[MQTT_UTK_ROUTE_ECHO_MAX];
+    uint32_t version = 0U;
+    uint32_t len = mqtt_utk_route_echo_read(text, (uint32_t)sizeof(text),
+                                            &version);
+
+    if ((len == 0U) || (version == route_echo_published))
+    {
+        return;
+    }
+
+    if (mqtt_publish(client, MQTT_ROUTE_ACTIVE_TOPIC, text, (u16_t)len,
+                     1 /* QoS 1 */, 1 /* retained */, publish_done_cb,
+                     NULL) == ERR_OK)
+    {
+        route_echo_published = version;
+        tm_printf((UB *)"mqtt: TX [%s] \"%s\"\n",
+                  MQTT_ROUTE_ACTIVE_TOPIC, text);
+    }
 }
 
 /* Optional application callback when MQTT connection fails or drops. */
@@ -294,8 +341,11 @@ void mqtt_utk_telemetry_poll(void)
      */
     if (client == NULL || !mqtt_client_is_connected(client))
     {
+        route_echo_published = 0U;  /* republish after reconnect */
         return;
     }
+
+    route_echo_poll();
 
     /*
      * Read one pending JSON telemetry message.

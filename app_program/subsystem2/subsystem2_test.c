@@ -36,16 +36,14 @@ s2_bench_send (motion_command_type_t type, float speed, float angle_deg,
     if (MOTION_TURN == type)
     {
         /* A turn is sent once; repeating it would start a new turn. */
-        (void) tk_snd_mbf(gh_motion_cmd_mbf, &command,
-                          (INT) sizeof(command), TMO_POL);
+        (void) motion_queue_command(&command);
         (void) tk_dly_tsk(duration_ms);
         return;
     }
 
     for (elapsed = 0; elapsed < duration_ms; elapsed += 100)
     {
-        (void) tk_snd_mbf(gh_motion_cmd_mbf, &command,
-                          (INT) sizeof(command), TMO_POL);
+        (void) motion_queue_command(&command);
         (void) tk_dly_tsk(100);
     }
 }

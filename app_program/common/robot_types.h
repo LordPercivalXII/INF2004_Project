@@ -32,6 +32,8 @@ typedef enum
     SYSTEM_EVENT_FAULT
 } system_event_type_t;
 
+#define SYSTEM_FAULT_ENCODER_STALL (7U)
+
 typedef enum
 {
     CONTROL_START = 0,
@@ -183,6 +185,7 @@ typedef struct
 {
     system_event_type_t type;
     uint32_t            timestamp_ms;
+    uint32_t            fault_code; /* SYSTEM_EVENT_FAULT source/reason */
     union
     {
         line_event_t        line;
@@ -219,6 +222,13 @@ typedef struct
     float           obstacle_distance_cm;
     uint32_t        last_barcode;
     uint32_t        fault_code;
+    uint8_t         fault_mask;     /* 5-bit snapshot, fault_mask.h */
+    bool            b_start_pending;    /* START countdown running      */
+    bool            b_imu_ready;        /* controller's IMU health gate */
+    bool            b_simulation;       /* SIM=1 build: motors not driven */
+    char            last_junction_char;   /* barcode used at last junction */
+    uint8_t         last_junction_action; /* barcode_command_t chosen      */
+    uint8_t         junction_count;       /* junctions acted on, wraps     */
     imu_event_t     imu;
     bool            b_height_trace;
     uint32_t        trace_sequence;
@@ -235,6 +245,9 @@ typedef struct
 #define SYSTEM_BIT_OBSTACLE     (1UL << 2)
 #define SYSTEM_BIT_FAULT        (1UL << 3)
 #define SYSTEM_BIT_WIFI_UP      (1UL << 4)
+#define SYSTEM_BIT_JUNCTION_BUSY (1UL << 5) /* controller still acting on
+                                               the last junction: S3 must
+                                               not consume a waypoint */
 
 #endif /* ROBOT_TYPES_H */
 

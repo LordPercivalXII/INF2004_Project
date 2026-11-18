@@ -9,12 +9,26 @@
  *   xQueueReceive(cmd_q, .., 0)             tk_rcv_mbf(.., TMO_POL)
  *   xEventGroupSetBits / ClearBits          tk_set_flg / tk_clr_flg
  *   xTaskGetTickCount() deadlines           board_millis() deadlines
+ *   xQueueReceive(evt_q_terrain, .., 0)     tk_rcv_mbf(gh_terrain_mbf,
+ *     polled before every other queue         .., TMO_POL) first
+ *
+ * Tribunal 1 fixes in this file:
+ *   - evt_q_terrain (1 byte) is polled before every IF-01 event, so a
+ *     shock is handled ahead of any FIFO backlog of line events
+ *     (Version C gap 4); a shock stops the car (NFR10, <= 40 ms).
+ *   - IF-01 events travel variable-length; line and obstacle events
+ *     travel packed (common/robot_packed.h) and are unpacked here.
+ *   - 1-bit junction_lock: one junction is acted on once, however many
+ *     cycles the thick tape stays under the sensors.
+ *   - Telemetry carries a 5-bit fault-mask snapshot (fault_mask_take).
  */
 
 #include "controller.h"
 #include "../common/robot_config.h"
 #include "../common/drv_board.h"
 #include "../common/rmath.h"
+#include "../common/robot_packed.h"
+#include "../common/fault_mask.h"
 #include "../subsystem1/subsystem1.h"
 #include "../subsystem2/subsystem2.h"
 #include "../subsystem5/subsystem5.h"
@@ -24,9 +38,9 @@
 /* Steering is a fraction of the drive speed, so a given line error gives
  * the same path curvature at any speed: 1.0 = inner wheel stopped (pivot
  * on it), above 1.0 = inner wheel backwards. */
-#define CTRL_STEER_GAIN         (0.40f) /* steer per unit line error    */
-#define CTRL_STEER_LIMIT        (1.20f)
-#define CTRL_STEER_SMOOTH       (0.35f) /* weight of newest sample      */
+#define CTRL_STEER_GAIN         (0.60f) /* steer per unit line error    */
+#define CTRL_STEER_LIMIT        (0.90f) /* keep the inner wheel forward */
+#define CTRL_STEER_SMOOTH       (0.45f) /* weight of newest sample      */
 #define CTRL_STEER_KD           (0.0f)   /* steer per (error/s)          */
 #define CTRL_CURVE_SLOW         (0.50f)  /* speed cut at full steer      */
 #define CTRL_STEER_DEADBAND     (0.10f)
@@ -35,7 +49,7 @@
 #define CTRL_LOST_FIRST_MS      (1300U)  /* arc towards last side this long */
 #define CTRL_LOST_SWEEP_MS      (1000U) /* then alternate sides every this long */
 #define CTRL_LOST_GIVEUP_MS     (10000U) /* stop searching after this       */
-#define CTRL_WHEEL_MIN          (0.04f) /* m/s: slowest wheel that turns   */
+#define CTRL_WHEEL_MIN          (0.08f) /* m/s: keep the inner wheel moving */
 #define CTRL_WHEEL_ZERO         (0.03f) /* below this the wheel is stopped */
 #define CTRL_SLEW_PER_CYCLE     (0.02f) /* max wheel target change / 10 ms */
 #define CTRL_LOST_SIDE_LEVEL    (0.20f) /* |error| that counts as a side  */
@@ -46,6 +60,15 @@
 #define CTRL_BETWEEN_STEER      (0.55f) /* steer while line is between sensors */
 #define CTRL_CENTRE_HOLD_CYCLES (40U)   /* x 10 ms to drive straight on both-white */
 #define CTRL_LOST_CYCLES        (8U)    /* x 10 ms lost before pivoting   */
+
+/* After a junction pivot the sensors usually straddle the new branch and
+   read white-white: that is "centred", not "lost".  If the line still is
+   not found, sweep gently around the turn's end point (+-45 deg, widening)
+   instead of the full-speed lost-line spin, which carried a correct turn
+   on round past its branch (a U-turn became ~360 deg). */
+#define CTRL_POSTTURN_SPIN_SPEED (0.12f) /* m/s per wheel, ~110 deg/s     */
+#define CTRL_POSTTURN_SWEEP_MS  (400U)  /* first sweep, ~45 deg           */
+#define CTRL_POSTTURN_MS        (3000U) /* post-turn search mode at most  */
 #define CTRL_LINE_DT_S          ((float) ROBOT_LINE_PERIOD_MS / 1000.0f)
 /* Ramp handling (S4 pitch: negative = nose up, positive = nose down). */
 #define CTRL_RAMP_ENTER_DEG     (6.0f)
@@ -59,18 +82,50 @@
 #define CTRL_BARCODE_SPEED_FACTOR (0.55f)
 #define CTRL_SHOCK_FACTOR       (0.7f)
 
+/* NFR10: a +-3 g shock stops the motors (0 = only slow down, the
+   behaviour before Tribunal 1).  The car resumes after the hold.
+   Off in SIM=1 builds: the simulated IMU injects a shock every 8 s,
+   which would fault the simulated car every 8 s. */
+#ifndef CTRL_SHOCK_STOP_ENABLED
+#define CTRL_SHOCK_STOP_ENABLED (!ROBOT_SIMULATION)
+#endif
+#define CTRL_SHOCK_STOP_MS      (2000U)
+
+/* junction_lock is released once the car has driven this far past the
+   accepted junction (or past the end of its turn): more than the 20 mm
+   tape plus the sensor spacing. */
+#define CTRL_JUNCTION_LOCK_M    (0.05f)
+
+#define CTRL_TERRAIN_QUEUE_LENGTH (8U)
+
 #define CTRL_IMU_BAD_MS         (1000U) /* IMU must be bad this long to fault */
 #define CTRL_FAULT_RETRY_MS     (1500U) /* auto-resume after a fault       */
+#define CTRL_START_WAIT_REPORT_MS (2000U) /* START held for the IMU: say so */
 
 #define FAULT_EXTERNAL          (1U)
 #define FAULT_IMU               (2U)
 #define FAULT_REACQUIRE         (3U)
 #define FAULT_BOXED_IN          (4U)
+#define FAULT_SHOCK             (5U)    /* recoverable: CTRL_SHOCK_STOP_MS */
 #define FAULT_MOTION_COMMAND    (6U)
 
 ID gh_event_mbf   = E_ID;
 ID gh_control_mbf = E_ID;
 ID gh_system_flg  = E_ID;
+ID gh_terrain_mbf = E_ID;
+
+/* Bytes before the payload union in every IF-01 message. */
+/* <stddef.h> clashes with the kernel's size_t: use the GCC builtin. */
+#define CTRL_EVENT_HEADER_SIZE  ((uint32_t) __builtin_offsetof(system_event_t, \
+                                                              data))
+#define CTRL_EVENT_WIRE_MAX     (CTRL_EVENT_HEADER_SIZE + \
+                                 sizeof(obstacle_packed_t))
+
+/* Controller-private 1-bit flags (only this task writes them). */
+typedef struct
+{
+    unsigned int    b_junction_lock : 1;
+} ctrl_flags_t;
 
 typedef struct
 {
@@ -94,11 +149,8 @@ typedef struct
     bool                b_have_imu;
     bool                b_turn_in_progress;  /* also set while
                                                 approaching a junction */
-    bool                b_junction_approach; /* driving to the pivot   */
     bool                b_junction_turn;     /* junction pivot running */
-    float               junction_start_m;    /* odometer at detection  */
     float               junction_turn_deg;   /* turn to make there     */
-    uint32_t            junction_start_ms;
     uint16_t            pending_turn;
     uint32_t            next_turn_id;
     uint32_t            active_turn_id;
@@ -126,6 +178,19 @@ typedef struct
     uint32_t            height_trace_motion_ms;
     bool                b_height_trace_moving;
     bool                b_height_trace_have_motion;
+    ctrl_flags_t        flags;
+    float               junction_lock_m;     /* odometer when locked */
+    char                last_junction_char;  /* barcode used, '\0' none */
+    bool                b_junction_approach; /* driving the axle onto the
+                                                junction before pivoting */
+    float               junction_start_m;    /* odometer at detection  */
+    uint32_t            junction_start_ms;
+    char                junction_symbol;
+    bool                b_post_turn;         /* just finished a junction
+                                                pivot: gentle search      */
+    uint32_t            post_turn_ms;
+    uint8_t             last_junction_action;/* barcode_command_t       */
+    uint8_t             junction_count;      /* junctions acted on      */
 } ctrl_state_t;
 
 /* ------------------------------------------------------------------ */
@@ -153,6 +218,11 @@ controller_init (void)
                                      sizeof(control_command_t));
     gh_control_mbf = tk_cre_mbf(&cmbf);
 
+    cmbf.maxmsz = (INT) sizeof(terrain_wire_t);
+    cmbf.bufsz  = (SZ) APP_MBF_BUFSZ(CTRL_TERRAIN_QUEUE_LENGTH,
+                                     sizeof(terrain_wire_t));
+    gh_terrain_mbf = tk_cre_mbf(&cmbf);
+
     cflg.flgatr  = (TA_TFIFO | TA_WMUL);
     cflg.iflgptn = 0U;
     gh_system_flg = tk_cre_flg(&cflg);
@@ -168,6 +238,10 @@ controller_init (void)
     else if (gh_system_flg < E_OK)
     {
         er = gh_system_flg;
+    }
+    else if (gh_terrain_mbf < E_OK)
+    {
+        er = gh_terrain_mbf;
     }
     else
     {
@@ -190,21 +264,181 @@ controller_start (void)
 }
 
 /*!
+ * @brief Payload bytes an IF-01 event of this type carries on the wire.
+ */
+static uint32_t
+ctrl_event_payload_size (system_event_type_t type)
+{
+    uint32_t size = 0U;
+
+    switch (type)
+    {
+        case SYSTEM_EVENT_LINE:
+            size = USE_BIT_PACKING ? sizeof(line_packed_t)
+                                   : sizeof(line_event_t);
+            break;
+
+        case SYSTEM_EVENT_MOTION:
+            size = sizeof(motion_event_t);
+            break;
+
+        case SYSTEM_EVENT_IMU:
+            size = sizeof(imu_event_t);
+            break;
+
+        case SYSTEM_EVENT_OBSTACLE:
+            size = USE_BIT_PACKING ? sizeof(obstacle_packed_t)
+                                   : sizeof(obstacle_event_t);
+            break;
+
+        default:
+            /* SYSTEM_EVENT_FAULT: fault_code is in the header. */
+            size = 0U;
+            break;
+    }
+
+    return (size);
+}
+
+static void
+ctrl_copy_bytes (uint8_t * p_dst, uint8_t const * p_src, uint32_t count)
+{
+    uint32_t idx;
+
+    for (idx = 0U; idx < count; idx++)
+    {
+        p_dst[idx] = p_src[idx];
+    }
+}
+
+/*!
  * @brief Post a system event to the controller without waiting.
  *        Callable from tasks and (TMO_POL) interrupt handlers.
+ *
+ * Only the header and the payload actually used are copied into the
+ * message buffer (it is variable-length); line and obstacle payloads are
+ * packed first when USE_BIT_PACKING is set.
  *
  * @return true if queued; false if the buffer is full or p_event is NULL.
  */
 bool
 controller_post_event (system_event_t const * p_event)
 {
-    bool b_ok = false;
+    bool     b_ok = false;
+    uint32_t size;
 
     if ((NULL != p_event) && (gh_event_mbf > 0))
     {
-        b_ok = (E_OK == tk_snd_mbf(gh_event_mbf, (void *) p_event,
-                                   (INT) sizeof(*p_event), TMO_POL));
+        size = CTRL_EVENT_HEADER_SIZE +
+               ctrl_event_payload_size(p_event->type);
+
+#if USE_BIT_PACKING
+        if ((SYSTEM_EVENT_LINE == p_event->type) ||
+            (SYSTEM_EVENT_OBSTACLE == p_event->type))
+        {
+            uint8_t           wire[CTRL_EVENT_WIRE_MAX];
+            line_packed_t     line;
+            obstacle_packed_t obstacle;
+
+            ctrl_copy_bytes(wire, (uint8_t const *) p_event,
+                            CTRL_EVENT_HEADER_SIZE);
+
+            if (SYSTEM_EVENT_LINE == p_event->type)
+            {
+                pack_line(&p_event->data.line, &line);
+                ctrl_copy_bytes(&wire[CTRL_EVENT_HEADER_SIZE],
+                                (uint8_t const *) &line, sizeof(line));
+            }
+            else
+            {
+                pack_obstacle(&p_event->data.obstacle,
+                              p_event->timestamp_ms, &obstacle);
+                ctrl_copy_bytes(&wire[CTRL_EVENT_HEADER_SIZE],
+                                (uint8_t const *) &obstacle,
+                                sizeof(obstacle));
+            }
+
+            b_ok = (E_OK == tk_snd_mbf(gh_event_mbf, wire, (INT) size,
+                                       TMO_POL));
+        }
+        else
+#endif /* USE_BIT_PACKING */
+        {
+            b_ok = (E_OK == tk_snd_mbf(gh_event_mbf, (void *) p_event,
+                                       (INT) size, TMO_POL));
+        }
     }
+
+    return (b_ok);
+}
+
+/*!
+ * @brief Post a terrain event (evt_q_terrain) without waiting.  The
+ *        controller reads this queue before any other.
+ *
+ * @param[in] b_shock   A new +-3 g shock (FR10).
+ * @param[in] height_m  Completed hump height, 0 if none.
+ *
+ * @return true if queued.
+ */
+bool
+controller_post_terrain (bool b_shock, float height_m)
+{
+    terrain_wire_t wire;
+    bool           b_ok = false;
+
+#if USE_BIT_PACKING
+    pack_terrain(b_shock, height_m, &wire);
+#else
+    wire.b_shock  = b_shock;
+    wire.height_m = height_m;
+#endif
+
+    if (gh_terrain_mbf > 0)
+    {
+        b_ok = (E_OK == tk_snd_mbf(gh_terrain_mbf, &wire,
+                                   (INT) sizeof(wire), TMO_POL));
+    }
+
+    return (b_ok);
+}
+
+/*!
+ * @brief Check a received IF-01 message and unpack it in place.
+ *
+ * @return false if the size does not match the type (message ignored).
+ */
+static bool
+ctrl_decode_event (system_event_t * p_event, INT size)
+{
+    bool b_ok = (size >= (INT) CTRL_EVENT_HEADER_SIZE) &&
+                ((uint32_t) size == (CTRL_EVENT_HEADER_SIZE +
+                                     ctrl_event_payload_size(p_event->type)));
+
+#if USE_BIT_PACKING
+    if (b_ok && (SYSTEM_EVENT_LINE == p_event->type))
+    {
+        line_packed_t line;
+
+        /* Copy out first: the packed bytes overlap data.line. */
+        ctrl_copy_bytes((uint8_t *) &line, (uint8_t const *) &p_event->data,
+                        sizeof(line));
+        unpack_line(&line, &p_event->data.line);
+    }
+    else if (b_ok && (SYSTEM_EVENT_OBSTACLE == p_event->type))
+    {
+        obstacle_packed_t obstacle;
+
+        ctrl_copy_bytes((uint8_t *) &obstacle,
+                        (uint8_t const *) &p_event->data, sizeof(obstacle));
+        unpack_obstacle(&obstacle, p_event->timestamp_ms,
+                        &p_event->data.obstacle);
+    }
+    else
+    {
+        /* Unpacked payloads arrive as sent. */
+    }
+#endif /* USE_BIT_PACKING */
 
     return (b_ok);
 }
@@ -223,6 +457,26 @@ static void
 ctrl_clear_bits (uint32_t bits)
 {
     (void) tk_clr_flg(gh_system_flg, (UINT) ~bits);
+}
+
+/*!
+ * @brief Take the junction lock.  SYSTEM_BIT_JUNCTION_BUSY tells S3 not
+ *        to consume a stored barcode on a repeat detection of this same
+ *        junction (the waypoint is kept for the next real junction).
+ */
+static void
+ctrl_junction_lock (ctrl_state_t * p_ctrl)
+{
+    p_ctrl->flags.b_junction_lock = 1U;
+    p_ctrl->junction_lock_m       = p_ctrl->distance_m;
+    ctrl_set_bits(SYSTEM_BIT_JUNCTION_BUSY);
+}
+
+static void
+ctrl_junction_unlock (ctrl_state_t * p_ctrl)
+{
+    p_ctrl->flags.b_junction_lock = 0U;
+    ctrl_clear_bits(SYSTEM_BIT_JUNCTION_BUSY);
 }
 
 static void
@@ -298,6 +552,43 @@ ctrl_turn_motion (float angle_deg, uint32_t turn_id)
     return (motion_send_command(&command));
 }
 
+/*!
+ * @brief Leave FAULT for IDLE (CONTROL_CLEAR_FAULT, or START from FAULT).
+ */
+static void
+ctrl_clear_fault (ctrl_state_t * p_ctrl)
+{
+    p_ctrl->fault_code         = 0U;
+    p_ctrl->b_start_pending    = false;
+    p_ctrl->start_requested_ms = 0U;
+    p_ctrl->state              = MISSION_IDLE;
+    p_ctrl->b_turn_in_progress = false;
+    p_ctrl->b_junction_turn    = false;
+    p_ctrl->b_junction_approach = false;
+    p_ctrl->active_turn_id     = 0U;
+    p_ctrl->pending_turn       = (uint16_t) BARCODE_CMD_NONE;
+    ctrl_junction_unlock(p_ctrl);
+    fault_mask_clear(FAULT_MASK_ALL);
+    ctrl_clear_bits(SYSTEM_BIT_FAULT | SYSTEM_BIT_MISSION_RUN);
+}
+
+/*!
+ * @brief Next turn ID, 1..MOTION_TURN_ID_MAX (5 bits on cmd_q_motion).
+ */
+static uint32_t
+ctrl_next_turn_id (ctrl_state_t * p_ctrl)
+{
+    p_ctrl->next_turn_id++;
+
+    if ((0U == p_ctrl->next_turn_id) ||
+        (p_ctrl->next_turn_id > MOTION_TURN_ID_MAX))
+    {
+        p_ctrl->next_turn_id = 1U;
+    }
+
+    return (p_ctrl->next_turn_id);
+}
+
 static void
 ctrl_stop_motion (void)
 {
@@ -319,10 +610,15 @@ ctrl_enter_fault (ctrl_state_t * p_ctrl, uint32_t code)
     p_ctrl->start_requested_ms = 0U;
     p_ctrl->state      = MISSION_FAULT;
     p_ctrl->b_turn_in_progress = false;
-    p_ctrl->b_junction_approach = false;
     p_ctrl->b_junction_turn = false;
+    p_ctrl->b_junction_approach = false;
     p_ctrl->active_turn_id = 0U;
     p_ctrl->pending_turn = (uint16_t) BARCODE_CMD_NONE;
+    ctrl_junction_unlock(p_ctrl);
+    if (FAULT_REACQUIRE == code)
+    {
+        fault_mask_set(FAULT_BIT_LINE);
+    }
     ctrl_set_bits(SYSTEM_BIT_FAULT);
     ctrl_clear_bits(SYSTEM_BIT_MISSION_RUN | SYSTEM_BIT_OBSTACLE);
     ctrl_stop_motion();
@@ -339,6 +635,26 @@ ctrl_handle_command (ctrl_state_t * p_ctrl,
     switch (p_command->type)
     {
         case CONTROL_START:
+            /* START from FAULT is the operator's acknowledgement: clear
+               the latched fault (encoder stall, line not reacquired,
+               boxed in ...) and start the countdown, as CLEAR_FAULT
+               would.  Without this, only a reboot left FAULT. */
+            if (MISSION_FAULT == p_ctrl->state)
+            {
+                if (p_ctrl->b_imu_healthy)
+                {
+                    tm_printf((UB *) "CTRL: START clears fault %u\n",
+                              (unsigned int) p_ctrl->fault_code);
+                    ctrl_clear_fault(p_ctrl);
+                }
+                else
+                {
+                    tm_printf((UB *) "CTRL: START ignored: fault %u and "
+                              "IMU not ready (keep the car still)\n",
+                              (unsigned int) p_ctrl->fault_code);
+                }
+            }
+
             if ((MISSION_IDLE == p_ctrl->state) &&
                 (!p_ctrl->b_start_pending))
             {
@@ -349,6 +665,11 @@ ctrl_handle_command (ctrl_state_t * p_ctrl,
                 ctrl_stop_motion();
                 tm_printf((UB *) "CTRL: START received, waiting 3 seconds%s\n",
                           p_ctrl->b_imu_healthy ? "" : " (IMU not ready yet)");
+#if ROBOT_SIMULATION
+                tm_printf((UB *) "CTRL: *** SIMULATION build (SIM=1): the "
+                          "motors are NOT driven. Rebuild with "
+                          "make SIM=0 for the real car ***\n");
+#endif
             }
             else
             {
@@ -363,10 +684,11 @@ ctrl_handle_command (ctrl_state_t * p_ctrl,
             p_ctrl->start_requested_ms = 0U;
             p_ctrl->state = MISSION_IDLE;
             p_ctrl->b_turn_in_progress = false;
-            p_ctrl->b_junction_approach = false;
             p_ctrl->b_junction_turn = false;
+            p_ctrl->b_junction_approach = false;
             p_ctrl->active_turn_id = 0U;
             p_ctrl->pending_turn = (uint16_t) BARCODE_CMD_NONE;
+            ctrl_junction_unlock(p_ctrl);
             ctrl_clear_bits(SYSTEM_BIT_MISSION_RUN | SYSTEM_BIT_OBSTACLE);
             ctrl_stop_motion();
             tm_printf((UB *) "CTRL: STOP received, mission idle\n");
@@ -381,11 +703,7 @@ ctrl_handle_command (ctrl_state_t * p_ctrl,
         case CONTROL_CLEAR_FAULT:
             if (p_ctrl->b_imu_healthy)
             {
-                p_ctrl->fault_code = 0U;
-                p_ctrl->b_start_pending = false;
-                p_ctrl->start_requested_ms = 0U;
-                p_ctrl->state      = MISSION_IDLE;
-                ctrl_clear_bits(SYSTEM_BIT_FAULT | SYSTEM_BIT_MISSION_RUN);
+                ctrl_clear_fault(p_ctrl);
             }
             break;
 
@@ -465,49 +783,60 @@ ctrl_junction_angle (uint16_t action)
 }
 
 /*!
- * @brief Start a junction turn: drive straight to the junction centre
- *        (JUNCTION_APPROACH_M on the odometer), then turn (see
- *        ctrl_junction_step).  Line steering is suspended meanwhile.
+ * @brief Start a junction turn at once, on the junction event itself:
+ *        the closed-loop pivot is commanded now, with no drive to a
+ *        pivot point first (the line sensors sit at the wheel axle, see
+ *        robot_config.h).  Line steering is suspended until it is done.
+ *
+ * @param[in] angle_deg  +90 left, -90 right, 180 U-turn.
+ * @param[in] symbol     Barcode character that chose it ('\0' if none).
+ */
+static void ctrl_junction_pivot(ctrl_state_t * p_ctrl, float angle_deg,
+                                char symbol);
+
+/*!
+ * @brief Junction detected (line sensors on the crossing): keep driving
+ *        straight, at the current speed and without line steering, until
+ *        the wheel axle - JUNCTION_PIVOT_OFFSET_M behind the sensors - is
+ *        over the junction centre, then pivot (ctrl_junction_step).
+ *        Pivoting at the sensors put the turn centre that far short of
+ *        the junction, leaving the car beside the new branch.
  */
 static void
-ctrl_junction_begin (ctrl_state_t * p_ctrl, float angle_deg)
+ctrl_junction_begin (ctrl_state_t * p_ctrl, float angle_deg, char symbol)
 {
-    float const speed = rmath_minf(JUNCTION_APPROACH_SPEED,
-                                   ctrl_drive_speed(p_ctrl));
+    float const speed = ctrl_drive_speed(p_ctrl);
 
+    p_ctrl->junction_turn_deg   = angle_deg;
+    p_ctrl->junction_symbol     = symbol;
     p_ctrl->b_junction_approach = true;
     p_ctrl->b_turn_in_progress  = true;     /* suspends line steering */
     p_ctrl->active_turn_id      = 0U;
-    p_ctrl->junction_turn_deg   = angle_deg;
     p_ctrl->junction_start_m    = p_ctrl->distance_m;
     p_ctrl->junction_start_ms   = board_millis();
     ctrl_set_motion(speed, speed);
-    tm_printf((UB *) "CTRL: junction -> turn %d deg after %d mm\n",
-              (int) angle_deg, (int) (JUNCTION_APPROACH_M * 1000.0f));
+    tm_printf((UB *) "CTRL: junction -> barcode '%c' -> turn %d deg after "
+              "%d mm (axle to centre)\n",
+              ('\0' != symbol) ? symbol : '-', (int) angle_deg,
+              (int) (JUNCTION_PIVOT_OFFSET_M * 1000.0f));
 }
 
 /*!
- * @brief While approaching: once the odometer has advanced
- *        JUNCTION_APPROACH_M (or the approach takes too long), make the
- *        closed-loop turn.  Called on every motion event.
+ * @brief While approaching: as soon as the odometer has covered
+ *        JUNCTION_PIVOT_OFFSET_M (or the approach times out), pivot.
+ *        Called on every motion event (20 ms, ~3 mm at 0.15 m/s).
  */
 static void
 ctrl_junction_step (ctrl_state_t * p_ctrl)
 {
     bool const b_arrived = ((p_ctrl->distance_m - p_ctrl->junction_start_m)
-                            >= JUNCTION_APPROACH_M);
+                            >= JUNCTION_PIVOT_OFFSET_M);
     bool const b_timeout = ((board_millis() - p_ctrl->junction_start_ms)
                             >= JUNCTION_APPROACH_TIMEOUT_MS);
 
     if (p_ctrl->b_junction_approach && (b_arrived || b_timeout))
     {
         p_ctrl->b_junction_approach = false;
-        p_ctrl->next_turn_id++;
-
-        if (0U == p_ctrl->next_turn_id)
-        {
-            p_ctrl->next_turn_id++;
-        }
 
         if (b_timeout && !b_arrived)
         {
@@ -515,15 +844,36 @@ ctrl_junction_step (ctrl_state_t * p_ctrl)
                       "turning here\n");
         }
 
-        if (ctrl_turn_motion(p_ctrl->junction_turn_deg, p_ctrl->next_turn_id))
-        {
-            p_ctrl->active_turn_id  = p_ctrl->next_turn_id;
-            p_ctrl->b_junction_turn = true;
-        }
-        else
-        {
-            ctrl_enter_fault(p_ctrl, FAULT_MOTION_COMMAND);
-        }
+        ctrl_junction_pivot(p_ctrl, p_ctrl->junction_turn_deg,
+                            p_ctrl->junction_symbol);
+    }
+}
+
+/*!
+ * @brief Pivot now (closed-loop turn; the motion task starts it at once).
+ */
+static void
+ctrl_junction_pivot (ctrl_state_t * p_ctrl, float angle_deg, char symbol)
+{
+    uint32_t const turn_id = ctrl_next_turn_id(p_ctrl);
+
+    p_ctrl->junction_turn_deg = angle_deg;
+
+    if (ctrl_turn_motion(angle_deg, turn_id))
+    {
+        p_ctrl->active_turn_id     = turn_id;
+        p_ctrl->b_turn_in_progress = true;  /* suspends line steering */
+        p_ctrl->b_junction_turn    = true;
+        tm_printf((UB *) "CTRL: pivot %d deg at junction centre "
+                  "(barcode '%c', drove %d mm) t_us=%u\n",
+                  (int) angle_deg, ('\0' != symbol) ? symbol : '-',
+                  (int) ((p_ctrl->distance_m - p_ctrl->junction_start_m) *
+                         1000.0f),
+                  (unsigned int) board_micros());
+    }
+    else
+    {
+        ctrl_enter_fault(p_ctrl, FAULT_MOTION_COMMAND);
     }
 }
 
@@ -539,12 +889,29 @@ ctrl_junction_turn_done (ctrl_state_t * p_ctrl)
     float const side = (p_ctrl->junction_turn_deg > 0.0f) ? -1.0f : 1.0f;
 
     p_ctrl->b_junction_turn = false;
-    p_ctrl->last_side       = side;
+    p_ctrl->junction_lock_m = p_ctrl->distance_m;   /* lock from here */
+
+    /* Assume the pivot landed on the new branch: white-white now means
+       "line between the sensors" (drive straight onto it).  Seeding the
+       error with the turn side instead made the steering keep turning
+       that way, past the branch.  The side is only remembered for the
+       search, should the line really not be there. */
+    p_ctrl->last_side       = 0.0f;
     p_ctrl->last_side_any   = side;
-    p_ctrl->last_seen_error = side;
+    p_ctrl->last_seen_error = 0.0f;
     p_ctrl->centred_cycles  = 0U;
     p_ctrl->lost_cycles     = 0U;
     p_ctrl->lost_start_ms   = board_millis();
+    p_ctrl->b_post_turn     = true;
+    p_ctrl->post_turn_ms    = board_millis();
+
+    /* The decoded barcode has been carried out: drop it (dashboard). */
+    if ('\0' != p_ctrl->last_junction_char)
+    {
+        tm_printf((UB *) "CTRL: barcode '%c' executed; cleared\n",
+                  p_ctrl->last_junction_char);
+        p_ctrl->barcode = 0U;
+    }
 }
 
 static void
@@ -554,7 +921,7 @@ ctrl_handle_line (ctrl_state_t * p_ctrl, line_event_t const * p_line)
     p_ctrl->b_line_detected = p_line->b_line_detected;
     p_ctrl->b_barcode_scanning = p_line->b_barcode_scanning;
 
-    if (p_ctrl->b_junction_approach || p_ctrl->b_junction_turn)
+    if (p_ctrl->b_junction_turn)
     {
         /* Junction manoeuvre: the pivot sweeps the old line across the
            sensors and off the far side (a LEFT pivot sends it off to the
@@ -564,6 +931,7 @@ ctrl_handle_line (ctrl_state_t * p_ctrl, line_event_t const * p_line)
     }
     else if (p_line->b_line_detected)
     {
+        p_ctrl->b_post_turn = false;    /* found the branch */
         p_ctrl->lost_cycles = 0U;
         p_ctrl->last_seen_error = p_line->line_error;
         float const abs_error = rmath_absf(p_line->line_error);
@@ -604,7 +972,21 @@ ctrl_handle_line (ctrl_state_t * p_ctrl, line_event_t const * p_line)
         p_ctrl->barcode = p_line->barcode;
     }
 
-    if (p_line->b_junction)
+    /* junction_lock: release once the car is clear of the junction it
+       last acted on (never while that junction's turn is running). */
+    if ((0U != p_ctrl->flags.b_junction_lock) &&
+        (!p_ctrl->b_turn_in_progress) &&
+        ((p_ctrl->distance_m - p_ctrl->junction_lock_m) >=
+         CTRL_JUNCTION_LOCK_M))
+    {
+        ctrl_junction_unlock(p_ctrl);
+    }
+
+    if (p_line->b_junction && (0U != p_ctrl->flags.b_junction_lock))
+    {
+        /* Same junction tape still under the sensors: already acted on. */
+    }
+    else if (p_line->b_junction)
     {
         /* S3 looked the stored character up in the MQTT route table;
            BARCODE_CMD_NONE means carry straight on. */
@@ -613,26 +995,43 @@ ctrl_handle_line (ctrl_state_t * p_ctrl, line_event_t const * p_line)
             ? p_line->junction_action
             : (uint16_t) BARCODE_CMD_NONE;
     }
+    else
+    {
+        /* No junction this cycle. */
+    }
 
     if ((MISSION_FOLLOWING == p_ctrl->state) && p_line->b_junction &&
+        (0U == p_ctrl->flags.b_junction_lock) &&
         (!p_ctrl->b_turn_in_progress))
     {
         /* The stored barcode decides (S3 resolved it; none stored or
            "straight" = BARCODE_CMD_NONE): straight carries on following
-           the line, a turn first drives to the junction centre. */
+           the line, a turn pivots at once. */
         float const angle_deg = ctrl_junction_angle(p_ctrl->pending_turn);
 
+        /* Reported in telemetry: what the robot decided, and why. */
+        p_ctrl->last_junction_char   = p_line->junction_char;
+        p_ctrl->last_junction_action = (uint8_t) p_ctrl->pending_turn;
+        p_ctrl->junction_count++;
+
         p_ctrl->pending_turn = (uint16_t) BARCODE_CMD_NONE;
+        ctrl_junction_lock(p_ctrl);
 
         if (0.0f == angle_deg)
         {
+            /* Barcode mapped to STRAIGHT, or nothing was decoded (or the
+               character has no MQTT mapping): keep following the line. */
             tm_printf((UB *) "CTRL: junction -> STRAIGHT (%s)\n",
                       ('\0' != p_line->junction_char) ? "barcode"
                                                        : "no barcode stored");
+            if ('\0' != p_line->junction_char)
+            {
+                p_ctrl->barcode = 0U;   /* executed: drop it */
+            }
         }
         else
         {
-            ctrl_junction_begin(p_ctrl, angle_deg);
+            ctrl_junction_begin(p_ctrl, angle_deg, p_line->junction_char);
         }
     }
 
@@ -660,21 +1059,27 @@ ctrl_handle_line (ctrl_state_t * p_ctrl, line_event_t const * p_line)
                wrong guess is corrected and the car never circles. */
             /* Each sweep is longer than the last (1x, 2x, 3x...), so the
                search widens until it reaches the line. */
+            bool const b_gentle = p_ctrl->b_post_turn &&
+                ((board_millis() - p_ctrl->post_turn_ms) < CTRL_POSTTURN_MS);
+            uint32_t const first = b_gentle ? CTRL_POSTTURN_SWEEP_MS
+                                            : CTRL_LOST_FIRST_MS;
+            float const spin = b_gentle ? CTRL_POSTTURN_SPIN_SPEED
+                                        : CTRL_SEARCH_SPIN_SPEED;
             uint32_t phase = 0U;
-            uint32_t span  = CTRL_LOST_FIRST_MS;
+            uint32_t span  = first;
             uint32_t t     = lost_ms;
             while (t >= span)
             {
                 t -= span;
                 phase++;
-                span = CTRL_LOST_FIRST_MS * (phase + 1U);
+                span = first * (phase + 1U);
             }
             float const side = (0U == (phase & 1U))
                 ? p_ctrl->last_side_any : -p_ctrl->last_side_any;
             /* Rotate on the spot so the car stays over the lost corner
                instead of driving across to a different part of the track. */
-            float const outer =  CTRL_SEARCH_SPIN_SPEED;
-            float const inner = -CTRL_SEARCH_SPIN_SPEED;
+            float const outer =  spin;
+            float const inner = -spin;
 
             ctrl_set_motion_slewed((side > 0.0f) ? outer : inner,
                                    (side > 0.0f) ? inner : outer, true);
@@ -941,10 +1346,11 @@ ctrl_handle_obstacle (ctrl_state_t * p_ctrl,
         ctrl_set_bits(SYSTEM_BIT_OBSTACLE);
         p_ctrl->state = MISSION_AVOIDING;
         p_ctrl->b_turn_in_progress = false;
-        p_ctrl->b_junction_approach = false;
         p_ctrl->b_junction_turn = false;
+        p_ctrl->b_junction_approach = false;
         p_ctrl->active_turn_id = 0U;
         p_ctrl->pending_turn = (uint16_t) BARCODE_CMD_NONE;
+        ctrl_junction_unlock(p_ctrl);
         avoid_start(&p_ctrl->avoid, board_millis(), p_ctrl->distance_m);
         p_ctrl->avoid_phase_shown = AVOID_PHASE_IDLE;
     }
@@ -1148,7 +1554,9 @@ ctrl_handle_event (ctrl_state_t * p_ctrl, system_event_t const * p_event)
             }
             else
             {
-                ctrl_enter_fault(p_ctrl, FAULT_EXTERNAL);
+                ctrl_enter_fault(p_ctrl,
+                                 (0U != p_event->fault_code)
+                                 ? p_event->fault_code : FAULT_EXTERNAL);
             }
             break;
 
@@ -1227,6 +1635,7 @@ ctrl_step_avoidance (ctrl_state_t * p_ctrl, uint32_t now_ms)
         input.now_ms          = now_ms;
         input.distance_m      = p_ctrl->distance_m;
         input.heading_deg     = p_ctrl->heading_deg;
+        input.line_error      = p_ctrl->line_error;
         input.b_line_detected = p_ctrl->b_line_detected;
         input.b_turn_done     = !p_ctrl->b_turn_in_progress;
 
@@ -1252,11 +1661,7 @@ ctrl_step_avoidance (ctrl_state_t * p_ctrl, uint32_t now_ms)
         }
         else if (AVOID_OUT_TURN == output.type)
         {
-            p_ctrl->next_turn_id++;
-            if (0U == p_ctrl->next_turn_id)
-            {
-                p_ctrl->next_turn_id++;
-            }
+            (void) ctrl_next_turn_id(p_ctrl);
 
             if (ctrl_turn_motion(output.turn_deg, p_ctrl->next_turn_id))
             {
@@ -1314,7 +1719,14 @@ ctrl_publish_telemetry (ctrl_state_t * p_ctrl, uint32_t now_ms)
         telemetry.hump_height_m        = p_ctrl->hump_m;
         telemetry.obstacle_distance_cm = p_ctrl->obstacle_cm;
         telemetry.last_barcode         = p_ctrl->barcode;
+        telemetry.b_start_pending      = p_ctrl->b_start_pending;
+        telemetry.b_imu_ready          = p_ctrl->b_imu_healthy;
+        telemetry.b_simulation         = (0 != ROBOT_SIMULATION);
+        telemetry.last_junction_char   = p_ctrl->last_junction_char;
+        telemetry.last_junction_action = p_ctrl->last_junction_action;
+        telemetry.junction_count       = p_ctrl->junction_count;
         telemetry.fault_code           = p_ctrl->fault_code;
+        telemetry.fault_mask           = fault_mask_take(FAULT_MASK_ALL);
         telemetry.imu                  = p_ctrl->imu;
         if (!telemetry_publish(&telemetry))
         {
@@ -1340,6 +1752,47 @@ ctrl_publish_telemetry (ctrl_state_t * p_ctrl, uint32_t now_ms)
         }
 
         p_ctrl->last_telemetry_ms = now_ms;
+    }
+}
+
+/*!
+ * @brief Drain evt_q_terrain (called before every other queue).  A shock
+ *        while driving stops the motors at once: ctrl_enter_fault() sends
+ *        MOTION_STOP, which wakes the motion task immediately (NFR10).
+ */
+static void
+ctrl_poll_terrain (ctrl_state_t * p_ctrl)
+{
+    terrain_wire_t  wire;
+    terrain_event_t terrain;
+
+    while (tk_rcv_mbf(gh_terrain_mbf, &wire, TMO_POL) > 0)
+    {
+#if USE_BIT_PACKING
+        unpack_terrain(&wire, &terrain);
+#else
+        terrain = wire;
+#endif
+
+        if (terrain.b_shock)
+        {
+            p_ctrl->shock_until_ms = board_millis() + CTRL_SHOCK_HOLD_MS;
+
+            if (CTRL_SHOCK_STOP_ENABLED &&
+                ((MISSION_FOLLOWING == p_ctrl->state) ||
+                 (MISSION_AVOIDING == p_ctrl->state)))
+            {
+                tm_printf((UB *) "[NFR10] shock: stop requested t_us=%u\n",
+                          (unsigned int) board_micros());
+                ctrl_enter_fault(p_ctrl, FAULT_SHOCK);
+            }
+        }
+
+        if (terrain.height_m > 0.0f)
+        {
+            tm_printf((UB *) "CTRL: terrain hump %u mm\n",
+                      (unsigned int) (terrain.height_m * 1000.0f + 0.5f));
+        }
     }
 }
 
@@ -1378,6 +1831,7 @@ controller_task (INT stacd, void * p_exinf)
 #if (CTRL_AUTO_START_MS > 0U)
     bool b_auto_started = false;
 #endif
+    uint32_t start_wait_report_ms = 0U;
 
     for (;;)
     {
@@ -1396,6 +1850,8 @@ controller_task (INT stacd, void * p_exinf)
             }
         }
 #endif
+        ctrl_poll_terrain(&ctrl);
+
         if (tk_rcv_mbf(gh_control_mbf, &command, TMO_POL) > 0)
         {
             ctrl_handle_command(&ctrl, &command);
@@ -1404,7 +1860,13 @@ controller_task (INT stacd, void * p_exinf)
         /* Auto-resume after a recoverable fault once the IMU is healthy. */
         if ((MISSION_FAULT == ctrl.state) && ctrl.b_imu_healthy &&
             (FAULT_MOTION_COMMAND != ctrl.fault_code) &&
-            ((board_millis() - ctrl.fault_since_ms) >= CTRL_FAULT_RETRY_MS))
+            (SYSTEM_FAULT_ENCODER_STALL != ctrl.fault_code) &&
+            (FAULT_EXTERNAL != ctrl.fault_code) &&
+            (FAULT_BOXED_IN != ctrl.fault_code) &&
+            (FAULT_REACQUIRE != ctrl.fault_code) &&
+            ((board_millis() - ctrl.fault_since_ms) >=
+             ((FAULT_SHOCK == ctrl.fault_code) ? CTRL_SHOCK_STOP_MS
+                                                : CTRL_FAULT_RETRY_MS)))
         {
             ctrl.fault_code        = 0U;
             ctrl.imu_bad_since_ms  = 0U;
@@ -1439,6 +1901,18 @@ controller_task (INT stacd, void * p_exinf)
                 ctrl_set_bits(SYSTEM_BIT_MISSION_RUN);
                 tm_printf((UB *) "CTRL: Countdown complete, mission STARTED\n");
             }
+            else if ((board_millis() - start_wait_report_ms) >=
+                     CTRL_START_WAIT_REPORT_MS)
+            {
+                /* Not silent: the dashboard shows "waiting for IMU" too. */
+                start_wait_report_ms = board_millis();
+                tm_printf((UB *) "CTRL: START waiting for IMU calibration "
+                          "(keep the car still and level)\n");
+            }
+            else
+            {
+                /* Still waiting for the IMU. */
+            }
         }
 
         /* Wait for one event, then drain whatever else is queued. */
@@ -1447,7 +1921,18 @@ controller_task (INT stacd, void * p_exinf)
 
         while (msg_size > 0)
         {
-            ctrl_handle_event(&ctrl, &event);
+            /* evt_q_terrain before every queued event (Version C gap 4). */
+            ctrl_poll_terrain(&ctrl);
+
+            if (ctrl_decode_event(&event, msg_size))
+            {
+                ctrl_handle_event(&ctrl, &event);
+            }
+            else
+            {
+                tm_printf((UB *) "CTRL: bad event type=%u size=%d\n",
+                          (unsigned int) event.type, (int) msg_size);
+            }
             msg_size = tk_rcv_mbf(gh_event_mbf, &event, TMO_POL);
         }
 

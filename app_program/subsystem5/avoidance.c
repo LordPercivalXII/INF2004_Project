@@ -2,7 +2,7 @@
  *
  * @brief Buddy 5 avoidance and line recovery (see avoidance.h).
  *
- * The distances below are first guesses for the 13 cm car on the tile
+ * The distances below are first guesses for the 15 cm car on the tile
  * mat; tune them from floor tests (testing/subsystem5/TEST_LOG.md).
  */
 
@@ -20,7 +20,6 @@
 #define AVOID_TAN_OUT           (1.7321f)   /* tan 60 */
 #define AVOID_SIN_OUT           (0.8660f)   /* sin 60 */
 #define AVOID_TURN_IN_DEG       (45.0f) /* back in                     */
-#define AVOID_ALIGN_PAST_DEG    (45.0f) /* past the original heading   */
 #define AVOID_SWEEP_DEG         (360.0f)
 #define AVOID_SWEEP_MAX         (2U)
 #define AVOID_HEADING_TOL_DEG   (4.0f)  /* a turn this close is done   */
@@ -32,29 +31,45 @@
 #define AVOID_RETRY_FORGET_CM   (40.0f) /* drove clear of that spot    */
 
 /* The bypass. */
-#define AVOID_ROOM_MARGIN_CM    (5.0f)  /* front distance needed = the
+/* Every distance below keeps AVOID_CLEARANCE_CM between the car and the
+ * obstacle (the sides: OBSTACLE_PATH_HALF_CM in obstacle_geometry.c). */
+#define AVOID_CLEARANCE_CM      (4.0f)
+#define AVOID_CAR_LENGTH_CM     (18.0f) /* front IR sensors to rear    */
+#define AVOID_NOSE_CM           (5.0f)  /* nose ahead of the sensor    */
+#define AVOID_ROOM_MARGIN_CM    (AVOID_NOSE_CM + AVOID_CLEARANCE_CM)
+                                        /* front distance needed = the
                                            forward part of the way out
-                                           + this (the nose is 5 cm
-                                           ahead of the sensor)        */
+                                           + this                      */
 #define AVOID_DEPTH_CM          (20.0f) /* assumed obstacle depth      */
-#define AVOID_PAST_CM           (17.0f) /* sensor past the rear before
-                                           turning in: the car's rear
-                                           is ~11 cm behind the sensor,
-                                           plus margin                 */
+#define AVOID_PAST_CM           ((AVOID_CAR_LENGTH_CM - AVOID_NOSE_CM) + \
+                                 AVOID_CLEARANCE_CM)
+                                        /* sensor past the obstacle's
+                                           rear before turning in: the
+                                           car's rear (13 cm behind the
+                                           sensor) + the clearance     */
 #define AVOID_OUT_SLACK         (1.5f)  /* LEG_OUT length limit factor */
-#define AVOID_AHEAD_STOP_CM     (10.0f) /* this close ahead: blocked   */
+#define AVOID_AHEAD_STOP_CM     (AVOID_NOSE_CM + AVOID_CLEARANCE_CM)
+                                        /* this close ahead (9 cm
+                                           from the sensor): stop and
+                                           wait                        */
+#define AVOID_TURN_STOP_CM      (AVOID_NOSE_CM + AVOID_CLEARANCE_CM)
+                                        /* the same while turning      */
+#define AVOID_CLEAR_CM          (15.0f) /* beyond this ahead is clear  */
+#define AVOID_CLEAR_READINGS    (3U)    /* clear readings in a row to
+                                           carry on                    */
+#define AVOID_BLOCKED_WAIT_MS   (8000U) /* still there: give up        */
 #define AVOID_NEW_OBSTACLE_CM   (20.0f) /* ahead while confirming the
                                            line: a new obstacle        */
 
 /* Finding the line again. */
-#define AVOID_SEARCH_OVERSHOOT_CM (10.0f) /* past the line, not seen  */
+#define AVOID_SEARCH_OVERSHOOT_CM (25.0f) /* extra room to reacquire line */
 #define AVOID_SEARCH_MAX_CM     (60.0f)
-#define AVOID_SENSOR_AHEAD_CM   (8.0f)  /* line sensors ahead of axle  */
-#define AVOID_TAPE_MIN_CM       (1.0f)  /* 1.8 cm tape                 */
-#define AVOID_TAPE_MAX_CM       (5.0f)
+#define AVOID_SENSOR_AHEAD_CM   (2.0f)  /* trim forward after tape hit  */
 #define AVOID_BLACK_SAMPLES     (3U)    /* line events in a row        */
 #define AVOID_VERIFY_CM         (10.0f)
 #define AVOID_VERIFY_LOST_MS    (600U)
+#define AVOID_VERIFY_LINE_SAMPLES (5U)
+#define AVOID_VERIFY_CENTER_ERROR (0.25f)
 
 /* Time limits. */
 #define AVOID_SCAN_TIMEOUT_MS   (10000U)
@@ -64,11 +79,14 @@
 
 #define AVOID_CM_PER_M          (100.0f)
 
-/* The simulated line never ends, so in simulation a few black samples
- * count as crossing it. */
-#ifndef AVOID_SIM_LINE
-#define AVOID_SIM_LINE          (ROBOT_SIMULATION)
-#endif
+/* Heading hold on straight drives (P control on the encoder heading).
+ * Trim = KP x heading error, added to the right wheel and taken off the
+ * left (a positive error needs a turn to the left).  The clamp keeps both
+ * wheels at or above 0.08 m/s at AVOID_SPEED_M_S. */
+#define AVOID_HOLD_KP           (0.004f)    /* m/s per degree   */
+#define AVOID_HOLD_MAX          (0.04f)     /* m/s              */
+#define AVOID_HOLD_RESEND       (0.003f)    /* m/s: resend when the trim
+                                               moves this much  */
 
 /*!
  * @brief Start a phase.
@@ -84,7 +102,9 @@ avoid_enter (avoid_t * p_avoid, avoid_phase_t phase,
     p_avoid->b_in_black     = false;
     p_avoid->black_samples  = 0U;
     p_avoid->white_since_ms = p_input->now_ms;
+    p_avoid->verify_line_samples = 0U;
     p_avoid->b_ahead_fresh  = false;
+    p_avoid->b_hold         = false;    /* a new phase stops holding */
 }
 
 static float
@@ -100,12 +120,62 @@ avoid_relative_deg (avoid_t const * p_avoid, avoid_input_t const * p_input)
     return (p_input->heading_deg - p_avoid->heading0_deg);
 }
 
-static void
-avoid_drive (avoid_output_t * p_output, float speed)
+static float
+avoid_hold_trim (avoid_t const * p_avoid, avoid_input_t const * p_input)
 {
+    float const error_deg = p_avoid->hold_deg -
+                            avoid_relative_deg(p_avoid, p_input);
+
+    return (rmath_clampf(AVOID_HOLD_KP * error_deg,
+                         -AVOID_HOLD_MAX, AVOID_HOLD_MAX));
+}
+
+static void
+avoid_hold_output (avoid_t * p_avoid, avoid_output_t * p_output, float trim)
+{
+    p_avoid->hold_trim    = trim;
     p_output->type        = AVOID_OUT_DRIVE;
-    p_output->left_speed  = speed;
-    p_output->right_speed = speed;
+    p_output->left_speed  = p_avoid->hold_speed - trim;
+    p_output->right_speed = p_avoid->hold_speed + trim;
+}
+
+/*!
+ * @brief Start a straight drive that holds a heading.
+ *
+ * @param[in] speed     m/s, negative = backwards (the trim works the same
+ *                      way: the turn rate follows right minus left).
+ * @param[in] hold_deg  Heading to keep, relative to heading0_deg: the
+ *                      target of the turn before this leg, so a turn that
+ *                      stopped within its tolerance is also corrected.
+ */
+static void
+avoid_hold_start (avoid_t * p_avoid, avoid_input_t const * p_input,
+                  avoid_output_t * p_output, float speed, float hold_deg)
+{
+    p_avoid->b_hold     = true;
+    p_avoid->hold_deg   = hold_deg;
+    p_avoid->hold_speed = speed;
+    avoid_hold_output(p_avoid, p_output, avoid_hold_trim(p_avoid, p_input));
+}
+
+/*!
+ * @brief While holding: resend the drive when the trim has moved enough.
+ */
+static void
+avoid_hold_step (avoid_t * p_avoid, avoid_input_t const * p_input,
+                 avoid_output_t * p_output)
+{
+    float trim;
+
+    if (p_avoid->b_hold)
+    {
+        trim = avoid_hold_trim(p_avoid, p_input);
+
+        if (rmath_absf(trim - p_avoid->hold_trim) >= AVOID_HOLD_RESEND)
+        {
+            avoid_hold_output(p_avoid, p_output, trim);
+        }
+    }
 }
 
 /*!
@@ -170,19 +240,21 @@ avoid_step_turn (avoid_t * p_avoid, avoid_input_t const * p_input,
 
 /*!
  * @brief A straight drive of a set length (negative speed: backwards),
- *        then the next phase.
+ *        holding a heading, then the next phase.
+ *
+ * @param[in] hold_deg  Heading to keep (read on the first call only).
  */
 static avoid_status_t
 avoid_step_drive (avoid_t * p_avoid, avoid_input_t const * p_input,
                   avoid_output_t * p_output, float speed, float length_cm,
-                  avoid_phase_t next_phase)
+                  float hold_deg, avoid_phase_t next_phase)
 {
     avoid_status_t status = AVOID_RUNNING;
 
     if (!p_avoid->b_entered)
     {
         p_avoid->b_entered = true;
-        avoid_drive(p_output, speed);
+        avoid_hold_start(p_avoid, p_input, p_output, speed, hold_deg);
     }
     else if (avoid_travelled_cm(p_avoid, p_input) >= length_cm)
     {
@@ -195,7 +267,7 @@ avoid_step_drive (avoid_t * p_avoid, avoid_input_t const * p_input,
     }
     else
     {
-        /* Still driving. */
+        avoid_hold_step(p_avoid, p_input, p_output);
     }
 
     return (status);
@@ -227,7 +299,11 @@ avoid_apply_decision (avoid_t * p_avoid, avoid_input_t const * p_input)
     switch (p_avoid->decision)
     {
         case OBSTACLE_ACTION_CONTINUE:
-            status = AVOID_DONE;
+            /* A clear scan after backing up can mean the same obstruction
+             * moved beyond the scan's detection range. Do not drive back
+             * toward it and restart the reverse loop. */
+            status = (0U == p_avoid->reverse_count)
+                     ? AVOID_DONE : AVOID_FAILED_BOXED_IN;
             break;
 
         case OBSTACLE_ACTION_REVERSE_RETRY:
@@ -278,48 +354,6 @@ avoid_apply_decision (avoid_t * p_avoid, avoid_input_t const * p_input)
 }
 
 /*!
- * @brief True once the sensors have crossed a tape-width black run (or,
- *        in simulation, seen black a few times).
- */
-static bool
-avoid_tape_crossed (avoid_t * p_avoid, avoid_input_t const * p_input)
-{
-    bool b_crossed = false;
-
-    if (p_input->b_line_detected)
-    {
-        if (!p_avoid->b_in_black)
-        {
-            p_avoid->b_in_black    = true;
-            p_avoid->black_start_m = p_input->distance_m;
-            p_avoid->black_samples = 0U;
-        }
-
-        p_avoid->black_samples++;
-#if AVOID_SIM_LINE
-        b_crossed = (p_avoid->black_samples >= AVOID_BLACK_SAMPLES);
-#endif
-    }
-    else if (p_avoid->b_in_black)
-    {
-        float const run_cm = rmath_absf(p_input->distance_m -
-                                        p_avoid->black_start_m) *
-                             AVOID_CM_PER_M;
-
-        p_avoid->b_in_black = false;
-        b_crossed = ((p_avoid->black_samples >= AVOID_BLACK_SAMPLES) &&
-                     (run_cm >= AVOID_TAPE_MIN_CM) &&
-                     (run_cm <= AVOID_TAPE_MAX_CM));
-    }
-    else
-    {
-        /* Still on white. */
-    }
-
-    return (b_crossed);
-}
-
-/*!
  * @brief True once a sensor has been on the line long enough to trust.
  */
 static bool
@@ -329,6 +363,22 @@ avoid_line_seen (avoid_t * p_avoid, avoid_input_t const * p_input)
                              ? (p_avoid->black_samples + 1U) : 0U;
 
     return (p_avoid->black_samples >= AVOID_BLACK_SAMPLES);
+}
+
+static bool
+avoid_line_candidate_phase (avoid_phase_t phase)
+{
+    return ((AVOID_PHASE_TURN_IN == phase) ||
+            (AVOID_PHASE_SEARCH == phase));
+}
+
+static void
+avoid_begin_verify (avoid_t * p_avoid, avoid_input_t const * p_input)
+{
+    /* Keep the heading and let the line controller capture the tape. A
+       fixed advance followed by an alignment turn can swing the sensors
+       back off a line that was only just detected. */
+    avoid_enter(p_avoid, AVOID_PHASE_VERIFY, p_input);
 }
 
 /*!
@@ -393,16 +443,39 @@ avoid_step_find (avoid_t * p_avoid, avoid_input_t const * p_input,
 }
 
 /*!
- * @brief True in the phases that drive forward, where something close
- *        ahead must stop the car.
+ * @brief How close ahead stops the car in this phase: 9 cm (nose +
+ *        clearance) while driving forward or turning, 0 (never)
+ *        otherwise.  REVERSE backs
+ *        away; SWEEP spins past the obstacle just passed; VERIFY has its
+ *        own rule (a new obstacle).
  */
-static bool
-avoid_is_driving_forward (avoid_phase_t phase)
+static float
+avoid_stop_cm (avoid_phase_t phase)
 {
-    return ((AVOID_PHASE_LEG_OUT == phase) ||
-            (AVOID_PHASE_LEG_PAST == phase) ||
-            (AVOID_PHASE_SEARCH == phase) ||
-            (AVOID_PHASE_ADVANCE == phase));
+    float stop_cm = 0.0f;
+
+    switch (phase)
+    {
+        case AVOID_PHASE_LEG_OUT:
+        case AVOID_PHASE_LEG_PAST:
+        case AVOID_PHASE_SEARCH:
+        case AVOID_PHASE_ADVANCE:
+            stop_cm = AVOID_AHEAD_STOP_CM;
+            break;
+
+        case AVOID_PHASE_TURN_OUT:
+        case AVOID_PHASE_TURN_PARALLEL:
+        case AVOID_PHASE_TURN_IN:
+        case AVOID_PHASE_ALIGN:
+            stop_cm = AVOID_TURN_STOP_CM;
+            break;
+
+        default:
+            /* Not checked. */
+            break;
+    }
+
+    return (stop_cm);
 }
 
 void
@@ -461,7 +534,10 @@ avoid_on_ahead_reading (avoid_t * p_avoid, float distance_cm)
 }
 
 /*!
- * @brief True while the controller should steer along the line itself.
+ * @brief True while the controller should steer along the line itself:
+ *        only once the IR has found the line (VERIFY).  In SEARCH there
+ *        is no line under the sensors yet, so the line follower would
+ *        steer on a stale error and curve the car back early.
  */
 bool
 avoid_is_following (avoid_t const * p_avoid)
@@ -471,14 +547,30 @@ avoid_is_following (avoid_t const * p_avoid)
 
 /*!
  * @brief Where the scanner should point: full scans while stopped to
- *        decide, straight ahead the rest of the time.
+ *        decide, straight ahead the rest of the time.  After backing up
+ *        the scan looks further: the obstacle it backed away from is now
+ *        further off, and a clear scan then would end in boxed in.
  */
 avoid_look_t
 avoid_look (avoid_t const * p_avoid)
 {
-    return (((AVOID_PHASE_IDLE == p_avoid->phase) ||
-             (AVOID_PHASE_WAIT_SCAN == p_avoid->phase))
-            ? AVOID_LOOK_SCAN : AVOID_LOOK_AHEAD);
+    avoid_look_t look = AVOID_LOOK_AHEAD;
+
+    if (AVOID_PHASE_IDLE == p_avoid->phase)
+    {
+        look = AVOID_LOOK_SCAN;
+    }
+    else if (AVOID_PHASE_WAIT_SCAN == p_avoid->phase)
+    {
+        look = (0U == p_avoid->reverse_count) ? AVOID_LOOK_SCAN
+                                              : AVOID_LOOK_SCAN_FAR;
+    }
+    else
+    {
+        /* Moving: straight ahead. */
+    }
+
+    return (look);
 }
 
 char const *
@@ -488,7 +580,7 @@ avoid_phase_name (avoid_phase_t phase)
     {
         "IDLE", "WAIT_SCAN", "REVERSE", "TURN_OUT", "LEG_OUT",
         "TURN_PARALLEL", "LEG_PAST", "TURN_IN", "SEARCH", "ADVANCE",
-        "ALIGN", "SWEEP", "VERIFY"
+        "ALIGN", "SWEEP", "VERIFY", "BLOCKED"
     };
 
     return (((uint32_t) phase < (sizeof(names) / sizeof(names[0])))
@@ -506,6 +598,7 @@ avoid_step (avoid_t * p_avoid, avoid_input_t const * p_input,
     avoid_status_t status   = AVOID_RUNNING;
     uint32_t const age_ms   = p_input->now_ms - p_avoid->phase_start_ms;
     float const    side     = (float) p_avoid->direction;
+    float const    stop_cm  = avoid_stop_cm(p_avoid->phase);
 
     *p_output = (avoid_output_t) {0};
 
@@ -514,17 +607,45 @@ avoid_step (avoid_t * p_avoid, avoid_input_t const * p_input,
         avoid_track(p_avoid, p_input);
     }
 
-    /* Something close ahead while driving forward: stop, give up. */
-    if (avoid_is_driving_forward(p_avoid->phase) && p_avoid->b_entered &&
-        p_avoid->b_ahead_fresh &&
-        (p_avoid->ahead_cm <= AVOID_AHEAD_STOP_CM))
+    /* Something close ahead while moving: stop (this also cancels a turn)
+       and wait for it to go.  The position tracking carries on, so the
+       interrupted step can pick up where it stopped. */
+    if ((stop_cm > 0.0f) && p_avoid->b_entered && p_avoid->b_ahead_fresh &&
+        (p_avoid->ahead_cm <= stop_cm))
     {
-        p_output->type = AVOID_OUT_STOP;
-        return (AVOID_FAILED_BLOCKED);
+        avoid_phase_t const from = p_avoid->phase;
+
+        avoid_enter(p_avoid, AVOID_PHASE_BLOCKED, p_input);
+        p_avoid->b_entered      = true;     /* the stop is sent below */
+        p_avoid->blocked_from   = from;
+        p_avoid->clear_readings = 0U;
+        p_output->type          = AVOID_OUT_STOP;
+        return (AVOID_RUNNING);
     }
 
     p_avoid->b_ahead_seen  = p_avoid->b_ahead_fresh;
     p_avoid->b_ahead_fresh = false;
+
+    /* Track line detections once the car has cleared the obstacle and starts
+     * returning. Ignore incidental tape readings during LEG_PAST. */
+    if (avoid_line_candidate_phase(p_avoid->phase))
+    {
+        if (p_input->b_line_detected)
+        {
+            if (p_avoid->line_acquire_samples < AVOID_BLACK_SAMPLES)
+            {
+                p_avoid->line_acquire_samples++;
+            }
+        }
+        else
+        {
+            p_avoid->line_acquire_samples = 0U;
+        }
+    }
+    else
+    {
+        p_avoid->line_acquire_samples = 0U;
+    }
 
     switch (p_avoid->phase)
     {
@@ -549,8 +670,10 @@ avoid_step (avoid_t * p_avoid, avoid_input_t const * p_input,
             break;
 
         case AVOID_PHASE_REVERSE:
+            /* Back straight out along the heading it stopped on. */
             status = avoid_step_drive(p_avoid, p_input, p_output,
                                       -AVOID_SPEED_M_S, p_avoid->reverse_cm,
+                                      avoid_relative_deg(p_avoid, p_input),
                                       p_avoid->after_reverse);
 
             if (p_avoid->phase != AVOID_PHASE_REVERSE)
@@ -576,6 +699,7 @@ avoid_step (avoid_t * p_avoid, avoid_input_t const * p_input,
                                           AVOID_OUT_SLACK *
                                           (p_avoid->decision_offset_cm /
                                            AVOID_SIN_OUT),
+                                          p_avoid->turn_target_deg,
                                           AVOID_PHASE_TURN_PARALLEL);
             }
             break;
@@ -593,8 +717,10 @@ avoid_step (avoid_t * p_avoid, avoid_input_t const * p_input,
             }
             else if (!p_avoid->b_entered)
             {
+                /* Parallel to the original path (turn_target_deg = 0). */
                 p_avoid->b_entered = true;
-                avoid_drive(p_output, AVOID_SPEED_M_S);
+                avoid_hold_start(p_avoid, p_input, p_output, AVOID_SPEED_M_S,
+                                 p_avoid->turn_target_deg);
             }
             else if (age_ms >= AVOID_DRIVE_TIMEOUT_MS)
             {
@@ -602,29 +728,34 @@ avoid_step (avoid_t * p_avoid, avoid_input_t const * p_input,
             }
             else
             {
-                /* Still driving past. */
+                avoid_hold_step(p_avoid, p_input, p_output);
             }
             break;
 
         case AVOID_PHASE_TURN_IN:
-            avoid_step_turn(p_avoid, p_input, p_output,
-                            side * AVOID_TURN_IN_DEG, AVOID_PHASE_SEARCH);
+            if (p_avoid->line_acquire_samples >= AVOID_BLACK_SAMPLES)
+            {
+                avoid_begin_verify(p_avoid, p_input);
+            }
+            else
+            {
+                avoid_step_turn(p_avoid, p_input, p_output,
+                                side * AVOID_TURN_IN_DEG,
+                                AVOID_PHASE_SEARCH);
+            }
             break;
 
         case AVOID_PHASE_SEARCH:
             /* Toward the line: it is where lateral_cm is 0. */
-            if (!p_avoid->b_entered)
+            if (p_avoid->line_acquire_samples >= AVOID_BLACK_SAMPLES)
+            {
+                avoid_begin_verify(p_avoid, p_input);
+            }
+            else if (!p_avoid->b_entered)
             {
                 p_avoid->b_entered = true;
-                avoid_drive(p_output, AVOID_SPEED_M_S);
-            }
-            else if (avoid_tape_crossed(p_avoid, p_input))
-            {
-                float const black_start_m = p_avoid->black_start_m;
-
-                avoid_enter(p_avoid, AVOID_PHASE_ADVANCE, p_input);
-                p_avoid->b_entered     = true;  /* still driving */
-                p_avoid->phase_start_m = black_start_m;
+                avoid_hold_start(p_avoid, p_input, p_output, AVOID_SPEED_M_S,
+                                 p_avoid->turn_target_deg);
             }
             else if ((!p_avoid->b_in_black) &&
                      ((p_avoid->lateral_cm <= -AVOID_SEARCH_OVERSHOOT_CM) ||
@@ -636,7 +767,7 @@ avoid_step (avoid_t * p_avoid, avoid_input_t const * p_input,
             }
             else
             {
-                /* Still searching. */
+                avoid_hold_step(p_avoid, p_input, p_output);
             }
             break;
 
@@ -658,11 +789,40 @@ avoid_step (avoid_t * p_avoid, avoid_input_t const * p_input,
             break;
 
         case AVOID_PHASE_ALIGN:
-            /* Back to the original heading and a little past it, so the
-               car joins the line going the way it was going. */
-            status = avoid_step_find(p_avoid, p_input, p_output,
-                                     -side * AVOID_ALIGN_PAST_DEG,
-                                     AVOID_TURN_TIMEOUT_MS);
+            /* Face the original direction before line following. Do not
+             * stop at the first black sample: the sensors can touch the
+             * tape while the chassis is still angled across it. */
+            avoid_step_turn(p_avoid, p_input, p_output, 0.0f,
+                            AVOID_PHASE_VERIFY);
+            break;
+
+        case AVOID_PHASE_BLOCKED:
+            /* Stopped.  A missed echo neither counts nor restarts the
+               count (Tribunal 1, A5: an angled or round object can
+               scatter the echo, so no echo is not proof of clear). */
+            if (p_avoid->b_ahead_seen &&
+                (p_avoid->ahead_cm < ULTRASONIC_MAX_DISTANCE_CM))
+            {
+                p_avoid->clear_readings =
+                    (p_avoid->ahead_cm > AVOID_CLEAR_CM)
+                    ? (p_avoid->clear_readings + 1U) : 0U;
+            }
+
+            if (p_avoid->clear_readings >= AVOID_CLEAR_READINGS)
+            {
+                /* Gone: start the interrupted step again.  Turns aim at a
+                   heading and the legs end on position, so it finishes
+                   only what is left. */
+                avoid_enter(p_avoid, p_avoid->blocked_from, p_input);
+            }
+            else if (age_ms >= AVOID_BLOCKED_WAIT_MS)
+            {
+                status = AVOID_FAILED_BLOCKED;
+            }
+            else
+            {
+                /* Waiting. */
+            }
             break;
 
         case AVOID_PHASE_SWEEP:
@@ -685,19 +845,41 @@ avoid_step (avoid_t * p_avoid, avoid_input_t const * p_input,
                 break;
             }
 
-            if (p_input->b_line_detected)
+            if (p_input->b_line_detected &&
+                (rmath_absf(p_input->line_error) <=
+                 AVOID_VERIFY_CENTER_ERROR))
             {
                 p_avoid->white_since_ms = p_input->now_ms;
+                if (p_avoid->verify_line_samples <
+                    AVOID_VERIFY_LINE_SAMPLES)
+                {
+                    p_avoid->verify_line_samples++;
+                }
+            }
+            else
+            {
+                p_avoid->verify_line_samples = 0U;
+                if (p_input->b_line_detected)
+                {
+                    /* A detected edge is still being tracked, but is not
+                       enough to hand control back to normal following. */
+                    p_avoid->white_since_ms = p_input->now_ms;
+                }
             }
 
-            if ((p_input->now_ms - p_avoid->white_since_ms) >=
+            if (p_avoid->verify_line_samples >=
+                AVOID_VERIFY_LINE_SAMPLES)
+            {
+                status = AVOID_DONE;
+            }
+            else if ((p_input->now_ms - p_avoid->white_since_ms) >=
                 AVOID_VERIFY_LOST_MS)
             {
                 status = avoid_start_sweep(p_avoid, p_input);
             }
             else if (avoid_travelled_cm(p_avoid, p_input) >= AVOID_VERIFY_CM)
             {
-                status = AVOID_DONE;
+                status = avoid_start_sweep(p_avoid, p_input);
             }
             else
             {

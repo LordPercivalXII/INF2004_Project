@@ -1,3 +1,4 @@
+
 const $ = (id) => document.getElementById(id);
 
 let brokerConnected = false;
@@ -7,7 +8,17 @@ let commandSequence = 0;
 const COMMAND_TIMEOUT_MS = 10000;
 const TELEMETRY_FRESH_MS = 10000;
 
-const missions = ["Idle", "Following", "Avoiding", "Fault"];
+// 4 and 5 exist only in the binary packet: START received, not moving yet.
+const missions = [
+  "Idle",
+  "Following",
+  "Avoiding",
+  "Fault",
+  "Starting (3 s countdown)",
+  "Waiting for IMU calibration",
+];
+const MISSION_STARTING = 4;
+const MISSION_WAIT_IMU = 5;
 
 const motionNames = {
   0: "Stationary",
@@ -74,6 +85,22 @@ function checkCommandConfirmation(telemetry, receivedAt) {
     typeof receivedAt !== "number" ||
     receivedAt <= pending.sentAt
   ) {
+    return;
+  }
+
+  // START reached the robot: report progress, keep waiting for a run.
+  if (pending.type === "START" && telemetry.mission === MISSION_STARTING) {
+    feedback("Robot received START. Countdown running...");
+    pending.startedAt = Date.now();   // countdown is not a timeout
+    return;
+  }
+
+  if (pending.type === "START" && telemetry.mission === MISSION_WAIT_IMU) {
+    feedback(
+      "Robot received START but is waiting for IMU calibration. " +
+      "Keep the car still and level."
+    );
+    pending.startedAt = Date.now();
     return;
   }
 
@@ -381,6 +408,36 @@ function updateRampTelemetry(t, isFresh = true) {
 // Poll robot telemetry
 // --------------------------------------------------
 
+const ROUTE_LETTER = { straight: "S", left: "L", right: "R", uturn: "U" };
+
+function showRouteActive(active) {
+  const element = $("route-active");
+  if (!element) return;
+
+  if (typeof active !== "string") {
+    element.textContent = "unknown (robot not connected yet)";
+    return;
+  }
+
+  const entries = active.split(",").filter((e) => e && !e.startsWith("*:"));
+  if (entries.length === 0) {
+    element.textContent =
+      "EMPTY: every junction goes straight. Press Publish route settings.";
+    return;
+  }
+
+  // Does the robot's table match what this form would send?
+  const form = new FormData($("route-form"));
+  const mismatched = Object.entries(ROUTE_LETTER).some(([field, letter]) => {
+    const symbol = String(form.get(field) || "").toUpperCase();
+    return !entries.includes(`${symbol}:${letter}`);
+  });
+
+  element.textContent = mismatched
+    ? `${active}  ⚠ differs from the form: press Publish route settings`
+    : `${active}  ✓ matches the form`;
+}
+
 async function poll() {
   try {
     const response = await fetch("/api/status", {
@@ -422,6 +479,13 @@ async function poll() {
     $("connection").className =
       `status ${brokerConnected ? "online" : "offline"}`;
 
+    // A SIM=1 firmware runs the whole mission but never drives the motors.
+    if (data.latest && data.latest.simulation) {
+      $("connection").textContent +=
+        " · SIMULATION firmware: motors not driven (rebuild with make SIM=0)";
+      $("connection").className = "status offline";
+    }
+
     // Enable or disable controls
     $("send-speed").disabled = !brokerConnected;
     $("start-robot").disabled = !brokerConnected;
@@ -429,6 +493,10 @@ async function poll() {
 
     $("route-form").querySelector("button").disabled =
       !brokerConnected;
+
+    // The route table the robot is actually using (echoed back by the
+    // robot), compared with this form: the form is only what WOULD be sent.
+    showRouteActive(data.route_active);
 
     const t = data.latest;
 
@@ -464,6 +532,18 @@ async function poll() {
               ? "No active avoidance"
               : "Unknown";
 
+    // What the robot decided at its last junction (bytes 5-6).
+    if (typeof t.junction_action === "string") {
+      setText(
+        "junction-decision",
+        t.junction_count
+          ? `#${t.junction_count}: ` +
+            (t.junction_char ? `'${t.junction_char}'` : "no barcode") +
+            ` → ${t.junction_action}`
+          : "No junction yet"
+      );
+    }
+
     $("obstacle-detail").textContent =
       t.mission === 2
         ? "Exact avoidance step not yet transmitted"
@@ -480,7 +560,7 @@ async function poll() {
     $("travelled").textContent =
       `${number(t.distance, 2)} m`;
 
-    // Display decoded ASCII barcode characters from the firmware.
+    // Firmware sends the decoded character as its ASCII code.
     $("barcode").textContent =
       hasNumber(t.barcode) && t.barcode >= 33 && t.barcode < 127
         ? String.fromCharCode(t.barcode)
@@ -531,5 +611,10 @@ async function poll() {
 // Start polling
 // --------------------------------------------------
 
-poll();
-setInterval(poll, 1000);
+// Clear server-side cached telemetry so a refresh starts from a clean state.
+fetch("/api/reset", { method: "POST" })
+  .catch(() => {})
+  .finally(() => {
+    poll();
+    setInterval(poll, 1000);
+  });

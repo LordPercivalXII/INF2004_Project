@@ -7,6 +7,11 @@
  * T-Kernel allows from interrupt handlers.  Width-based glitch filtering
  * is done in the task, because merging a short pulse needs the element
  * after it.
+ *
+ * Counters shared with the ISR are single-writer (Tribunal 1, RMW): the
+ * ISR only increments, the task keeps the last value it saw and reports
+ * the difference, so no read-then-clear can lose an increment made by
+ * the ISR between the two (the ISR may run on the other core).
  */
 
 #include "subsystem3.h"
@@ -14,10 +19,11 @@
 #include "../common/robot_config.h"
 #include "../common/drv_board.h"
 #include "../common/drv_gpio_irq.h"
+#include "../common/fault_mask.h"
 
 static volatile uint32_t g_last_edge_us = 0U;
 static volatile uint8_t  g_level_black  = 0U;
-static volatile bool     gb_overflow    = false;
+static volatile uint32_t g_overflow_count = 0U; /* edge buffer full  */
 static volatile uint32_t g_irq_count    = 0U;  /* every GP28 interrupt  */
 static volatile uint32_t g_change_count = 0U;  /* real level changes    */
 
@@ -60,7 +66,8 @@ barcode_edge_isr (uint32_t pin, uint32_t events)
         if (E_OK != tk_snd_mbf(gh_barcode_edge_mbf, &element,
                                (INT) sizeof(element), TMO_POL))
         {
-            gb_overflow = true;     /* this read will be discarded */
+            g_overflow_count++;     /* this read will be discarded */
+            fault_mask_set(FAULT_BIT_LINE);
         }
     }
 }
@@ -88,9 +95,11 @@ barcode_sensor_init (void)
 bool
 barcode_sensor_take_overflow (void)
 {
-    bool const b_overflow = gb_overflow;
+    static uint32_t seen = 0U;  /* task-side copy; the ISR never writes it */
+    uint32_t const  now  = g_overflow_count;
+    bool const      b_overflow = (now != seen);
 
-    gb_overflow = false;
+    seen = now;
 
     return (b_overflow);
 }
@@ -104,10 +113,16 @@ barcode_sensor_take_overflow (void)
 void
 barcode_sensor_take_counts (uint32_t * p_irqs, uint32_t * p_changes)
 {
-    *p_irqs         = g_irq_count;
-    *p_changes      = g_change_count;
-    g_irq_count     = 0U;
-    g_change_count  = 0U;
+    static uint32_t seen_irqs    = 0U;
+    static uint32_t seen_changes = 0U;
+    uint32_t const  irqs    = g_irq_count;
+    uint32_t const  changes = g_change_count;
+
+    /* Unsigned subtraction is correct across the 32-bit wrap. */
+    *p_irqs      = irqs - seen_irqs;
+    *p_changes   = changes - seen_changes;
+    seen_irqs    = irqs;
+    seen_changes = changes;
 }
 
 /*** end of file ***/

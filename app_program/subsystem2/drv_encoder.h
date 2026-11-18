@@ -13,6 +13,8 @@ bool encoder_init(void);
 void encoder_read(int32_t * p_left, int32_t * p_right);
 /* Cumulative short-edge rejection counters; reported by motion_task. */
 void encoder_read_rejected(uint32_t * p_left, uint32_t * p_right);
+/* Cumulative reversed-direction glitch ticks dropped (see the .c). */
+void encoder_read_reversed(uint32_t * p_left, uint32_t * p_right);
 void encoder_sim_add(int32_t left_delta, int32_t right_delta);
 
 #endif /* DRV_ENCODER_H */

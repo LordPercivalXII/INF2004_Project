@@ -113,15 +113,23 @@ barcode_session_reset (barcode_session_t * p_session)
 static void
 barcode_session_push (barcode_session_t * p_session, uint32_t width_us)
 {
-    if (p_session->count < CODE39_MAX_ELEMENTS)
+    uint32_t idx;
+
+    if (p_session->count >= CODE39_MAX_ELEMENTS)
     {
-        p_session->widths[p_session->count] = width_us;
-        p_session->count++;
+        /* Full (usually line-tape junk before the barcode): drop the
+           oldest bar and space, so the newest elements - where a barcode
+           still being read is - are kept and decoding stays possible.
+           The decoder searches sub-windows, so a lost prefix is fine. */
+        for (idx = 2U; idx < p_session->count; idx++)
+        {
+            p_session->widths[idx - 2U] = p_session->widths[idx];
+        }
+        p_session->count -= 2U;
     }
-    else
-    {
-        p_session->b_overflow = true;
-    }
+
+    p_session->widths[p_session->count] = width_us;
+    p_session->count++;
 
     if (width_us > p_session->widest_us)
     {
@@ -130,6 +138,48 @@ barcode_session_push (barcode_session_t * p_session, uint32_t width_us)
 }
 
 #if S3_BARCODE_DEBUG
+/*!
+ * @brief After a failed read: compare the narrowest bar with the
+ *        narrowest space.  In Code 39 they are printed equally wide, so
+ *        their ratio measures the sensor, not the barcode: spaces much
+ *        wider than bars mean the spot is too large (sensor too high) or
+ *        the GP28 threshold sits too close to white.  Above about 2.5x
+ *        narrow bars vanish into the spaces and reads fail.
+ */
+static void
+barcode_debug_sensor_hint (barcode_session_t const * p_session)
+{
+    uint32_t bar   = UINT32_MAX;
+    uint32_t space = UINT32_MAX;
+    uint32_t idx;
+
+    /* Inner elements only: the first and last can be cut short. */
+    for (idx = 1U; (idx + 1U) < p_session->count; idx++)
+    {
+        if (0U == (idx % 2U))
+        {
+            bar = (p_session->widths[idx] < bar) ? p_session->widths[idx]
+                                                 : bar;
+        }
+        else
+        {
+            space = (p_session->widths[idx] < space)
+                    ? p_session->widths[idx] : space;
+        }
+    }
+
+    if ((p_session->count >= 10U) && (UINT32_MAX != bar) && (0U != bar) &&
+        (UINT32_MAX != space))
+    {
+        tm_printf((UB *) "[S3 barcode] narrowest bar %u us, space %u us: "
+                  "space/bar = %u.%u (1.0 ideal; > 2.5: lower the sensor "
+                  "or turn the GP28 pot towards black)\n",
+                  (unsigned int) bar, (unsigned int) space,
+                  (unsigned int) (space / bar),
+                  (unsigned int) (((space % bar) * 10U) / bar));
+    }
+}
+
 /*!
  * @brief Print one scan: element widths (us), bars marked B, spaces s.
  *        A clean Code 39 read shows two width groups ~2-3x apart, with
@@ -160,6 +210,7 @@ barcode_debug_dump (barcode_session_t const * p_session, bool b_decoded,
     {
         tm_printf((UB *) "not decoded%s\n",
                   b_overflow ? " (overflow)" : "");
+        barcode_debug_sensor_hint(p_session);
     }
 
     for (idx = 0U; idx < p_session->count; idx++)
@@ -281,6 +332,72 @@ barcode_session_wait (barcode_session_t const * p_session)
 }
 
 /*!
+ * @brief Idle: a read starts at the first bar that is not a glitch.
+ */
+static void
+barcode_session_start (barcode_session_t * p_session,
+                       barcode_element_t const * p_element)
+{
+    if ((0U != p_element->is_black) &&
+        (p_element->width_us >= BARCODE_GLITCH_US))
+    {
+        p_session->b_active     = true;
+        gb_scan_active          = true;
+        p_session->pending      = *p_element;
+        p_session->last_edge_us = p_element->end_us;
+        p_session->widest_us    = p_element->width_us;
+        p_session->received     = 1U;
+    }
+}
+
+/*!
+ * @brief A wide space just ended the elements so far: if they hold a
+ *        whole symbol, decode now instead of waiting for the end gap
+ *        (which can be up to 1 s, and the junction may come first).
+ *
+ * @param[in] quiet_us  The space just pushed.
+ *
+ * @return true if decoded (result published, session reset).
+ */
+static bool
+barcode_session_try_early (barcode_session_t * p_session, uint32_t quiet_us)
+{
+    barcode_result_t result = {0};
+    uint32_t         narrowest = UINT32_MAX;
+    uint32_t         idx;
+    bool             b_decoded = false;
+
+    /* "*X*" is exactly CODE39_MIN_ELEMENTS elements, ending in a bar. */
+    if (p_session->count >= CODE39_MIN_ELEMENTS)
+    {
+        for (idx = 0U; idx < p_session->count; idx++)
+        {
+            narrowest = (p_session->widths[idx] < narrowest)
+                        ? p_session->widths[idx] : narrowest;
+        }
+
+        if ((quiet_us / BARCODE_QUIET_FACTOR) >= narrowest)
+        {
+            b_decoded = code39_decode_dir(p_session->widths,
+                                          p_session->count, result.text,
+                                          sizeof(result.text),
+                                          &result.b_reversed);
+        }
+    }
+
+    if (b_decoded)
+    {
+        barcode_result_put(&result);
+#if S3_BARCODE_DEBUG
+        barcode_debug_dump(p_session, true, false, &result);
+#endif
+        barcode_session_reset(p_session);
+    }
+
+    return (b_decoded);
+}
+
+/*!
  * @brief Feed one element into the session.
  */
 static void
@@ -289,17 +406,7 @@ barcode_session_add (barcode_session_t * p_session,
 {
     if (!p_session->b_active)
     {
-        /* Idle: a read starts at the first bar that is not a glitch. */
-        if ((0U != p_element->is_black) &&
-            (p_element->width_us >= BARCODE_GLITCH_US))
-        {
-            p_session->b_active     = true;
-            gb_scan_active          = true;
-            p_session->pending      = *p_element;
-            p_session->last_edge_us = p_element->end_us;
-            p_session->widest_us    = p_element->width_us;
-            p_session->received     = 1U;
-        }
+        barcode_session_start(p_session, p_element);
     }
     else
     {
@@ -350,6 +457,16 @@ barcode_session_add (barcode_session_t * p_session,
             p_session->pending        = *p_element;
             p_session->burst_us       = 0U;
             p_session->burst_other_us = 0U;
+
+            /* Elements arrive when they END: a long space arriving here
+               has already finished, so the symbol before it is complete.
+               If it decodes, the space is dropped and the next bar starts
+               a fresh scan. */
+            if (0U == p_element->is_black)
+            {
+                (void) barcode_session_try_early(p_session,
+                                                 p_element->width_us);
+            }
         }
     }
 }
