@@ -103,6 +103,7 @@ static void telemetry_encode_imu(telemetry_message_t const *p_message,
     if (pitch_qdeg > 127.0f) pitch_qdeg = 127.0f;
     if (pitch_qdeg < -128.0f) pitch_qdeg = -128.0f;
 
+    if (p_message->imu.b_pickup_detected) flags |= 0x80U;
     packet[0] = (uint8_t)(7U | 0x08U | flags);
     packet[1] = (uint8_t)p_message->imu.motion_state;
     packet[2] = (uint8_t)(int8_t)pitch_qdeg;
@@ -612,7 +613,7 @@ uint32_t mqtt_utk_telemetry_read(char *buffer, uint32_t buffer_size)
               "\"hump_count\":%u,\"tilt_valid\":%u,"
               "\"height_approx\":%u,\"rise_m\":%s,"
               "\"terrain_peak_m\":%s,\"height_tracking_valid\":%u,"
-              "\"height_gap_pending\":%u}",
+                      "\"height_gap_pending\":%u,\"pickup_detected\":%u}",
         (unsigned int)message.timestamp_ms,
         (unsigned int)message.mission_state,
         speed,
@@ -633,7 +634,8 @@ uint32_t mqtt_utk_telemetry_read(char *buffer, uint32_t buffer_size)
         (unsigned int)message.imu.b_height_approximate,
         rise, peak,
         (unsigned int)message.imu.b_height_tracking_valid,
-        (unsigned int)message.imu.b_height_gap_pending);
+        (unsigned int)message.imu.b_height_gap_pending,
+        (unsigned int)message.imu.b_pickup_detected);
 
     return (len > 0) ? (uint32_t)len : 0U;
 #endif /* USE_BIT_PACKING */

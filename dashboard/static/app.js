@@ -569,6 +569,12 @@ async function poll() {
     $("fault").textContent =
       t.fault ?? "--";
 
+    const pickupDetected = isTrue(t.pickup_detected) || t.fault_code === 8;
+    $("collision-state").textContent = pickupDetected
+      ? "Collision detected — robot lifted / stopped"
+      : "No collision detected";
+    $("collision-status").classList.toggle("detected", pickupDetected);
+
     // --------------------------------------------------
     // New Ramp Detection & Height telemetry
     // --------------------------------------------------
