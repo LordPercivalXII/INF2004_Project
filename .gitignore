@@ -5,3 +5,9 @@ secrets.h
 build_make
 **/.DS_Store
 config/wifi_secrets.h
+
+# Dashboard generated databases
+dashboard/*.sqlite3
+dashboard/*.sqlite3-wal
+dashboard/*.sqlite3-shm
+dashboard/db_backup/
