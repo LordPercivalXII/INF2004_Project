@@ -21,11 +21,18 @@
 static uint32_t g_servo_angle = ULTRASONIC_COARSE_CENTER_DEG;
 
 #if S5_ULTRASONIC_HW
+/*!
+ * @brief Set the pulse for an angle (below 90 = left).  The servo is
+ *        mounted mirrored: a short pulse turns the sensor RIGHT (S5-M15),
+ *        so the pulse is for 180 - angle.
+ */
 static void
 servo_write (uint32_t angle_deg)
 {
+    uint32_t const mirrored = SERVO_FULL_SCALE_DEG - angle_deg;
+
     board_pwm_set_level(PIN_SCAN_SERVO, SERVO_PULSE_MIN_US +
-                        ((angle_deg * SERVO_PULSE_SPAN_US) /
+                        ((mirrored * SERVO_PULSE_SPAN_US) /
                          SERVO_FULL_SCALE_DEG));
 }
 #endif
