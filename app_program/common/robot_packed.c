@@ -353,7 +353,7 @@ pack_obstacle (obstacle_event_t const * p_obs, uint32_t event_ms,
                                         1.0f, PACK_U9_MAX);
     p_wire->closest_cm  = pack_unsigned(p_obs->closest_distance_cm, 1.0f,
                                         PACK_U9_MAX);
-    p_wire->width_cm    = pack_unsigned(p_obs->estimated_width_cm, 1.0f,
+    p_wire->width_cm    = pack_unsigned(p_obs->estimated_width_cm, 10.0f,
                                         PACK_U9_MAX);
     p_wire->clear_cm    = pack_unsigned(clear_cm, 1.0f, PACK_U9_MAX);
     p_wire->offset_q9   = pack_offset(p_obs->bypass_offset_cm, 1.0f,
@@ -382,7 +382,7 @@ unpack_obstacle (obstacle_packed_t const * p_wire, uint32_t event_ms,
     obs.b_side_reading      = (0U != p_wire->b_side);
     obs.scan_start_ms       = event_ms - (uint32_t) p_wire->scan_ms;
     obs.closest_distance_cm = (float) p_wire->closest_cm;
-    obs.estimated_width_cm  = (float) p_wire->width_cm;
+    obs.estimated_width_cm  = (float) p_wire->width_cm / 10.0f;
     obs.bypass_offset_cm    = unpack_offset(p_wire->offset_q9, 1.0f,
                                             PACK_Q9_BIAS);
 

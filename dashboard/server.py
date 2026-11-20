@@ -20,9 +20,7 @@ state = {'connected': False, 'latest': None, 'received_at': None, 'error': None,
          'route_active': None}
 history = deque(maxlen=120)
 mission_events = deque(maxlen=100)
-DEMO_MODE = os.getenv('ROBO_DEMO_MODE') == '1'
-DEFAULT_DB_NAME = 'mission_history_demo.sqlite3' if DEMO_MODE else 'mission_history.sqlite3'
-DB_PATH = Path(os.getenv('MISSION_DB_PATH', str(Path(__file__).resolve().parent / DEFAULT_DB_NAME)))
+DB_PATH = Path(os.getenv("MISSION_DB_PATH", str(Path(__file__).resolve().parent / "mission_history.sqlite3")))
 MAX_MISSIONS = 30
 _last_mission_save = 0.0
 mission = {'id': 0, 'status': 'No mission recorded', 'started_at': None, 'ended_at': None, 'initial_speed': None, 'last_speed': None, 'final_distance_m': None, 'peak_hump_m': None, 'barcode_count': 0, 'obstacle_count': 0, 'hump_count': None}
@@ -50,8 +48,6 @@ def init_mission_db():
         row = db.execute("SELECT data FROM missions ORDER BY id DESC LIMIT 1").fetchone()
         if row:
             restored = json.loads(row[0])
-            if restored.get('status') in ('Completed', 'Success', 'Failed'):
-                restored['status'] = 'Ended (unconfirmed)'
             mission.update(restored)
             mission_events.extend(json.loads(r[0]) for r in db.execute(
                 "SELECT data FROM mission_events WHERE mission_id=? ORDER BY id DESC LIMIT 100", (mission['id'],)
@@ -60,7 +56,10 @@ def init_mission_db():
             if mission.get('started_at') is not None and mission.get('ended_at') is None:
                 mission['ended_at'] = time.time()
                 mission['status'] = 'Interrupted (server restart)'
-                save_mission()
+                # Save after the read connection closes.
+                needs_restart_save = True
+    if locals().get('needs_restart_save'):
+        save_mission()
 
 
 def save_mission():
@@ -108,6 +107,7 @@ def on_connect(c, userdata, flags, reason_code, properties):
 def on_disconnect(c, userdata, disconnect_flags, reason_code, properties):
     with lock:
         state['connected'] = False
+        state['error'] = str(reason_code)
         add_event('MQTT', f'Broker disconnected: {reason_code}')
 
 
@@ -118,6 +118,17 @@ ACTIONS = ('STRAIGHT', 'LEFT', 'RIGHT', 'U-TURN')
 def decode_packet(payload, previous):
     """Decode the project's 4-byte status/ramp/IMU/metadata frames and legacy 5/7-byte frames."""
     b0, b1, b2, b3 = payload[:4]
+    # Dedicated width frame: marker 0x17, little-endian tenths of cm.
+    # Do not replace existing mission/status fields with a partial frame.
+    if len(payload) == 4 and b0 == 0x17 and b3 == 0x01:
+        value = dict(previous or {})
+        value.update({
+            'obstacle_width_cm': (b1 | (b2 << 8)) / 10.0,
+            'obstacle_width_valid': True,
+            'binary': True,
+        })
+        return value
+
     if len(payload) == 4 and (b0 & 0x07) == 6:
         value = dict(previous or {})
         flags = (b0 >> 3) & 0x1F
@@ -169,6 +180,8 @@ def decode_packet(payload, previous):
         'fault': (b0 >> 3) & 0x1F,
         'speed': b1 / 100.0,
         'line': (b2 - 128) / 128.0,
+        'obstacle_width_cm': (previous or {}).get('obstacle_width_cm'),
+        'obstacle_width_valid': (previous or {}).get('obstacle_width_valid'),
         'hump_m': (previous or {}).get('hump_m'),
         'obstacle_cm': (previous or {}).get('obstacle_cm'),
         'barcode': (previous or {}).get('barcode', 0),
@@ -365,8 +378,7 @@ def mqtt_loop():
             time.sleep(3)
 
 
-if not DEMO_MODE:
-    threading.Thread(target=mqtt_loop, daemon=True).start()
+
 
 
 @app.get('/')
@@ -409,9 +421,6 @@ def mission_history():
         with db_connect() as db:
             rows = db.execute("SELECT id, data FROM missions ORDER BY id DESC LIMIT ?", (MAX_MISSIONS,)).fetchall()
             missions = [json.loads(row[1]) for row in rows]
-            for run in missions:
-                if run.get('status') in ('Completed', 'Success', 'Failed'):
-                    run['status'] = 'Ended (unconfirmed)'
             selected = next((m for m in missions if m['id'] == requested_id), None) if requested_id is not None else (missions[0] if missions else None)
             if selected:
                 events = [json.loads(row[0]) for row in db.execute(
@@ -420,9 +429,9 @@ def mission_history():
             else:
                 events = []
         return jsonify({'missions': missions, 'mission': selected, 'events': events,
-                        'source': 'local simulator' if os.getenv('ROBO_DEMO_MODE') == '1' else 'received MQTT telemetry',
+                        'source': 'received MQTT telemetry',
                         'limits': {'missions': MAX_MISSIONS, 'events_per_mission': 100},
-                        'note': 'Saved in local SQLite. Demo records are synthetic when ROBO_DEMO_MODE=1; unknown values remain unknown.'})
+                        'note': 'Saved in local SQLite. Only reported telemetry is recorded; unknown values remain unknown.'})
 
 
 @app.post('/api/reset')
@@ -443,8 +452,6 @@ def no_cache(response):
 
 
 def publish(topic, payload, retain=False):
-    if DEMO_MODE:
-        return jsonify({'error': 'Robot commands are disabled in local demo mode'}), 503
     with lock:
         connected = state['connected']
     if not connected:
@@ -479,7 +486,7 @@ def route():
 def speed():
     data = request.get_json(silent=True) or {}
     value = data.get('speed')
-    if isinstance(value, bool) or not isinstance(value, (float, int)) or not 0.10 <= value <= 0.70:
+    if isinstance(value, bool) or not isinstance(value, (float, int)) or not _num(value) or not 0.10 <= value <= 0.70:
         return jsonify({'error': 'Speed must be between 0.10 and 0.70 m/s'}), 400
     return publish(CONTROL, f'SPEED:{value:.2f}', retain=False)
 
@@ -494,65 +501,80 @@ def stop():
     return publish(CONTROL, 'STOP', retain=False)
 
 
-# Local-only development simulator. Disabled unless explicitly enabled.
-# Uses the same telemetry callback as MQTT, but never publishes to the robot.
-_simulation_busy = threading.Event()
+# ============================================================
+# LOCAL MISSION HISTORY TEST
+# Remove this endpoint before production deployment.
+# ============================================================
 
+@app.post("/api/dev/test-mission")
+def test_mission():
+    if request.remote_addr not in ("127.0.0.1", "::1"):
+        return jsonify({"error": "Local requests only"}), 403
 
-def _demo_mission():
-    from types import SimpleNamespace
-    def emit(mission_code, speed, distance, barcode=None, junction_count=0,
-             action=None, hump_count=0, peak=0.0, height_valid=False):
-        data = {'mission': mission_code, 'speed': speed, 'distance_m': distance,
-                'barcode': barcode or 0, 'junction_char': barcode or '',
-                'junction_count': junction_count, 'junction_action': action,
-                'hump_count': hump_count, 'hump_active': False,
-                'hump_valid': height_valid, 'height_tracking_valid': height_valid,
-                'terrain_peak_m': peak, 'simulation': True}
-        msg = SimpleNamespace(topic=TELEMETRY, payload=json.dumps(data).encode('utf-8'))
-        on_message(None, None, msg)
-    try:
-        # Establish a known idle baseline, then send staged robot-like packets.
-        emit(0, 0.0, 0.0)
-        time.sleep(0.7)
-        emit(1, 0.20, 0.0)
-        time.sleep(1.3)
-        emit(1, 0.20, 0.8, 'A', 1, 'STRAIGHT')
-        time.sleep(1.3)
-        emit(1, 0.20, 1.2, None, 1)
-        emit(1, 0.28, 1.7, None, 1)
-        time.sleep(1.3)
-        emit(1, 0.28, 2.4, None, 1, hump_count=1, peak=0.038, height_valid=True)
-        time.sleep(1.3)
-        emit(2, 0.18, 3.1, None, 1, hump_count=1, peak=0.038, height_valid=True)
-        time.sleep(1.3)
-        emit(1, 0.20, 4.2, None, 1, hump_count=1, peak=0.038, height_valid=True)
-        time.sleep(1.3)
-        emit(1, 0.20, 5.4, 'B', 2, 'LEFT', 1, 0.038, True)
-        time.sleep(1.3)
-        emit(1, 0.20, 6.7, None, 2, hump_count=1, peak=0.038, height_valid=True)
-        time.sleep(1.3)
-        emit(0, 0.0, 7.8, None, 2, hump_count=1, peak=0.038, height_valid=True)
-    finally:
-        _simulation_busy.clear()
+    now = time.time()
 
+    samples = [
+        # Start mission
+        {"mission": 0, "speed": 0.0, "line": 0.0},
+        {"mission": 4, "speed": 0.15, "line": 0.1},
 
-@app.get('/api/dev/info')
-def dev_info():
-    return jsonify({'demo_mode': DEMO_MODE, 'simulation_running': _simulation_busy.is_set()})
+        # Following line
+        {"mission": 1, "speed": 0.15, "line": 0.05},
 
+        # Barcode detection
+        {
+            "mission": 1,
+            "speed": 0.15,
+            "barcode": ord("A"),
+            "junction_char": "A",
+            "junction_action": "STRAIGHT",
+            "junction_count": 1
+        },
 
-@app.post('/api/dev/simulate')
-def dev_simulate():
-    if os.getenv('ROBO_DEMO_MODE') != '1':
-        return jsonify({'error': 'Simulation mode disabled'}), 404
-    if _simulation_busy.is_set():
-        return jsonify({'error': 'Simulation already running'}), 409
-    _simulation_busy.set()
-    threading.Thread(target=_demo_mission, daemon=True).start()
-    return jsonify({'ok': True, 'mode': 'SIMULATED',
-                    'note': 'Synthetic telemetry; no robot or broker required.'}), 202
+        # Obstacle avoidance
+        {"mission": 2, "speed": 0.10, "obstacle_cm": 15.0},
+
+        # Return to following
+        {"mission": 1, "speed": 0.15},
+
+        # Ramp detection
+        {
+            "mission": 1,
+            "speed": 0.15,
+            "hump_count": 0,
+            "hump_active": True,
+            "hump_valid": True,
+            "terrain_peak_m": 0.025,
+            "height_tracking_valid": True
+        },
+        {
+            "mission": 1,
+            "speed": 0.15,
+            "hump_count": 1,
+            "hump_active": False,
+            "hump_valid": True,
+            "hump_m": 0.025,
+            "terrain_peak_m": 0.025,
+            "height_tracking_valid": True
+        },
+
+        # End mission
+        {"mission": 0, "speed": 0.0, "distance": 1.75}
+    ]
+
+    with lock:
+        for i, sample in enumerate(samples):
+            record_mission(sample, now + i)
+
+    return jsonify({
+        "ok": True,
+        "message": "Test mission recorded",
+        "samples": len(samples)
+    })
+
 
 
 if __name__ == '__main__':
-    app.run(host='127.0.0.1', port=8080, debug=False)
+    print(f'Connecting to MQTT broker {HOST}:{PORT}')
+    threading.Thread(target=mqtt_loop, daemon=True, name='mqtt-dashboard').start()
+    app.run(host='127.0.0.1', port=8080, debug=False, threaded=True)

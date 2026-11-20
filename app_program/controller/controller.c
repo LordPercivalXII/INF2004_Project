@@ -101,6 +101,7 @@
 #define CTRL_IMU_BAD_MS         (1000U) /* IMU must be bad this long to fault */
 #define CTRL_FAULT_RETRY_MS     (1500U) /* auto-resume after a fault       */
 #define CTRL_START_WAIT_REPORT_MS (2000U) /* START held for the IMU: say so */
+#define CTRL_PICKUP_RECOVERY_SAMPLES (30U) /* 30 consecutive 100 Hz IMU events */
 
 #define FAULT_EXTERNAL          (1U)
 #define FAULT_IMU               (2U)
@@ -141,10 +142,13 @@ typedef struct
     float               heading_deg;    /* from the encoders, + = left */
     float               hump_m;
     float               obstacle_cm;
+    float               obstacle_width_cm;
+    bool                obstacle_width_valid;
     uint32_t            barcode;
     uint32_t            fault_code;
     bool                b_imu_healthy;
     bool                b_pickup_latched;
+    bool                b_pickup_active;  /* latest raw IMU pickup event */
     imu_event_t         imu;
     imu_height_t        height;
     uint32_t            imu_ms;
@@ -172,6 +176,9 @@ typedef struct
     avoid_phase_t       avoid_phase_shown;  /* last phase printed */
     uint32_t            last_telemetry_ms;
     bool                b_start_pending;
+    bool                b_recovery_pending;
+    uint32_t            recovery_requested_ms;
+    uint32_t            recovery_good_samples;
     uint32_t            start_requested_ms;
     uint32_t            height_trace_sequence;
     uint32_t            height_trace_dropped;
@@ -564,6 +571,8 @@ ctrl_clear_fault (ctrl_state_t * p_ctrl)
     p_ctrl->b_pickup_latched   = false;
     p_ctrl->imu.b_pickup_detected = false;
     p_ctrl->b_start_pending    = false;
+    p_ctrl->b_recovery_pending = false;
+    p_ctrl->recovery_good_samples = 0U;
     p_ctrl->start_requested_ms = 0U;
     p_ctrl->state              = MISSION_IDLE;
     p_ctrl->b_turn_in_progress = false;
@@ -611,6 +620,8 @@ ctrl_enter_fault (ctrl_state_t * p_ctrl, uint32_t code)
     p_ctrl->fault_since_ms = board_millis();
     tm_printf((UB *) "CTRL: FAULT code %u\n", (unsigned int) code);
     p_ctrl->b_start_pending = false;
+    p_ctrl->b_recovery_pending = false;
+    p_ctrl->recovery_good_samples = 0U;
     p_ctrl->start_requested_ms = 0U;
     p_ctrl->state      = MISSION_FAULT;
     p_ctrl->b_turn_in_progress = false;
@@ -625,6 +636,52 @@ ctrl_enter_fault (ctrl_state_t * p_ctrl, uint32_t code)
     }
     ctrl_set_bits(SYSTEM_BIT_FAULT);
     ctrl_clear_bits(SYSTEM_BIT_MISSION_RUN | SYSTEM_BIT_OBSTACLE);
+    ctrl_stop_motion();
+}
+
+/* A pickup START is acknowledged once, but recovery waits for a sequence
+ * of fresh, healthy IMU events without a new pickup indication. The IMU
+ * reports pickup as an event, not a continuous grounded/not-grounded signal:
+ * this does not prove contact with the floor. Operator must place the car
+ * down before pressing START. Motor output remains stopped until countdown. */
+static void
+ctrl_try_pickup_recovery (ctrl_state_t * p_ctrl)
+{
+    if (!p_ctrl->b_recovery_pending ||
+        (MISSION_FAULT != p_ctrl->state) ||
+        (FAULT_PICKUP != p_ctrl->fault_code))
+    {
+        return;
+    }
+
+    if (!p_ctrl->b_have_imu ||
+        (p_ctrl->imu_ms < p_ctrl->recovery_requested_ms) ||
+        ((uint32_t) (board_millis() - p_ctrl->imu_ms) > 100U) ||
+        !p_ctrl->b_imu_healthy ||
+        !p_ctrl->imu.b_sensor_valid ||
+        p_ctrl->b_pickup_active)
+    {
+        p_ctrl->recovery_good_samples = 0U;
+        return;
+    }
+
+    if (p_ctrl->recovery_good_samples < CTRL_PICKUP_RECOVERY_SAMPLES)
+    {
+        p_ctrl->recovery_good_samples++;
+    }
+    if (p_ctrl->recovery_good_samples < CTRL_PICKUP_RECOVERY_SAMPLES)
+    {
+        return;
+    }
+
+    tm_printf((UB *) "CTRL: pickup recovery confirmed; countdown starting\n");
+    ctrl_clear_fault(p_ctrl);
+    p_ctrl->imu_bad_since_ms = 0U;
+    p_ctrl->b_steer_primed = false;
+    s_cmd_left = 0.0f;
+    s_cmd_right = 0.0f;
+    p_ctrl->b_start_pending = true;
+    p_ctrl->start_requested_ms = board_millis();
     ctrl_stop_motion();
 }
 
@@ -643,8 +700,21 @@ ctrl_handle_command (ctrl_state_t * p_ctrl,
                the latched fault (encoder stall, line not reacquired,
                boxed in ...) and start the countdown, as CLEAR_FAULT
                would.  Without this, only a reboot left FAULT. */
+            if ((MISSION_FAULT == p_ctrl->state) &&
+                (FAULT_PICKUP == p_ctrl->fault_code))
+            {
+                /* Remember the first START while the IMU settles. */
+                p_ctrl->b_recovery_pending = true;
+                p_ctrl->recovery_requested_ms = board_millis();
+                p_ctrl->recovery_good_samples = 0U;
+                ctrl_stop_motion();
+                tm_printf((UB *) "CTRL: START accepted; waiting for fresh "
+                          "stable IMU readings before pickup recovery\n");
+                break;
+            }
             if (MISSION_FAULT == p_ctrl->state)
             {
+                /* Other faults retain their original manual recovery path. */
                 if (p_ctrl->b_imu_healthy)
                 {
                     tm_printf((UB *) "CTRL: START clears fault %u\n",
@@ -684,9 +754,15 @@ ctrl_handle_command (ctrl_state_t * p_ctrl,
             break;
 
         case CONTROL_STOP:
+            p_ctrl->b_recovery_pending = false;
+            p_ctrl->recovery_good_samples = 0U;
             p_ctrl->b_start_pending = false;
             p_ctrl->start_requested_ms = 0U;
-            p_ctrl->state = MISSION_IDLE;
+            /* STOP must not disguise a still-latched safety fault. */
+            if (MISSION_FAULT != p_ctrl->state)
+            {
+                p_ctrl->state = MISSION_IDLE;
+            }
             p_ctrl->b_turn_in_progress = false;
             p_ctrl->b_junction_turn = false;
             p_ctrl->b_junction_approach = false;
@@ -695,7 +771,8 @@ ctrl_handle_command (ctrl_state_t * p_ctrl,
             ctrl_junction_unlock(p_ctrl);
             ctrl_clear_bits(SYSTEM_BIT_MISSION_RUN | SYSTEM_BIT_OBSTACLE);
             ctrl_stop_motion();
-            tm_printf((UB *) "CTRL: STOP received, mission idle\n");
+            tm_printf((UB *) "CTRL: STOP received, motors stopped; state=%d\n",
+                      (int) p_ctrl->state);
             break;
 
         case CONTROL_SET_SPEED:
@@ -1165,6 +1242,7 @@ ctrl_handle_imu (ctrl_state_t * p_ctrl, imu_event_t const * p_imu)
         ((p_imu->sample_interval_ms < 5U) ||
          (p_imu->sample_interval_ms > IMU_RECOVERABLE_INTERVAL_MS));
     p_ctrl->imu = *p_imu;
+    p_ctrl->b_pickup_active = p_imu->b_pickup_detected;
     if (p_imu->b_pickup_detected)
     {
         p_ctrl->b_pickup_latched = true;
@@ -1172,7 +1250,8 @@ ctrl_handle_imu (ctrl_state_t * p_ctrl, imu_event_t const * p_imu)
     p_ctrl->imu.b_pickup_detected = p_ctrl->b_pickup_latched;
     if (p_ctrl->b_pickup_latched &&
         ((MISSION_FOLLOWING == p_ctrl->state) ||
-         (MISSION_AVOIDING == p_ctrl->state)))
+         (MISSION_AVOIDING == p_ctrl->state) ||
+         p_ctrl->b_start_pending))
     {
         tm_printf((UB *) "[SAFETY] pickup detected: stopping motors; "
                   "place robot down, then press START\n");
@@ -1346,6 +1425,23 @@ ctrl_handle_obstacle (ctrl_state_t * p_ctrl,
     if (!p_obs->b_side_reading)
     {
         p_ctrl->obstacle_cm = p_obs->center_distance_cm;
+    }
+
+    /* Only completed scans supply a usable width measurement. */
+    if (!p_obs->b_side_reading && p_obs->b_scan_complete)
+    {
+        if (p_obs->b_detected &&
+            p_obs->estimated_width_cm > 0.0f &&
+            p_obs->estimated_width_cm < 1000000.0f)
+        {
+            p_ctrl->obstacle_width_cm = p_obs->estimated_width_cm;
+            p_ctrl->obstacle_width_valid = true;
+        }
+        else
+        {
+            p_ctrl->obstacle_width_cm = 0.0f;
+            p_ctrl->obstacle_width_valid = false;
+        }
     }
 
     if (p_obs->b_side_reading)
@@ -1528,6 +1624,7 @@ ctrl_handle_event (ctrl_state_t * p_ctrl, system_event_t const * p_event)
             ctrl_handle_imu(p_ctrl, &p_event->data.imu);
             p_ctrl->imu_ms = p_event->timestamp_ms;
             p_ctrl->b_have_imu = true;
+            ctrl_try_pickup_recovery(p_ctrl);
             imu_height_observe_imu(&p_ctrl->height, &p_ctrl->imu,
                                    p_ctrl->imu_ms);
             reason = HEIGHT_REJECT_NONE;
@@ -1735,6 +1832,8 @@ ctrl_publish_telemetry (ctrl_state_t * p_ctrl, uint32_t now_ms)
         telemetry.distance_m           = p_ctrl->distance_m;
         telemetry.hump_height_m        = p_ctrl->hump_m;
         telemetry.obstacle_distance_cm = p_ctrl->obstacle_cm;
+        telemetry.obstacle_width_cm = p_ctrl->obstacle_width_cm;
+        telemetry.obstacle_width_valid = p_ctrl->obstacle_width_valid;
         telemetry.last_barcode         = p_ctrl->barcode;
         telemetry.b_start_pending      = p_ctrl->b_start_pending;
         telemetry.b_imu_ready          = p_ctrl->b_imu_healthy;
