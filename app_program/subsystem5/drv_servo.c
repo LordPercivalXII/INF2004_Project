@@ -14,7 +14,7 @@
 #define SERVO_PULSE_MIN_US      (500U)
 #define SERVO_PULSE_SPAN_US     (2000U)
 #define SERVO_FULL_SCALE_DEG    (180U)
-#define SERVO_STEP_DEG          (2U)    /* 2 deg per 20 ms = 100 deg/s:
+#define SERVO_STEP_DEG          (3U)    /* 3 deg per 20 ms = 150 deg/s:
                                            faster can throw the sensor */
 #define SERVO_STEP_MS           (20)
 

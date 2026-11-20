@@ -47,6 +47,10 @@ static uint32_t const g_coarse_angles[OBSTACLE_COARSE_COUNT] =
  * write from the other core is seen whole. */
 static volatile avoid_look_t g_look = AVOID_LOOK_SCAN;
 
+/* Scans still owed for an obstacle seen while driving (width measurement). */
+#define OBSTACLE_WIDTH_SCANS (3U)
+static uint32_t g_width_scans_left = 0U;
+
 void
 obstacle_set_look (avoid_look_t look)
 {
@@ -108,8 +112,9 @@ obstacle_car_is_avoiding (void)
 static bool
 obstacle_scan_wanted (void)
 {
-    return (obstacle_car_is_avoiding() &&
-            ((AVOID_LOOK_SCAN == g_look) || (AVOID_LOOK_SCAN_FAR == g_look)));
+    return ((obstacle_car_is_avoiding() &&
+             ((AVOID_LOOK_SCAN == g_look) || (AVOID_LOOK_SCAN_FAR == g_look))) ||
+            (g_width_scans_left > 0U));
 }
 
 /*!
@@ -163,6 +168,10 @@ obstacle_post_stop (float distance_cm)
 
     tm_printf((UB *) "S5: STOP obstacle in path at %d cm, 0 deg\n",
               obstacle_round(distance_cm));
+
+    /* Request a full scan to measure obstacle width, even if not avoiding yet */
+    tm_printf((UB *) "S5: Requesting full scan for width measurement\n");
+    g_width_scans_left = OBSTACLE_WIDTH_SCANS;
 }
 
 /*!
@@ -297,6 +306,80 @@ obstacle_print_profile (obstacle_scan_t const * p_scan,
 }
 
 /*!
+ * @brief Median of three readings: one bad echo cannot move it.
+ */
+static float
+obstacle_median3 (float a, float b, float c)
+{
+    float const lo = (a < b) ? a : b;
+    float const hi = (a < b) ? b : a;
+
+    return ((c < lo) ? lo : ((c > hi) ? hi : c));
+}
+
+/*!
+ * @brief Re-ping both edges twice more and keep the median of the three
+ *        readings, so one stray echo at an edge does not set the width.
+ */
+static void
+obstacle_refine_edges (obstacle_scan_t * p_scan,
+                       obstacle_profile_t const * p_profile,
+                       uint32_t scan_number)
+{
+    float first_cm;
+    float second_cm;
+    float third_cm;
+
+    first_cm  = p_profile->left_edge_cm;
+    second_cm = obstacle_measure_at(p_profile->left_angle_deg, scan_number);
+    third_cm  = obstacle_measure_at(p_profile->left_angle_deg, scan_number);
+    obstacle_scan_add(p_scan, p_profile->left_angle_deg,
+                      obstacle_median3(first_cm, second_cm, third_cm));
+
+    if (p_profile->right_angle_deg != p_profile->left_angle_deg)
+    {
+        first_cm  = p_profile->right_edge_cm;
+        second_cm = obstacle_measure_at(p_profile->right_angle_deg, scan_number);
+        third_cm  = obstacle_measure_at(p_profile->right_angle_deg, scan_number);
+        obstacle_scan_add(p_scan, p_profile->right_angle_deg,
+                          obstacle_median3(first_cm, second_cm, third_cm));
+    }
+}
+
+#define OBSTACLE_WIDTH_SAMPLES (3U)
+
+static float    g_widths_cm[OBSTACLE_WIDTH_SAMPLES];
+static uint32_t g_width_count = 0U;
+static uint32_t g_width_next  = 0U;
+
+/*!
+ * @brief Median of the last few scans' widths, so one scan cannot swing it.
+ */
+static float
+obstacle_width_smooth (float width_cm)
+{
+    g_widths_cm[g_width_next] = width_cm;
+    g_width_next = (g_width_next + 1U) % OBSTACLE_WIDTH_SAMPLES;
+
+    if (g_width_count < OBSTACLE_WIDTH_SAMPLES)
+    {
+        g_width_count++;
+    }
+
+    if (1U == g_width_count)
+    {
+        return (g_widths_cm[0]);
+    }
+
+    if (2U == g_width_count)
+    {
+        return ((g_widths_cm[0] + g_widths_cm[1]) * 0.5f);
+    }
+
+    return (obstacle_median3(g_widths_cm[0], g_widths_cm[1], g_widths_cm[2]));
+}
+
+/*!
  * @brief Scan, profile, decide, and post the result.
  */
 static void
@@ -307,6 +390,8 @@ obstacle_scan_and_report (obstacle_scan_t * p_scan, uint32_t scan_number)
     system_event_t     event        = {0};
     uint32_t const     start_ms     = board_millis();
     bool               b_complete   = false;
+
+    tm_printf((UB *) "S5: Starting full scan for width measurement\n");
     float const        center_cm    = obstacle_scan(p_scan, scan_number,
                                                     &b_complete);
 
@@ -316,6 +401,18 @@ obstacle_scan_and_report (obstacle_scan_t * p_scan, uint32_t scan_number)
     }
 
     obstacle_profile_build(p_scan, &profile);
+
+    if (profile.b_detected)
+    {
+        obstacle_refine_edges(p_scan, &profile, scan_number);
+        obstacle_profile_build(p_scan, &profile);
+        profile.width_cm = obstacle_width_smooth(profile.width_cm);
+    }
+    else
+    {
+        g_width_count = 0U;
+    }
+
     obstacle_plan_build(&profile, &plan);
 
     event.type         = SYSTEM_EVENT_OBSTACLE;
@@ -338,6 +435,10 @@ obstacle_scan_and_report (obstacle_scan_t * p_scan, uint32_t scan_number)
 
     if (profile.b_detected)
     {
+        int const width_hundredths = (int) (profile.width_cm * 100.0f + 0.5f);
+
+        tm_printf((UB *) "S5: Obstacle detected - width=%d.%02d cm\n",
+                  width_hundredths / 100, width_hundredths % 100);
         obstacle_print_profile(p_scan, &profile, &plan);
     }
     else
@@ -394,6 +495,10 @@ obstacle_task (INT stacd, void * p_exinf)
             }
 
             obstacle_scan_and_report(&scan, scan_number);
+            if (g_width_scans_left > 0U)
+            {
+                g_width_scans_left--;
+            }
             scan_number++;
         }
         else

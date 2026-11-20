@@ -19,7 +19,7 @@
                                            and need not back up        */
 #define AVOID_TAN_OUT           (1.7321f)   /* tan 60 */
 #define AVOID_SIN_OUT           (0.8660f)   /* sin 60 */
-#define AVOID_TURN_IN_DEG       (45.0f) /* back in                     */
+#define AVOID_TURN_IN_DEG       (60.0f) /* back in                     */
 #define AVOID_SWEEP_DEG         (360.0f)
 #define AVOID_SWEEP_MAX         (2U)
 #define AVOID_HEADING_TOL_DEG   (4.0f)  /* a turn this close is done   */
@@ -829,11 +829,22 @@ avoid_step (avoid_t * p_avoid, avoid_input_t const * p_input,
             break;
 
         case AVOID_PHASE_ALIGN:
-            /* Face the original direction before line following. Do not
-             * stop at the first black sample: the sensors can touch the
-             * tape while the chassis is still angled across it. */
-            avoid_step_turn(p_avoid, p_input, p_output, 0.0f,
-                            AVOID_PHASE_VERIFY);
+            /* The IR sensors have reacquired the line: cancel any pivot
+             * still running and hand steering to line-following VERIFY. */
+            if (p_input->b_line_detected &&
+                (rmath_absf(p_input->line_error) <=
+                 AVOID_VERIFY_CENTER_ERROR))
+            {
+                p_output->type = AVOID_OUT_STOP;
+                avoid_enter(p_avoid, AVOID_PHASE_VERIFY, p_input);
+            }
+            else
+            {
+                /* Until the line is centered, keep correcting toward the
+                 * original heading. */
+                avoid_step_turn(p_avoid, p_input, p_output, 0.0f,
+                                AVOID_PHASE_VERIFY);
+            }
             break;
 
         case AVOID_PHASE_BLOCKED:

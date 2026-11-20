@@ -237,7 +237,11 @@ subsystem5_test (void)
 
     /* ---- Stage 3: the profile ------------------------------------------ */
 
-    s5_test_sweep(&scan, 80U, 100U, S5_TEST_NEAR_CM);
+    obstacle_scan_add(&scan, 80U, 24.37f);
+    obstacle_scan_add(&scan, 85U, 24.09f);
+    obstacle_scan_add(&scan, 90U, 24.0f);
+    obstacle_scan_add(&scan, 95U, 24.09f);
+    obstacle_scan_add(&scan, 100U, 24.37f);
     obstacle_profile_build(&scan, &profile);
     TEST_CHECK("S5-U10",
                (profile.b_detected &&
@@ -245,11 +249,11 @@ subsystem5_test (void)
                 (profile.right_clearance_cm > 199.0f)),
                "obstacle ahead: both sides clear, not blocked by own hits");
     TEST_CHECK("S5-U11",
-               ((profile.width_cm > 3.9f) && (profile.width_cm < 4.5f) &&
+               ((profile.width_cm > 8.0f) && (profile.width_cm < 9.0f) &&
                 (profile.center_angle_deg > -0.5f) &&
                 (profile.center_angle_deg < 0.5f) &&
                 (profile.closest_cm < 24.5f)),
-               "obstacle ahead: centre 0 deg, width ~4.2 cm, closest 24 cm");
+               "obstacle ahead: centre 0 deg, flat face 24 cm, width ~8.5 cm");
 
     obstacle_scan_add(&scan, 90U, 50.0f);
     TEST_CHECK("S5-U12",
@@ -333,15 +337,32 @@ subsystem5_test (void)
     b_ok  = b_ok && (OBSTACLE_ACTION_TURN_LEFT == s5_test_plan(&scan).action);
     s5_test_sweep(&scan, 70U, 90U, S5_TEST_NEAR_CM);
     b_ok  = b_ok && (OBSTACLE_ACTION_TURN_RIGHT == s5_test_plan(&scan).action);
-    s5_test_sweep(&scan, 60U, 120U, S5_TEST_NEAR_CM);   /* no side clear */
-    b_ok  = b_ok &&
-            (OBSTACLE_ACTION_REVERSE_RETRY == s5_test_plan(&scan).action);
     s5_test_sweep(&scan, 85U, 95U, 12.0f);              /* too close */
     b_ok  = b_ok &&
             (OBSTACLE_ACTION_REVERSE_RETRY == s5_test_plan(&scan).action);
     TEST_CHECK("S5-U13", b_ok,
                "decision: continue (beside / nothing), left, right, "
-               "reverse (no room / too close)");
+               "reverse (too close)");
+
+    /* A box filling the whole scan window at a safe distance: beyond the
+       window is unseen, not blocked, so the car commits to a side (tie:
+       left) with the offset from the last seen reading, instead of
+       reversing until it faults boxed in.  Too close still reverses. */
+    s5_test_sweep(&scan, 60U, 120U, S5_TEST_NEAR_CM);
+    obstacle_profile_build(&scan, &profile);
+    plan = s5_test_plan(&scan);
+    b_ok = profile.b_left_edge_out && profile.b_right_edge_out &&
+           (0.0f == profile.left_clearance_cm) &&
+           (OBSTACLE_ACTION_TURN_LEFT == plan.action) &&
+           (plan.bypass_offset_cm > 20.0f) &&
+           (plan.bypass_offset_cm < 23.0f);
+    s5_test_sweep(&scan, 60U, 120U, 12.0f);
+    b_ok = b_ok &&
+           (OBSTACLE_ACTION_REVERSE_RETRY == s5_test_plan(&scan).action);
+    TEST_CHECK("S5-U44", b_ok,
+               "box past both scan edges at a safe distance: turn (unseen "
+               "is not blocked), offset from the last seen reading; too "
+               "close still reverses");
 
     /* ---- Driving: the stop check --------------------------------------- */
 

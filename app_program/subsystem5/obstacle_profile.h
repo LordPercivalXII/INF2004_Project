@@ -42,7 +42,8 @@ typedef struct
 /* Stage 3: the obstacle profile.  Angles are from straight ahead, - left,
  * + right; lateral distances are sideways from the sensor, - left.
  * A clearance is the nearest reading beside the obstacle, 0 if the
- * obstacle reaches the edge of the scan on that side. */
+ * obstacle reaches the edge of the scan on that side (then the edge-out
+ * flag is set: what lies beyond the scan is unseen, not blocked). */
 typedef struct
 {
     bool  b_detected;
@@ -55,6 +56,12 @@ typedef struct
     float width_cm;
     float left_clearance_cm;
     float right_clearance_cm;
+    bool  b_left_edge_out;      /* obstacle runs past the scan's left   */
+    bool  b_right_edge_out;     /* ... right edge: beyond it is unseen  */
+    float left_edge_cm;         /* distance to left edge (for offsets)   */
+    float right_edge_cm;        /* distance to right edge (for offsets)  */
+    uint32_t left_angle_deg;    /* servo angle of the left edge reading  */
+    uint32_t right_angle_deg;   /* servo angle of the right edge reading */
 } obstacle_profile_t;
 
 /* Stage 4: what to do about it. */
