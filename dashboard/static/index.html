@@ -1,320 +1,1053 @@
 <!doctype html>
+
 <html lang="en">
   <head>
     <meta charset="utf-8" />
-    <meta name="viewport" content="width=device-width,initial-scale=1" />
+    <meta content="width=device-width,initial-scale=1" name="viewport" />
     <title>Robot Dashboard</title>
-    <link rel="stylesheet" href="/style.css" />
+    <link href="/style.css" rel="stylesheet" />
   </head>
   <body>
     <!-- Shared SVG symbols keep every dashboard icon consistent. -->
-    <svg class="icon-sprite" xmlns="http://www.w3.org/2000/svg" aria-hidden="true" focusable="false">
-      <symbol id="icon-bolt" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="m13 2-3 8h7l-6 12 1-9H5l8-11z"/></symbol>
-      <symbol id="icon-flag" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M4 22V4"/><path d="M4 4c4-3 8 3 16 0v12c-8 3-12-3-16 0"/></symbol>
-      <symbol id="icon-gauge" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M12 14l4-4"/><path d="M4.93 19a10 10 0 1 1 14.14 0"/></symbol>
-      <symbol id="icon-barcode" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M4 5v14M7 5v14M11 5v14M13 5v14M17 5v14M20 5v14"/></symbol>
-      <symbol id="icon-warning" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="m10.29 3.86-8.47 14.14A2 2 0 0 0 3.53 21h16.94a2 2 0 0 0 1.71-3L13.71 3.86a2 2 0 0 0-3.42 0Z"/><path d="M12 9v4M12 17h.01"/></symbol>
-      <symbol id="icon-mountain" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="m8 3 4 8 3-4 6 12H3L8 3Z"/><path d="M9 15h7"/></symbol>
-      <symbol id="icon-activity" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M2 12h4l3-7 4 14 3-7h6"/></symbol>
+    <svg
+      aria-hidden="true"
+      class="icon-sprite"
+      focusable="false"
+      xmlns="http://www.w3.org/2000/svg"
+    >
+      <symbol
+        fill="none"
+        id="icon-bolt"
+        stroke="currentColor"
+        stroke-linecap="round"
+        stroke-linejoin="round"
+        stroke-width="2"
+        viewbox="0 0 24 24"
+      >
+        <path d="m13 2-3 8h7l-6 12 1-9H5l8-11z"></path>
+      </symbol>
+      <symbol
+        fill="none"
+        id="icon-flag"
+        stroke="currentColor"
+        stroke-linecap="round"
+        stroke-linejoin="round"
+        stroke-width="2"
+        viewbox="0 0 24 24"
+      >
+        <path d="M4 22V4"></path>
+        <path d="M4 4c4-3 8 3 16 0v12c-8 3-12-3-16 0"></path>
+      </symbol>
+      <symbol
+        fill="none"
+        id="icon-gauge"
+        stroke="currentColor"
+        stroke-linecap="round"
+        stroke-linejoin="round"
+        stroke-width="2"
+        viewbox="0 0 24 24"
+      >
+        <path d="M12 14l4-4"></path>
+        <path d="M4.93 19a10 10 0 1 1 14.14 0"></path>
+      </symbol>
+      <symbol
+        fill="none"
+        id="icon-barcode"
+        stroke="currentColor"
+        stroke-linecap="round"
+        stroke-linejoin="round"
+        stroke-width="2"
+        viewbox="0 0 24 24"
+      >
+        <path d="M4 5v14M7 5v14M11 5v14M13 5v14M17 5v14M20 5v14"></path>
+      </symbol>
+      <symbol
+        fill="none"
+        id="icon-warning"
+        stroke="currentColor"
+        stroke-linecap="round"
+        stroke-linejoin="round"
+        stroke-width="2"
+        viewbox="0 0 24 24"
+      >
+        <path
+          d="m10.29 3.86-8.47 14.14A2 2 0 0 0 3.53 21h16.94a2 2 0 0 0 1.71-3L13.71 3.86a2 2 0 0 0-3.42 0Z"
+        ></path>
+        <path d="M12 9v4M12 17h.01"></path>
+      </symbol>
+      <symbol
+        fill="none"
+        id="icon-mountain"
+        stroke="currentColor"
+        stroke-linecap="round"
+        stroke-linejoin="round"
+        stroke-width="2"
+        viewbox="0 0 24 24"
+      >
+        <path d="m8 3 4 8 3-4 6 12H3L8 3Z"></path>
+        <path d="M9 15h7"></path>
+      </symbol>
+      <symbol
+        fill="none"
+        id="icon-activity"
+        stroke="currentColor"
+        stroke-linecap="round"
+        stroke-linejoin="round"
+        stroke-width="2"
+        viewbox="0 0 24 24"
+      >
+        <path d="M2 12h4l3-7 4 14 3-7h6"></path>
+      </symbol>
+      <symbol
+        fill="none"
+        id="icon-robot"
+        stroke="currentColor"
+        stroke-linecap="round"
+        stroke-linejoin="round"
+        stroke-width="2"
+        viewbox="0 0 24 24"
+      >
+        <rect height="12" rx="4" width="14" x="5" y="7"></rect>
+        <path d="M12 3v4M9 3h6M5 12H2v4h3M19 12h3v4h-3"></path>
+        <circle cx="9" cy="13" r="1"></circle>
+        <circle cx="15" cy="13" r="1"></circle>
+      </symbol>
+      <symbol
+        fill="none"
+        id="icon-grid"
+        stroke="currentColor"
+        stroke-linecap="round"
+        stroke-linejoin="round"
+        stroke-width="2"
+        viewbox="0 0 24 24"
+      >
+        <rect height="7" rx="1" width="7" x="3" y="3"></rect>
+        <rect height="7" rx="1" width="7" x="14" y="3"></rect>
+        <rect height="7" rx="1" width="7" x="3" y="14"></rect>
+        <rect height="7" rx="1" width="7" x="14" y="14"></rect>
+      </symbol>
+      <symbol
+        fill="none"
+        id="icon-wifi"
+        stroke="currentColor"
+        stroke-linecap="round"
+        stroke-linejoin="round"
+        stroke-width="2"
+        viewbox="0 0 24 24"
+      >
+        <path
+          d="M2 9a16 16 0 0 1 20 0M5 12a11 11 0 0 1 14 0M8 15a6 6 0 0 1 8 0"
+        ></path>
+        <circle cx="12" cy="19" r="1"></circle>
+      </symbol>
+      <symbol
+        fill="none"
+        id="icon-history"
+        stroke="currentColor"
+        stroke-linecap="round"
+        stroke-linejoin="round"
+        stroke-width="2"
+        viewbox="0 0 24 24"
+      >
+        <path d="M3 12a9 9 0 1 0 3-6.7L3 8M3 3v5h5M12 7v5l3 2"></path>
+      </symbol>
+      <symbol
+        fill="none"
+        id="icon-box"
+        stroke="currentColor"
+        stroke-linecap="round"
+        stroke-linejoin="round"
+        stroke-width="2"
+        viewbox="0 0 24 24"
+      >
+        <path d="m12 2 9 5-9 5-9-5 9-5ZM3 7v10l9 5 9-5V7M12 12v10"></path>
+      </symbol>
+      <symbol
+        fill="none"
+        id="icon-arrow"
+        stroke="currentColor"
+        stroke-linecap="round"
+        stroke-linejoin="round"
+        stroke-width="2"
+        viewbox="0 0 24 24"
+      >
+        <path d="M4 12h16m-6-6 6 6-6 6"></path>
+      </symbol>
+      <symbol
+        fill="none"
+        id="icon-width"
+        stroke="currentColor"
+        stroke-linecap="round"
+        stroke-linejoin="round"
+        stroke-width="2"
+        viewbox="0 0 24 24"
+      >
+        <path d="M4 8v8m16-8v8M4 12h16"></path>
+      </symbol>
+      <symbol
+        fill="none"
+        id="icon-up"
+        stroke="currentColor"
+        stroke-linecap="round"
+        stroke-linejoin="round"
+        stroke-width="2"
+        viewbox="0 0 24 24"
+      >
+        <path d="M12 20V4m-6 6 6-6 6 6"></path>
+      </symbol>
+      <symbol
+        fill="none"
+        id="icon-angle"
+        stroke="currentColor"
+        stroke-linecap="round"
+        stroke-linejoin="round"
+        stroke-width="2"
+        viewbox="0 0 24 24"
+      >
+        <path d="M4 18h16M5 18l9-12m-4 8 5 4"></path>
+      </symbol>
+      <symbol
+        fill="none"
+        id="icon-layers"
+        stroke="currentColor"
+        stroke-linecap="round"
+        stroke-linejoin="round"
+        stroke-width="2"
+        viewbox="0 0 24 24"
+      >
+        <path d="m12 2 9 5-9 5-9-5 9-5Zm-9 10 9 5 9-5M3 17l9 5 9-5"></path>
+      </symbol>
+      <symbol
+        fill="none"
+        id="icon-settings"
+        stroke="currentColor"
+        stroke-linecap="round"
+        stroke-linejoin="round"
+        stroke-width="2"
+        viewbox="0 0 24 24"
+      >
+        <circle cx="12" cy="12" r="3"></circle>
+        <path
+          d="M12 2v3m0 14v3M2 12h3m14 0h3M5 5l2 2m10 10 2 2M19 5l-2 2M7 17l-2 2"
+        ></path>
+      </symbol>
+      <symbol
+        fill="none"
+        id="icon-shield"
+        stroke="currentColor"
+        stroke-linecap="round"
+        stroke-linejoin="round"
+        stroke-width="2"
+        viewbox="0 0 24 24"
+      >
+        <path d="m12 2 9 4v6c0 5-4 8-9 10-5-2-9-5-9-10V6l9-4Z"></path>
+        <path d="m9 12 2 2 4-4"></path>
+      </symbol>
+      <symbol
+        fill="none"
+        id="icon-target"
+        stroke="currentColor"
+        stroke-linecap="round"
+        stroke-linejoin="round"
+        stroke-width="2"
+        viewbox="0 0 24 24"
+      >
+        <circle cx="12" cy="12" r="9"></circle>
+        <circle cx="12" cy="12" r="4"></circle>
+        <path d="M12 1v4m0 14v4M1 12h4m14 0h4"></path>
+      </symbol>
+      <symbol
+        fill="none"
+        id="icon-info"
+        stroke="currentColor"
+        stroke-linecap="round"
+        stroke-linejoin="round"
+        stroke-width="2"
+        viewbox="0 0 24 24"
+      >
+        <circle cx="12" cy="12" r="10"></circle>
+        <path d="M12 11v6m0-10v.2"></path>
+      </symbol>
+      <symbol
+        fill="none"
+        id="icon-bug"
+        stroke="currentColor"
+        stroke-linecap="round"
+        stroke-linejoin="round"
+        stroke-width="2"
+        viewbox="0 0 24 24"
+      >
+        <path
+          d="M8 9V6a4 4 0 0 1 8 0v3M5 11h14v5a7 7 0 0 1-14 0v-5ZM2 9l3 2m14 0 3-2M2 17l3-1m14 0 3 1M12 11v11"
+        ></path>
+      </symbol>
+      <symbol
+        fill="none"
+        id="icon-junction"
+        stroke="currentColor"
+        stroke-linecap="round"
+        stroke-linejoin="round"
+        stroke-width="2"
+        viewbox="0 0 24 24"
+      >
+        <path d="M12 21V9m0 0L6 3m6 6 6-6M6 3v6m12-6v6"></path>
+      </symbol>
+      <symbol
+        fill="none"
+        id="icon-menu"
+        stroke="currentColor"
+        stroke-linecap="round"
+        stroke-linejoin="round"
+        stroke-width="2"
+        viewbox="0 0 24 24"
+      >
+        <path d="M4 7h16M4 12h16M4 17h16"></path>
+      </symbol>
+      <symbol
+        fill="none"
+        id="icon-send"
+        stroke="currentColor"
+        stroke-linecap="round"
+        stroke-linejoin="round"
+        stroke-width="2"
+        viewbox="0 0 24 24"
+      >
+        <path d="m22 2-7 20-4-9-9-4 20-7ZM11 13 22 2"></path>
+      </symbol>
     </svg>
-
     <div class="app-layout">
-      <aside class="sidebar" id="sidebar" aria-label="Main navigation">
-        <div class="sidebar-header"><span class="sidebar-mark">◈</span><div class="sidebar-brand"><strong>RoboControl</strong><small>INF2004 · CSC19</small></div><button type="button" class="sidebar-toggle" id="sidebar-toggle" aria-label="Collapse sidebar" title="Collapse sidebar">☰</button></div>
+      <aside aria-label="Main navigation" class="sidebar" id="sidebar">
+        <div class="sidebar-header">
+          <span class="sidebar-mark"
+            ><svg aria-hidden="true" class="" viewbox="0 0 24 24">
+              <use href="#icon-robot"></use></svg
+          ></span>
+          <div class="sidebar-brand">
+            <strong>RoboControl</strong><small>INF2004 · CSC19</small>
+          </div>
+          <button
+            aria-label="Collapse sidebar"
+            class="sidebar-toggle"
+            id="sidebar-toggle"
+            title="Collapse sidebar"
+            type="button"
+          >
+            <svg aria-hidden="true" class="" viewbox="0 0 24 24">
+              <use href="#icon-menu"></use>
+            </svg>
+          </button>
+        </div>
         <p class="nav-group">ROBOT</p>
-        <nav class="nav-links" aria-label="Pages">
-          <button type="button" class="nav-link active" data-page="dashboard" aria-current="page"><span class="nav-symbol">▦</span><span class="nav-label">Dashboard</span></button>
-          <button type="button" class="nav-link" data-page="network"><span class="nav-symbol">◉</span><span class="nav-label">Network &amp; MQTT</span></button>
-          <button type="button" class="nav-link" data-page="diagnostics"><span class="nav-symbol">⌁</span><span class="nav-label">Mission History</span></button>
+        <nav aria-label="Pages" class="nav-links">
+          <button
+            aria-current="page"
+            class="nav-link active"
+            data-page="dashboard"
+            type="button"
+          >
+            <svg aria-hidden="true" class="nav-symbol" viewbox="0 0 24 24">
+              <use href="#icon-grid"></use></svg
+            ><span class="nav-label">Dashboard</span>
+          </button>
+          <button class="nav-link" data-page="network" type="button">
+            <svg aria-hidden="true" class="nav-symbol" viewbox="0 0 24 24">
+              <use href="#icon-wifi"></use></svg
+            ><span class="nav-label">Network &amp; MQTT</span>
+          </button>
+          <button class="nav-link" data-page="diagnostics" type="button">
+            <svg aria-hidden="true" class="nav-symbol" viewbox="0 0 24 24">
+              <use href="#icon-history"></use>
+            </svg>
+            <span class="nav-label">Mission History</span>
+          </button>
         </nav>
-        <div class="sidebar-footer"><span id="sidebar-status-dot" class="sidebar-dot"></span><span id="sidebar-status-text">Checking broker...</span></div>
+        <div class="sidebar-footer">
+          <span class="sidebar-dot" id="sidebar-status-dot"></span
+          ><span id="sidebar-status-text">Checking broker...</span>
+        </div>
       </aside>
       <div class="app-content">
-      <main class="shell">
-      <header class="topbar">
-        <div class="brand">
-          <div class="brand-icon"><svg viewBox="0 0 24 24" aria-hidden="true"><use href="#icon-bolt"></use></svg></div>
-          <div>
-            <p class="eyebrow">INF2004 · CSC19</p>
-            <h1>Robot Control &amp; Telemetry</h1>
-          </div>
-        </div>
-        <span id="connection" class="status">Connecting…</span>
-      </header>
-      <div id="page-dashboard" class="page-view"><div class="dashboard-grid">
-        <div class="left-stack">
-          <section class="panel mission-panel">
-            <h2><span class="section-icon" aria-hidden="true"><svg viewBox="0 0 24 24"><use href="#icon-flag"></use></svg></span> Mission control</h2>
-            <div class="mission-buttons">
-              <button
-                id="start-robot"
-                class="start-button"
-                type="button"
-                disabled
-              >
-                ▶ Start robot</button
-              ><button
-                id="stop-robot"
-                class="stop-button"
-                type="button"
-                disabled
-              >
-                ■ Stop robot
-              </button>
-            </div>
-            <p class="hint">
-              Mission display changes only when telemetry confirms the state.
-              STOP is a software request, not an emergency stop. Secure the
-              robot before testing.
-            </p>
-          </section>
-          <section class="panel speed-panel">
-            <div class="panel-heading">
-              
-<h2 class="speed-heading">
-  <span class="speed-icon" aria-hidden="true"><svg viewBox="0 0 24 24"><use href="#icon-gauge"></use></svg></span>
-  Speed control
-</h2>
-
-              <div class="speed-display">
-                <strong id="speed-value">0.35</strong> <span>m/s</span>
+        <main class="shell">
+          <header class="topbar">
+            <div class="brand">
+              <div class="brand-icon">
+                <svg aria-hidden="true" viewbox="0 0 24 24">
+                  <use href="#icon-robot"></use>
+                </svg>
               </div>
-            </div>
-            <input
-              id="speed-slider"
-              type="range"
-              min="0.10"
-              max="0.70"
-              step="0.05"
-              value="0.35"
-            />
-            <div class="range"><span>0.10</span><span>0.70 m/s</span></div>
-            <div class="speed-bottom">
-              <p class="hint">
-                Enabled only when the MQTT broker is connected. Sending does not
-                start the robot.
-              </p>
-              <button id="send-speed" type="button">➤ Send speed</button>
-            </div>
-          </section>
-          <section class="panel barcode-panel">
-            <h2><span class="section-icon amber" aria-hidden="true"><svg viewBox="0 0 24 24"><use href="#icon-barcode"></use></svg></span> Barcode turns</h2>
-            <p class="panel-subtitle">
-              One Code 39 character per action. Mappings are retained by MQTT.
-            </p>
-            <form id="route-form" class="fields">
-              <label
-                >Straight<input
-                  name="straight"
-                  maxlength="1"
-                  value="A"
-                  required
-              /></label>
-              <label
-                >Left<input name="left" maxlength="1" value="B" required
-              /></label>
-              <label
-                >Right<input name="right" maxlength="1" value="C" required
-              /></label>
-              <label
-                >U-turn<input name="uturn" maxlength="1" value="D" required
-              /></label>
-              <button type="submit">↑ Publish route settings</button>
-            </form>
-          </section>
-        </div>
-        <div class="center-stack">
-          <section class="metrics" aria-label="Robot summary">
-            <article>
-              <small class="metric-label"><span class="metric-icon" aria-hidden="true"><svg viewBox="0 0 24 24"><use href="#icon-gauge"></use></svg></span><span>Current speed</span></small>
-              <div><strong id="current-speed">--</strong><span> m/s</span></div>
-            </article>
-            <article>
-              <small class="metric-label"><span class="metric-icon" aria-hidden="true"><svg viewBox="0 0 24 24"><use href="#icon-flag"></use></svg></span><span>Mission</span></small><strong id="mission">--</strong
-              ><span id="timestamp">No data</span>
-            </article>
-            <article>
-              <small class="metric-label"><span class="metric-icon amber" aria-hidden="true"><svg viewBox="0 0 24 24"><use href="#icon-warning"></use></svg></span><span>Obstacle state</span></small
-              ><strong id="obstacle-state">--</strong
-              ><span id="obstacle-detail">Waiting</span>
-            </article>
-          </section>
-          <section class="panel obstacle-panel">
-            <h2>
-              <span class="section-icon amber" aria-hidden="true"><svg viewBox="0 0 24 24"><use href="#icon-warning"></use></svg></span> Obstacle detection
-            </h2>
-            <p class="panel-subtitle">
-              Straight-ahead distance and width from the robot's obstacle sensor
-            </p>
-            <div class="obstacle-content">
-              <div class="radar" aria-hidden="true">
-                <div class="radar-ring one"></div>
-                <div class="radar-ring two"></div>
-                <div class="radar-line"></div>
-                <div class="radar-dot"></div>
-              </div>
-              <article class="obstacle-reading">
-                <small>↑ Straight-ahead distance</small>
-                <div><strong id="distance">--</strong><span> cm</span></div>
-              </article>
-              <article class="obstacle-reading">
-                <small>↔ Est. obstacle width</small
-                ><strong id="obstacle-width">Unavailable</strong
-                ><span id="width-detail"
-                  >Updates after a valid obstacle scan.</span
-                >
-              </article>
-            </div>
-          </section>
-          <section class="panel ramp-panel">
-            <div class="ramp-header">
               <div>
-                <h2>
-                  <span class="section-icon" aria-hidden="true"><svg viewBox="0 0 24 24"><use href="#icon-mountain"></use></svg></span> Ramp detection &amp;
-                  height
-                </h2>
-                <p class="panel-subtitle">
-                  Live IMU readings and estimated terrain height
+                <p class="eyebrow">INF2004 · CSC19</p>
+                <h1>Robot Control &amp; Telemetry</h1>
+                <p class="brand-subtitle">
+                  Real-time control, sensing and mission status of the robot.
                 </p>
               </div>
-              <span id="ramp-status" class="ramp-badge"
-                >Waiting for telemetry</span
+            </div>
+            <span class="status" id="connection">Connecting…</span>
+          </header>
+          <div class="page-view" id="page-dashboard">
+            <section aria-label="Robot summary" class="metrics">
+              <article>
+                <small class="metric-label">
+                  <span aria-hidden="true" class="metric-icon">
+                    <svg viewbox="0 0 24 24">
+                      <use href="#icon-gauge"></use>
+                    </svg>
+                  </span>
+                  <span>Current speed</span>
+                </small>
+                <strong id="current-speed">--</strong>
+                <span>m/s</span>
+              </article>
+              <article>
+                <small class="metric-label">
+                  <span aria-hidden="true" class="metric-icon">
+                    <svg viewbox="0 0 24 24">
+                      <use href="#icon-flag"></use>
+                    </svg>
+                  </span>
+                  <span>Mission</span>
+                </small>
+                <strong id="mission">--</strong>
+                <span id="timestamp">No data</span>
+              </article>
+              <article>
+                <small class="metric-label">
+                  <span aria-hidden="true" class="metric-icon amber">
+                    <svg viewbox="0 0 24 24">
+                      <use href="#icon-warning"></use>
+                    </svg>
+                  </span>
+                  <span>Obstacle state</span>
+                </small>
+                <strong id="obstacle-state">--</strong>
+                <span id="obstacle-detail">Waiting</span>
+              </article>
+              <article class="system-metric">
+                <small class="metric-label"
+                  ><span class="metric-icon"
+                    ><svg viewbox="0 0 24 24">
+                      <use href="#icon-activity"></use></svg></span
+                  ><span>System Status</span></small
+                ><strong class="system-status-pill" id="system-status"
+                  >Idle</strong
+                >
+              </article>
+            </section>
+            <div class="dashboard-grid">
+              <div class="left-stack">
+                <section class="panel mission-panel">
+                  <h2>
+                    <span aria-hidden="true" class="section-icon"
+                      ><svg viewbox="0 0 24 24">
+                        <use href="#icon-flag"></use></svg
+                    ></span>
+                    Mission control
+                  </h2>
+                  <div class="mission-buttons">
+                    <button
+                      class="start-button"
+                      disabled=""
+                      id="start-robot"
+                      type="button"
+                    >
+                      Start robot</button
+                    ><button
+                      class="stop-button"
+                      disabled=""
+                      id="stop-robot"
+                      type="button"
+                    >
+                      Stop robot
+                    </button>
+                  </div>
+                  <p class="hint">
+                    Mission display changes only when telemetry confirms the
+                    state. STOP is a software request, not an emergency stop.
+                    Secure the robot before testing.
+                  </p>
+                </section>
+                <section class="panel speed-panel">
+                  <div class="panel-heading">
+                    <h2 class="speed-heading">
+                      <span aria-hidden="true" class="speed-icon"
+                        ><svg viewbox="0 0 24 24">
+                          <use href="#icon-gauge"></use></svg
+                      ></span>
+                      Speed control
+                    </h2>
+                    <div class="speed-display">
+                      <strong id="speed-value">0.15</strong> <span>m/s</span>
+                    </div>
+                  </div>
+                  <input
+                    id="speed-slider"
+                    max="0.70"
+                    min="0.10"
+                    step="0.05"
+                    type="range"
+                    value="0.15"
+                  />
+                  <div class="range">
+                    <span>0.10</span><span>0.70 m/s</span>
+                  </div>
+                  <div class="speed-bottom">
+                    <p class="hint">
+                      Enabled only when the MQTT broker is connected. Sending
+                      does not start the robot.
+                    </p>
+                    <button id="send-speed" type="button">Send speed</button>
+                  </div>
+                </section>
+                <section class="panel barcode-panel">
+                  <h2>
+                    <span aria-hidden="true" class="section-icon amber"
+                      ><svg aria-hidden="true" class="" viewbox="0 0 24 24">
+                        <use href="#icon-barcode"></use></svg
+                    ></span>
+                    Barcode turns
+                  </h2>
+                  <p class="panel-subtitle">
+                    One Code 39 character per action. Mappings are retained by
+                    MQTT.
+                  </p>
+                  <form class="fields" id="route-form">
+                    <label
+                      >Straight<input
+                        maxlength="1"
+                        name="straight"
+                        required=""
+                        value="A"
+                    /></label>
+                    <label
+                      >Left<input
+                        maxlength="1"
+                        name="left"
+                        required=""
+                        value="B"
+                    /></label>
+                    <label
+                      >Right<input
+                        maxlength="1"
+                        name="right"
+                        required=""
+                        value="C"
+                    /></label>
+                    <label
+                      >U-turn<input
+                        maxlength="1"
+                        name="uturn"
+                        required=""
+                        value="D"
+                    /></label>
+                    <button type="submit">Publish route settings</button>
+                  </form>
+                </section>
+              </div>
+              <div class="center-stack">
+                <section class="panel obstacle-panel">
+                  <h2>
+                    <span aria-hidden="true" class="section-icon amber"
+                      ><svg aria-hidden="true" class="" viewbox="0 0 24 24">
+                        <use href="#icon-box"></use></svg
+                    ></span>
+                    Obstacle detection
+                  </h2>
+                  <p class="panel-subtitle">
+                    Straight-ahead distance and width from the robot's obstacle
+                    sensor
+                  </p>
+                  <div class="obstacle-content">
+                    <div aria-hidden="true" class="radar">
+                      <div class="radar-ring one"></div>
+                      <div class="radar-ring two"></div>
+                      <div class="radar-line"></div>
+                      <div class="radar-dot"></div>
+                    </div>
+                    <article class="obstacle-reading">
+                      <small
+                        ><svg
+                          aria-hidden="true"
+                          class="inline-icon"
+                          viewbox="0 0 24 24"
+                        >
+                          <use href="#icon-arrow"></use></svg
+                        >Straight-ahead distance</small
+                      >
+                      <div>
+                        <strong id="distance">--</strong><span> cm</span>
+                      </div>
+                    </article>
+                    <article class="obstacle-reading">
+                      <small
+                        ><svg
+                          aria-hidden="true"
+                          class="inline-icon"
+                          viewbox="0 0 24 24"
+                        >
+                          <use href="#icon-width"></use></svg
+                        >Est. obstacle width</small
+                      ><strong id="obstacle-width">Unavailable</strong
+                      ><span id="width-detail"
+                        >Updates after a valid obstacle scan.</span
+                      >
+                    </article>
+                  </div>
+                </section>
+                <section class="panel ramp-panel">
+                  <div class="ramp-header">
+                    <div>
+                      <h2>
+                        <span aria-hidden="true" class="section-icon"
+                          ><svg aria-hidden="true" class="" viewbox="0 0 24 24">
+                            <use href="#icon-mountain"></use></svg
+                        ></span>
+                        Ramp detection &amp; height
+                      </h2>
+                      <p class="panel-subtitle">
+                        Live IMU readings and estimated terrain height
+                      </p>
+                    </div>
+                    <span class="ramp-badge" id="ramp-status"
+                      >Waiting for telemetry</span
+                    >
+                  </div>
+                  <div class="ramp-metrics">
+                    <article class="featured">
+                      <small
+                        ><svg
+                          aria-hidden="true"
+                          class="inline-icon"
+                          viewbox="0 0 24 24"
+                        >
+                          <use href="#icon-angle"></use></svg
+                        >Pitch angle</small
+                      ><strong id="ramp-pitch">--</strong
+                      ><span>degrees (°)</span>
+                    </article>
+                    <article class="featured">
+                      <small
+                        ><svg
+                          aria-hidden="true"
+                          class="inline-icon"
+                          viewbox="0 0 24 24"
+                        >
+                          <use href="#icon-up"></use></svg
+                        >Current terrain rise</small
+                      ><strong id="ramp-rise">--</strong><span>cm, est.</span>
+                    </article>
+                    <article>
+                      <small
+                        ><svg
+                          aria-hidden="true"
+                          class="inline-icon"
+                          viewbox="0 0 24 24"
+                        >
+                          <use href="#icon-activity"></use></svg
+                        >IMU motion</small
+                      ><strong id="ramp-direction">--</strong>
+                    </article>
+                    <article>
+                      <small
+                        ><svg
+                          aria-hidden="true"
+                          class="inline-icon"
+                          viewbox="0 0 24 24"
+                        >
+                          <use href="#icon-up"></use></svg
+                        >Peak height</small
+                      ><strong id="ramp-peak">--</strong>
+                    </article>
+                    <article>
+                      <small
+                        ><svg
+                          aria-hidden="true"
+                          class="inline-icon"
+                          viewbox="0 0 24 24"
+                        >
+                          <use href="#icon-mountain"></use></svg
+                        >Last hump</small
+                      ><strong id="ramp-height">--</strong>
+                    </article>
+                    <article>
+                      <small
+                        ><svg
+                          aria-hidden="true"
+                          class="inline-icon"
+                          viewbox="0 0 24 24"
+                        >
+                          <use href="#icon-layers"></use></svg
+                        >Completed humps</small
+                      ><strong id="ramp-count">--</strong>
+                    </article>
+                    <article>
+                      <small
+                        ><svg
+                          aria-hidden="true"
+                          class="inline-icon"
+                          viewbox="0 0 24 24"
+                        >
+                          <use href="#icon-up"></use></svg
+                        >Height measurement</small
+                      ><strong id="ramp-validity">Unknown</strong>
+                    </article>
+                    <article>
+                      <small
+                        ><svg
+                          aria-hidden="true"
+                          class="inline-icon"
+                          viewbox="0 0 24 24"
+                        >
+                          <use href="#icon-target"></use></svg
+                        >Height tracking</small
+                      ><strong id="ramp-tracking">Unknown</strong>
+                    </article>
+                    <article>
+                      <small
+                        ><svg
+                          aria-hidden="true"
+                          class="inline-icon"
+                          viewbox="0 0 24 24"
+                        >
+                          <use href="#icon-settings"></use></svg
+                        >IMU calibration</small
+                      ><strong id="ramp-calibration">Unknown</strong>
+                    </article>
+                    <article>
+                      <small
+                        ><svg
+                          aria-hidden="true"
+                          class="inline-icon"
+                          viewbox="0 0 24 24"
+                        >
+                          <use href="#icon-shield"></use></svg
+                        >Quality</small
+                      ><strong id="ramp-quality">Unknown</strong>
+                    </article>
+                  </div>
+                  <p class="hint ramp-note">
+                    Heights are estimates from IMU and motion data. A height is
+                    confirmed only when firmware reports it as valid.
+                  </p>
+                </section>
+              </div>
+              <section class="panel telemetry-panel">
+                <h2>
+                  <span aria-hidden="true" class="section-icon red"
+                    ><svg aria-hidden="true" class="" viewbox="0 0 24 24">
+                      <use href="#icon-activity"></use></svg
+                  ></span>
+                  Live telemetry
+                </h2>
+                <div class="barcode-card">
+                  <span
+                    ><svg
+                      aria-hidden="true"
+                      class="inline-icon"
+                      viewbox="0 0 24 24"
+                    >
+                      <use href="#icon-barcode"></use></svg
+                    >Last barcode</span
+                  ><strong id="barcode">--</strong>
+                </div>
+                <div class="barcode-card">
+                  <span
+                    ><svg
+                      aria-hidden="true"
+                      class="inline-icon"
+                      viewbox="0 0 24 24"
+                    >
+                      <use href="#icon-junction"></use></svg
+                    >Last junction</span
+                  ><strong id="junction-decision">--</strong>
+                </div>
+                <div class="route-active">
+                  <small
+                    ><svg
+                      aria-hidden="true"
+                      class="inline-icon"
+                      viewbox="0 0 24 24"
+                    >
+                      <use href="#icon-warning"></use></svg
+                    >Route table on robot</small
+                  ><strong id="route-active">--</strong>
+                </div>
+                <div class="details">
+                  <div>
+                    <span
+                      ><svg
+                        aria-hidden="true"
+                        class="inline-icon"
+                        viewbox="0 0 24 24"
+                      >
+                        <use href="#icon-info"></use></svg
+                      >Line error</span
+                    ><b id="line">--</b>
+                  </div>
+                  <div>
+                    <span
+                      ><svg
+                        aria-hidden="true"
+                        class="inline-icon"
+                        viewbox="0 0 24 24"
+                      >
+                        <use href="#icon-width"></use></svg
+                      >Distance travelled</span
+                    ><b id="travelled">--</b>
+                  </div>
+                  <div>
+                    <span
+                      ><svg
+                        aria-hidden="true"
+                        class="inline-icon"
+                        viewbox="0 0 24 24"
+                      >
+                        <use href="#icon-bug"></use></svg
+                      >Fault code</span
+                    ><b id="fault">--</b>
+                  </div>
+                </div>
+                <div
+                  aria-live="polite"
+                  class="collision-status"
+                  id="collision-status"
+                  role="status"
+                >
+                  <span
+                    ><svg
+                      aria-hidden="true"
+                      class="inline-icon"
+                      viewbox="0 0 24 24"
+                    >
+                      <use href="#icon-box"></use></svg
+                    >Pickup / collision</span
+                  ><strong id="collision-state">Waiting for telemetry</strong>
+                </div>
+                <p class="hint">
+                  “Avoiding” is the confirmed mission state, not a specific
+                  manoeuvre.
+                </p>
+              </section>
+            </div>
+          </div>
+          <section class="page-view" hidden="" id="page-network">
+            <div class="page-intro">
+              <div>
+                <p class="eyebrow">CONNECTIVITY</p>
+                <h1>Network &amp; MQTT</h1>
+                <p>
+                  Connection information from the running Flask server and
+                  received robot telemetry.
+                </p>
+              </div>
+              <button
+                class="secondary-button"
+                id="refresh-network"
+                type="button"
               >
+                Refresh now
+              </button>
             </div>
-            <div class="ramp-metrics">
-              <article class="featured">
-                <small>◉ Pitch angle</small><strong id="ramp-pitch">--</strong
-                ><span>degrees (°)</span>
-              </article>
-              <article class="featured">
-                <small>↕ Current terrain rise</small
-                ><strong id="ramp-rise">--</strong><span>cm, est.</span>
-              </article>
-              <article>
-                <small>⌁ IMU motion</small
-                ><strong id="ramp-direction">--</strong>
-              </article>
-              <article>
-                <small>⌃ Peak height</small><strong id="ramp-peak">--</strong>
-              </article>
-              <article>
-                <small>⌁ Last hump</small><strong id="ramp-height">--</strong>
-              </article>
-              <article>
-                <small>▱ Completed humps</small
-                ><strong id="ramp-count">--</strong>
-              </article>
-              <article>
-                <small>↕ Height measurement</small
-                ><strong id="ramp-validity">Unknown</strong>
-              </article>
-              <article>
-                <small>◎ Height tracking</small
-                ><strong id="ramp-tracking">Unknown</strong>
-              </article>
-              <article>
-                <small>✓ IMU calibration</small
-                ><strong id="ramp-calibration">Unknown</strong>
-              </article>
-              <article>
-                <small>◇ Quality</small
-                ><strong id="ramp-quality">Unknown</strong>
-              </article>
+            <div class="network-grid">
+              <section class="panel network-card">
+                <h2>MQTT broker</h2>
+                <div class="network-list">
+                  <div>
+                    <span>Connection</span
+                    ><strong id="net-broker-status">Checking...</strong>
+                  </div>
+                  <div>
+                    <span>Broker host</span
+                    ><strong id="net-broker-host">--</strong>
+                  </div>
+                  <div>
+                    <span>Broker port</span
+                    ><strong id="net-broker-port">--</strong>
+                  </div>
+                  <div>
+                    <span>Dashboard client ID</span
+                    ><strong id="net-client-id">--</strong>
+                  </div>
+                  <div>
+                    <span>Last connection error</span
+                    ><strong id="net-error">--</strong>
+                  </div>
+                </div>
+              </section>
+              <section class="panel network-card">
+                <h2>Robot WiFi</h2>
+                <p class="panel-subtitle">
+                  Reported by the robot, not inferred from your laptop.
+                </p>
+                <div class="network-list">
+                  <div>
+                    <span>Connected SSID</span
+                    ><strong id="net-robot-ssid">Not reported</strong>
+                  </div>
+                  <div>
+                    <span>Robot IP address</span
+                    ><strong id="net-robot-ip">Not reported</strong>
+                  </div>
+                  <div>
+                    <span>WiFi signal (RSSI)</span
+                    ><strong id="net-robot-rssi">Not reported</strong>
+                  </div>
+                </div>
+                <p class="network-note">
+                  The current telemetry protocol does not provide these fields.
+                  They will remain unavailable until the firmware publishes
+                  them.
+                </p>
+              </section>
+              <section class="panel network-card">
+                <h2>Telemetry health</h2>
+                <div class="network-list">
+                  <div>
+                    <span>Robot telemetry</span
+                    ><strong id="net-telemetry-status">Checking...</strong>
+                  </div>
+                  <div>
+                    <span>Last packet received</span
+                    ><strong id="net-last-received">--</strong>
+                  </div>
+                  <div>
+                    <span>Age of last packet</span
+                    ><strong id="net-telemetry-age">--</strong>
+                  </div>
+                  <div>
+                    <span>Packets received since server start</span
+                    ><strong id="net-packet-count">--</strong>
+                  </div>
+                  <div>
+                    <span>Last MQTT topic received</span
+                    ><strong id="net-last-topic">--</strong>
+                  </div>
+                </div>
+              </section>
+              <section class="panel network-card">
+                <h2>MQTT topics</h2>
+                <p class="panel-subtitle">
+                  Configured application topics. These are not discovered from
+                  the broker.
+                </p>
+                <div class="topic-list" id="net-topics">
+                  <span>Loading...</span>
+                </div>
+              </section>
             </div>
-            <p class="hint ramp-note">
-              Heights are estimates from IMU and motion data. A height is
-              confirmed only when firmware reports it as valid.
-            </p>
+            <p class="network-error" id="network-error" role="status"></p>
           </section>
-        </div>
-        <section class="panel telemetry-panel">
-          <h2><span class="section-icon red" aria-hidden="true"><svg viewBox="0 0 24 24"><use href="#icon-activity"></use></svg></span> Live telemetry</h2>
-          <div class="barcode-card">
-            <span>▥ Last barcode</span><strong id="barcode">--</strong>
-          </div>
-          <div class="barcode-card">
-            <span>⚑ Last junction</span
-            ><strong id="junction-decision">--</strong>
-          </div>
-          <div class="route-active">
-            <small>⚠ Route table on robot</small
-            ><strong id="route-active">--</strong>
-          </div>
-          <div class="details">
-            <div><span>◎ Line error</span><b id="line">--</b></div>
-            <div><span>↔ Distance travelled</span><b id="travelled">--</b></div>
-            <div><span>⚠ Fault code</span><b id="fault">--</b></div>
-          </div>
-          <div
-            class="collision-status"
-            id="collision-status"
-            role="status"
-            aria-live="polite"
-          >
-            <span>◇ Pickup / collision</span
-            ><strong id="collision-state">Waiting for telemetry</strong>
-          </div>
-          <p class="hint">
-            “Avoiding” is the confirmed mission state, not a specific manoeuvre.
-          </p>
-        </section>
-      </div>
-      </div>
-      <section id="page-network" class="page-view" hidden>
-        <div class="page-intro"><div><p class="eyebrow">CONNECTIVITY</p><h1>Network &amp; MQTT</h1><p>Connection information from the running Flask server and received robot telemetry.</p></div><button type="button" id="refresh-network" class="secondary-button">Refresh now</button></div>
-        <div class="network-grid">
-          <section class="panel network-card"><h2>MQTT broker</h2><div class="network-list">
-            <div><span>Connection</span><strong id="net-broker-status">Checking...</strong></div>
-            <div><span>Broker host</span><strong id="net-broker-host">--</strong></div>
-            <div><span>Broker port</span><strong id="net-broker-port">--</strong></div>
-            <div><span>Dashboard client ID</span><strong id="net-client-id">--</strong></div>
-            <div><span>Last connection error</span><strong id="net-error">--</strong></div>
-          </div></section>
-          <section class="panel network-card"><h2>Robot WiFi</h2><p class="panel-subtitle">Reported by the robot, not inferred from your laptop.</p><div class="network-list">
-            <div><span>Connected SSID</span><strong id="net-robot-ssid">Not reported</strong></div>
-            <div><span>Robot IP address</span><strong id="net-robot-ip">Not reported</strong></div>
-            <div><span>WiFi signal (RSSI)</span><strong id="net-robot-rssi">Not reported</strong></div>
-          </div><p class="network-note">The current telemetry protocol does not provide these fields. They will remain unavailable until the firmware publishes them.</p></section>
-          <section class="panel network-card"><h2>Telemetry health</h2><div class="network-list">
-            <div><span>Robot telemetry</span><strong id="net-telemetry-status">Checking...</strong></div>
-            <div><span>Last packet received</span><strong id="net-last-received">--</strong></div>
-            <div><span>Age of last packet</span><strong id="net-telemetry-age">--</strong></div>
-            <div><span>Packets received since server start</span><strong id="net-packet-count">--</strong></div>
-            <div><span>Last MQTT topic received</span><strong id="net-last-topic">--</strong></div>
-          </div></section>
-          <section class="panel network-card"><h2>MQTT topics</h2><p class="panel-subtitle">Configured application topics. These are not discovered from the broker.</p><div id="net-topics" class="topic-list"><span>Loading...</span></div></section>
-        </div>
-        <p id="network-error" class="network-error" role="status"></p>
-      </section>
-      <section id="page-diagnostics" class="page-view" hidden>
-        <div id="demo-banner" class="demo-banner" hidden><span>LOCAL SIMULATION MODE · Synthetic data, not robot telemetry</span><button type="button" id="demo-trigger" class="secondary-button">▶ Simulate a mission</button></div>
-        <div class="page-intro"><div><p class="eyebrow">WIRELESS MISSION RECORD</p><h1>Mission History</h1><p>Events captured from real MQTT telemetry. Unknown readings remain unavailable.</p></div><button type="button" id="download-mission" class="secondary-button" disabled>Download JSON</button></div>
-        <section class="panel mission-run-panel">
-          <div class="mission-run-heading"><div><h2>Recorded missions</h2><p class="panel-subtitle">Select a run to review its complete event history. Most recent first.</p></div><span id="mh-run-count" class="mission-run-count">0 runs</span></div>
-          <div class="history-toolbar"><input id="mh-search" type="search" placeholder="Search runs by number or date" aria-label="Search recorded missions" /></div>
-          <div id="mh-runs" class="mission-run-list">No missions recorded yet.</div>
-        </section>
-        <div class="mission-stats">
-          <div class="panel mission-stat"><small>ROBOT RUN STATE</small><strong id="mh-status">No mission recorded</strong></div>
-          <div class="panel mission-stat"><small>ELAPSED TIME</small><strong id="mh-duration">--</strong></div>
-          <div class="panel mission-stat"><small>INITIAL SPEED</small><strong id="mh-speed">--</strong></div>
-          <div class="panel mission-stat"><small>FINAL DISTANCE</small><strong id="mh-distance">--</strong></div>
-          <div class="panel mission-stat"><small>BARCODE EVENTS</small><strong id="mh-barcodes">--</strong></div>
-          <div class="panel mission-stat"><small>RAMP PEAK HEIGHT</small><strong id="mh-peak">--</strong></div>
-          <div class="panel mission-stat"><small>RAMP COUNT</small><strong id="mh-humps">--</strong></div>
-          <div class="panel mission-stat"><small>AVOIDANCE ENTRIES</small><strong id="mh-obstacles">--</strong></div>
-        </div>
-        <div class="network-grid mission-history-grid">
-          <section class="panel network-card"><h2>Mission event timeline</h2><p class="panel-subtitle">Only detected state changes and events, not every telemetry packet.</p><div class="history-filters" id="mh-filters"><button type="button" class="active" data-event-filter="ALL">All</button><button type="button" data-event-filter="MISSION">Mission</button><button type="button" data-event-filter="BARCODE">Barcode</button><button type="button" data-event-filter="RAMP">Ramp</button><button type="button" data-event-filter="OBSTACLE">Obstacle</button><button type="button" data-event-filter="SPEED">Speed</button></div><div id="mh-events" class="event-list">No mission events recorded.</div></section>
-          <section class="panel network-card"><h2>Barcode sequence</h2><p class="panel-subtitle">Reported barcode detections, with timestamps and actions when available.</p><div id="mh-barcode-list" class="event-list">No barcode events recorded.</div></section>
-          <section class="panel network-card"><h2>Connection diagnostics</h2><div class="network-list"><div><span>Broker status</span><strong id="diag-broker">--</strong></div><div><span>Telemetry</span><strong id="diag-telemetry">--</strong></div><div><span>Last error</span><strong id="diag-error">--</strong></div></div></section>
-          <section class="panel network-card"><h2>Recent MQTT events</h2><div id="diag-events" class="event-list">Waiting for events...</div></section>
-        </div>
-        <p class="network-note">Mission records are saved locally in SQLite and survive Flask restarts. Event accuracy depends on actual firmware telemetry fields.</p>
-        <p class="network-error" id="mh-error" role="status"></p>
-      </section>
-      <p id="feedback" role="status" aria-live="polite"></p>
-    </main>
+          <section class="page-view" hidden="" id="page-diagnostics">
+            <div class="page-intro">
+              <div>
+                <p class="eyebrow">WIRELESS MISSION RECORD</p>
+                <h1>Mission History</h1>
+                <p>
+                  Mission events recorded from robot MQTT telemetry. Unavailable
+                  readings are shown as unknown.
+                </p>
+              </div>
+              <button
+                class="secondary-button"
+                disabled=""
+                id="download-mission"
+                type="button"
+              >
+                Download JSON
+              </button>
+            </div>
+            <section class="panel mission-run-panel">
+              <div class="mission-run-heading">
+                <div>
+                  <h2>Recorded missions</h2>
+                  <p class="panel-subtitle">
+                    Select a run to review its complete event history. Most
+                    recent first.
+                  </p>
+                </div>
+                <span class="mission-run-count" id="mh-run-count">0 runs</span>
+              </div>
+              <div class="mission-run-list" id="mh-runs">
+                No missions recorded yet.
+              </div>
+            </section>
+            <div class="mission-stats">
+              <div class="panel mission-stat">
+                <small>MISSION STATUS</small
+                ><strong id="mh-status">No mission recorded</strong>
+              </div>
+              <div class="panel mission-stat">
+                <small>ELAPSED TIME</small><strong id="mh-duration">--</strong>
+              </div>
+              <div class="panel mission-stat">
+                <small>INITIAL SPEED</small><strong id="mh-speed">--</strong>
+              </div>
+              <div class="panel mission-stat">
+                <small>FINAL DISTANCE</small
+                ><strong id="mh-distance">--</strong>
+              </div>
+              <div class="panel mission-stat">
+                <small>BARCODE EVENTS</small
+                ><strong id="mh-barcodes">--</strong>
+              </div>
+              <div class="panel mission-stat">
+                <small>RAMP PEAK HEIGHT</small><strong id="mh-peak">--</strong>
+              </div>
+              <div class="panel mission-stat">
+                <small>RAMP COUNT</small><strong id="mh-humps">--</strong>
+              </div>
+              <div class="panel mission-stat">
+                <small>AVOIDANCE ENTRIES</small
+                ><strong id="mh-obstacles">--</strong>
+              </div>
+            </div>
+            <div class="network-grid mission-history-grid">
+              <section class="panel network-card">
+                <h2>Mission event timeline</h2>
+                <p class="panel-subtitle">
+                  Only detected state changes and events, not every telemetry
+                  packet.
+                </p>
+                <div class="event-list" id="mh-events">
+                  No mission events recorded.
+                </div>
+              </section>
+              <section class="panel network-card">
+                <h2>Barcode sequence</h2>
+                <p class="panel-subtitle">
+                  Reported barcode detections, with timestamps and actions when
+                  available.
+                </p>
+                <div class="event-list" id="mh-barcode-list">
+                  No barcode events recorded.
+                </div>
+              </section>
+              <section class="panel network-card">
+                <h2>Connection diagnostics</h2>
+                <div class="network-list">
+                  <div>
+                    <span>Broker status</span
+                    ><strong id="diag-broker">--</strong>
+                  </div>
+                  <div>
+                    <span>Telemetry</span
+                    ><strong id="diag-telemetry">--</strong>
+                  </div>
+                  <div>
+                    <span>Last error</span><strong id="diag-error">--</strong>
+                  </div>
+                </div>
+              </section>
+            </div>
+            <p class="network-note">
+              Mission records are saved locally in SQLite and survive Flask
+              restarts. Event accuracy depends on actual firmware telemetry
+              fields.
+            </p>
+            <p class="network-error" id="mh-error" role="status"></p>
+          </section>
+          <p aria-live="polite" id="feedback" role="status"></p>
+        </main>
       </div>
     </div>
     <script src="/app.js"></script>

@@ -51,7 +51,7 @@ typedef enum
     MOTION_MOVE_DISTANCE
 } motion_command_type_t;
 
-#define BARCODE_TEXT_MAX    (8U)
+#define BARCODE_TEXT_MAX (8U)
 
 /*
  * What to do at the next junction.  Chosen by subsystem 3 from the
@@ -60,102 +60,102 @@ typedef enum
  */
 typedef enum
 {
-    BARCODE_CMD_NONE  = 0,      /* Continue straight through.          */
-    BARCODE_CMD_LEFT  = 1,
+    BARCODE_CMD_NONE = 0, /* Continue straight through.          */
+    BARCODE_CMD_LEFT = 1,
     BARCODE_CMD_RIGHT = 2,
     BARCODE_CMD_UTURN = 3
 } barcode_command_t;
 
 typedef struct
 {
-    float       line_error;
-    bool        b_line_detected;
-    bool        b_junction;
-    bool        b_barcode_valid;
-    bool        b_barcode_scanning;
-    bool        b_barcode_reversed; /* read right-to-left               */
-    uint16_t    barcode;            /* decoded character (ASCII) when
-                                       b_barcode_valid                   */
-    char        barcode_text[BARCODE_TEXT_MAX + 1U];
-    uint16_t    junction_action;    /* barcode_command_t when b_junction */
-    char        junction_char;      /* character used, '\0' if none     */
+    float line_error;
+    bool b_line_detected;
+    bool b_junction;
+    bool b_barcode_valid;
+    bool b_barcode_scanning;
+    bool b_barcode_reversed; /* read right-to-left               */
+    uint16_t barcode;        /* decoded character (ASCII) when
+                                b_barcode_valid                   */
+    char barcode_text[BARCODE_TEXT_MAX + 1U];
+    uint16_t junction_action; /* barcode_command_t when b_junction */
+    char junction_char;       /* character used, '\0' if none     */
 } line_event_t;
 
 typedef struct
 {
-    int32_t     left_ticks;
-    int32_t     right_ticks;
-    float       left_speed_m_s;
-    float       right_speed_m_s;
-    float       distance_m;
-    bool        turn_complete;
-    uint32_t    turn_id;
+    int32_t left_ticks;
+    int32_t right_ticks;
+    float left_speed_m_s;
+    float right_speed_m_s;
+    float distance_m;
+    bool turn_complete;
+    uint32_t turn_id;
 } motion_event_t;
 
 typedef enum
 {
-    MOTION_STATIONARY   = 0,    /* Quiet IMU; cannot prove zero speed. */
+    MOTION_STATIONARY = 0, /* Quiet IMU; cannot prove zero speed. */
     MOTION_ACCELERATING = 1,
-    MOTION_TURNING      = 2,
-    MOTION_CLIMBING     = 3,
-    MOTION_DESCENDING   = 4,
-    MOTION_IMPACT       = 5,
-    MOTION_UNKNOWN     = 6     /* Calibrating or invalid sample. */
+    MOTION_TURNING = 2,
+    MOTION_CLIMBING = 3,
+    MOTION_DESCENDING = 4,
+    MOTION_IMPACT = 5,
+    MOTION_UNKNOWN = 6 /* Calibrating or invalid sample. */
 } motion_class_t;
 
 typedef struct
 {
-    float           acceleration_x_g;
-    float           acceleration_y_g;
-    float           acceleration_z_g;
-    float           turn_rate_dps;
-    float           estimated_hump_height_m;
-    bool            b_shock_detected;
-    bool            b_pickup_detected;
-    bool            b_sensor_valid;
-    motion_class_t  motion_state;
-    float           tilt_roll_deg;
-    float           tilt_pitch_deg;
-    bool            b_calibrated;
-    bool            b_tilt_valid;
-    bool            b_timing_gap;
-    uint32_t        sample_interval_ms;
-    uint32_t        acquisition_us;
-    bool            b_hump_active;
-    bool            b_hump_complete;
-    bool            b_hump_height_valid;
-    bool            b_hump_rejected;
-    bool            b_saturated;
-    float           vertical_acceleration_g;
-    uint32_t        hump_count;
-    uint32_t        shock_count;
-    uint32_t        rejected_hump_count;
-    float           magnetic_heading_deg;
-    bool            b_heading_valid;
-    bool            b_turn_rate_valid;
-    bool            b_magnetic_disturbed;
-    bool            b_has_gyro;
-    bool            b_turn_rate_estimated;
-    bool            b_height_approximate;
-    bool            b_mag_calibrated;
-    float           terrain_rise_m;
-    float           terrain_peak_m;
-    bool            b_height_tracking_valid;
-    bool            b_height_uses_odometry;
-    bool            b_height_gap_pending;
-    uint32_t        height_gap_count;
+    float acceleration_x_g;
+    float acceleration_y_g;
+    float acceleration_z_g;
+    float turn_rate_dps;
+    float estimated_hump_height_m;
+    bool b_shock_detected;
+    bool b_pickup_detected;
+    bool b_sensor_valid;
+    motion_class_t motion_state;
+    float tilt_roll_deg;
+    float tilt_pitch_deg;
+    bool b_calibrated;
+    bool b_tilt_valid;
+    bool b_timing_gap;
+    uint32_t sample_interval_ms;
+    uint32_t acquisition_us;
+    bool b_hump_active;
+    bool b_hump_complete;
+    bool b_hump_height_valid;
+    bool b_hump_rejected;
+    bool b_saturated;
+    float vertical_acceleration_g;
+    uint32_t hump_count;
+    uint32_t shock_count;
+    uint32_t rejected_hump_count;
+    float magnetic_heading_deg;
+    bool b_heading_valid;
+    bool b_turn_rate_valid;
+    bool b_magnetic_disturbed;
+    bool b_has_gyro;
+    bool b_turn_rate_estimated;
+    bool b_height_approximate;
+    bool b_mag_calibrated;
+    float terrain_rise_m;
+    float terrain_peak_m;
+    bool b_height_tracking_valid;
+    bool b_height_uses_odometry;
+    bool b_height_gap_pending;
+    uint32_t height_gap_count;
     /* Last interrupted crossing, not a valid or completed measurement. */
-    bool            b_height_interrupted_available;
-    float           interrupted_rise_m;
-    float           interrupted_peak_m;
-    uint32_t        height_interrupted_reason;
+    bool b_height_interrupted_available;
+    float interrupted_rise_m;
+    float interrupted_peak_m;
+    uint32_t height_interrupted_reason;
 } imu_event_t;
 
 /* Scanner's decision for the controller (stage 4 of Buddy 5). */
 typedef enum
 {
     OBSTACLE_ACTION_CONTINUE = 0,
-    OBSTACLE_ACTION_STOP,           /* in the path: stop, profile follows */
+    OBSTACLE_ACTION_STOP, /* in the path: stop, profile follows */
     OBSTACLE_ACTION_TURN_LEFT,
     OBSTACLE_ACTION_TURN_RIGHT,
     OBSTACLE_ACTION_REVERSE_RETRY
@@ -163,91 +163,93 @@ typedef enum
 
 typedef struct
 {
-    bool        b_detected;
-    bool        b_scan_complete;
+    bool b_detected;
+    bool b_scan_complete;
     obstacle_action_t action;
-    uint32_t    scan_start_ms;      /* board_millis() when the scan began */
-    float       bypass_offset_cm;   /* sideways move for a turn action */
-    float       center_distance_cm;
-    float       estimated_width_cm;
-    float       left_clearance_cm;
-    float       right_clearance_cm;
-    float       closest_distance_cm;
-    float       center_angle_deg;   /* from straight ahead, - left */
-    float       lateral_offset_cm;  /* sideways offset, - left */
-    int8_t      bypass_direction;   /* -1 left, +1 right, 0 none */
-    bool        b_side_reading;     /* one reading toward the obstacle's
-                                       side while going round it; only
-                                       side_distance_cm is set */
-    float       side_distance_cm;
+    uint32_t scan_start_ms; /* board_millis() when the scan began */
+    float bypass_offset_cm; /* sideways move for a turn action */
+    float center_distance_cm;
+    float estimated_width_cm;
+    float left_clearance_cm;
+    float right_clearance_cm;
+    float closest_distance_cm;
+    float center_angle_deg;  /* from straight ahead, - left */
+    float lateral_offset_cm; /* sideways offset, - left */
+    int8_t bypass_direction; /* -1 left, +1 right, 0 none */
+    bool b_side_reading;     /* one reading toward the obstacle's
+                                side while going round it; only
+                                side_distance_cm is set */
+    float side_distance_cm;
 } obstacle_event_t;
 
 typedef struct
 {
     system_event_type_t type;
-    uint32_t            timestamp_ms;
-    uint32_t            fault_code; /* SYSTEM_EVENT_FAULT source/reason */
+    uint32_t timestamp_ms;
+    uint32_t fault_code; /* SYSTEM_EVENT_FAULT source/reason */
     union
     {
-        line_event_t        line;
-        motion_event_t      motion;
-        imu_event_t         imu;
-        obstacle_event_t    obstacle;
+        line_event_t line;
+        motion_event_t motion;
+        imu_event_t imu;
+        obstacle_event_t obstacle;
     } data;
 } system_event_t;
 
 typedef struct
 {
-    control_command_type_t  type;
-    float                   value;
+    control_command_type_t type;
+    float value;
 } control_command_t;
 
 typedef struct
 {
-    motion_command_type_t   type;
-    float                   left_speed;
-    float                   right_speed;
-    float                   turn_angle_deg;
-    uint32_t                turn_id;
-    float                   target_distance_m;  /* for MOTION_MOVE_DISTANCE */
+    motion_command_type_t type;
+    float left_speed;
+    float right_speed;
+    float turn_angle_deg;
+    uint32_t turn_id;
+    float target_distance_m; /* for MOTION_MOVE_DISTANCE */
 } motion_command_t;
 
 typedef struct
 {
-    uint32_t        timestamp_ms;
+    uint32_t timestamp_ms;
     mission_state_t mission_state;
-    float           speed_m_s;
-    float           line_error;
-    float           distance_m;
-    float           hump_height_m;
-    float           obstacle_distance_cm;
-    uint32_t        last_barcode;
-    uint32_t        fault_code;
-    uint8_t         fault_mask;     /* 5-bit snapshot, fault_mask.h */
-    bool            b_start_pending;    /* START countdown running      */
-    bool            b_imu_ready;        /* controller's IMU health gate */
-    bool            b_simulation;       /* SIM=1 build: motors not driven */
-    char            last_junction_char;   /* barcode used at last junction */
-    uint8_t         last_junction_action; /* barcode_command_t chosen      */
-    uint8_t         junction_count;       /* junctions acted on, wraps     */
-    imu_event_t     imu;
-    bool            b_height_trace;
-    uint32_t        trace_sequence;
-    uint32_t        trace_dropped;
-    uint32_t        imu_ms;
-    uint32_t        motion_interval_ms;
-    float           motion_delta_m;
-    motion_event_t  motion;
+    float speed_m_s;
+    float line_error;
+    float distance_m;
+    float hump_height_m;
+    float obstacle_distance_cm;
+    float obstacle_width_cm;
+    bool obstacle_width_valid;
+    uint32_t last_barcode;
+    uint32_t fault_code;
+    uint8_t fault_mask;           /* 5-bit snapshot, fault_mask.h */
+    bool b_start_pending;         /* START countdown running      */
+    bool b_imu_ready;             /* controller's IMU health gate */
+    bool b_simulation;            /* SIM=1 build: motors not driven */
+    char last_junction_char;      /* barcode used at last junction */
+    uint8_t last_junction_action; /* barcode_command_t chosen      */
+    uint8_t junction_count;       /* junctions acted on, wraps     */
+    imu_event_t imu;
+    bool b_height_trace;
+    uint32_t trace_sequence;
+    uint32_t trace_dropped;
+    uint32_t imu_ms;
+    uint32_t motion_interval_ms;
+    float motion_delta_m;
+    motion_event_t motion;
 } telemetry_message_t;
 
 /* System status bits (event flag owned by the controller, IF-05). */
-#define SYSTEM_BIT_READY        (1UL << 0)
-#define SYSTEM_BIT_MISSION_RUN  (1UL << 1)
-#define SYSTEM_BIT_OBSTACLE     (1UL << 2)
-#define SYSTEM_BIT_FAULT        (1UL << 3)
-#define SYSTEM_BIT_WIFI_UP      (1UL << 4)
-#define SYSTEM_BIT_JUNCTION_BUSY (1UL << 5) /* controller still acting on
-                                               the last junction: S3 must
+#define SYSTEM_BIT_READY (1UL << 0)
+#define SYSTEM_BIT_MISSION_RUN (1UL << 1)
+#define SYSTEM_BIT_OBSTACLE (1UL << 2)
+#define SYSTEM_BIT_FAULT (1UL << 3)
+#define SYSTEM_BIT_WIFI_UP (1UL << 4)
+#define SYSTEM_BIT_JUNCTION_BUSY (1UL << 5) /* controller still acting on \
+                                               the last junction: S3 must \
                                                not consume a waypoint */
 
 #endif /* ROBOT_TYPES_H */
