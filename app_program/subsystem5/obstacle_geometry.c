@@ -21,9 +21,9 @@
 #define OBSTACLE_STOP_CM        (20.0f)
 #define OBSTACLE_STOP_READINGS  (3U)
 
-/* Readings up to this far behind the nearest one are the same obstacle,
- * so a reading that wobbles by a cm cannot split it in two. */
-#define OBSTACLE_BAND_CM        (10.0f)
+/* Keep the cluster close to the nearest return. A wide band pulls in
+ * oblique/background echoes and makes a narrow obstacle look much wider. */
+#define OBSTACLE_BAND_CM        (3.0f)
 
 /* The car's path: half its 15 cm width plus a 4 cm clearance each side. */
 #define OBSTACLE_PATH_HALF_CM   (11.5f)
@@ -57,19 +57,6 @@ static float
 obstacle_lateral_cm (float relative_deg, float distance_cm)
 {
     return (distance_cm * rmath_sinf(relative_deg * RMATH_DEG_TO_RAD));
-}
-
-/*!
- * @brief One half of the width: along the face from the perpendicular foot
- *        to an edge, by Pythagoras: edge² = perpendicular² + along².
- */
-static float
-obstacle_leg_cm (float edge_cm, float perpendicular_cm)
-{
-    float const along_sq = (edge_cm * edge_cm) -
-                           (perpendicular_cm * perpendicular_cm);
-
-    return ((along_sq > 0.0f) ? rmath_sqrtf(along_sq) : 0.0f);
 }
 
 /*!
@@ -295,9 +282,28 @@ obstacle_profile_build (obstacle_scan_t const * p_scan,
     p_profile->lateral_offset_cm  =
         obstacle_lateral_cm(p_profile->center_angle_deg,
                             p_profile->closest_cm);
-    p_profile->width_cm           =
-        obstacle_leg_cm(p_scan->points[last].distance_cm, p_profile->closest_cm) +
-        obstacle_leg_cm(p_scan->points[first].distance_cm, p_profile->closest_cm);
+    {
+        /* Project the beam-corrected edge angles onto the face, assumed
+         * perpendicular to the profile centre. Correct the closest range
+         * for its offset from that centre before using the tangent span. */
+        float const center_angle_rad =
+            p_profile->center_angle_deg * RMATH_DEG_TO_RAD;
+        float const closest_from_center_rad =
+            (p_profile->closest_angle_deg - p_profile->center_angle_deg) *
+            RMATH_DEG_TO_RAD;
+        float const face_distance_cm = p_profile->closest_cm *
+                                      rmath_cosf(closest_from_center_rad);
+        float const left_edge_rad =
+            (p_profile->left_edge_deg - p_profile->center_angle_deg) *
+            RMATH_DEG_TO_RAD;
+        float const right_edge_rad =
+            (p_profile->right_edge_deg - p_profile->center_angle_deg) *
+            RMATH_DEG_TO_RAD;
+
+        p_profile->width_cm = face_distance_cm *
+                              (rmath_tanf(right_edge_rad) -
+                               rmath_tanf(left_edge_rad));
+    }
     p_profile->b_left_edge_out    = (0U == first);
     p_profile->b_right_edge_out   = ((last + 1U) == p_scan->count);
     p_profile->left_clearance_cm  = p_profile->b_left_edge_out ? 0.0f :
