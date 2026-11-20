@@ -60,6 +60,8 @@ typedef struct
     bool  b_right_edge_out;     /* ... right edge: beyond it is unseen  */
     float left_edge_cm;         /* distance to left edge (for offsets)   */
     float right_edge_cm;        /* distance to right edge (for offsets)  */
+    uint32_t left_angle_deg;    /* servo angle of the left edge reading  */
+    uint32_t right_angle_deg;   /* servo angle of the right edge reading */
 } obstacle_profile_t;
 
 /* Stage 4: what to do about it. */

@@ -237,7 +237,11 @@ subsystem5_test (void)
 
     /* ---- Stage 3: the profile ------------------------------------------ */
 
-    s5_test_sweep(&scan, 80U, 100U, S5_TEST_NEAR_CM);
+    obstacle_scan_add(&scan, 80U, 24.37f);
+    obstacle_scan_add(&scan, 85U, 24.09f);
+    obstacle_scan_add(&scan, 90U, 24.0f);
+    obstacle_scan_add(&scan, 95U, 24.09f);
+    obstacle_scan_add(&scan, 100U, 24.37f);
     obstacle_profile_build(&scan, &profile);
     TEST_CHECK("S5-U10",
                (profile.b_detected &&
@@ -245,11 +249,11 @@ subsystem5_test (void)
                 (profile.right_clearance_cm > 199.0f)),
                "obstacle ahead: both sides clear, not blocked by own hits");
     TEST_CHECK("S5-U11",
-               ((profile.width_cm > 3.9f) && (profile.width_cm < 4.5f) &&
+               ((profile.width_cm > 8.0f) && (profile.width_cm < 9.0f) &&
                 (profile.center_angle_deg > -0.5f) &&
                 (profile.center_angle_deg < 0.5f) &&
                 (profile.closest_cm < 24.5f)),
-               "obstacle ahead: centre 0 deg, width ~4.2 cm, closest 24 cm");
+               "obstacle ahead: centre 0 deg, flat face 24 cm, width ~8.5 cm");
 
     obstacle_scan_add(&scan, 90U, 50.0f);
     TEST_CHECK("S5-U12",

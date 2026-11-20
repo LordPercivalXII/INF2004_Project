@@ -60,6 +60,19 @@ obstacle_lateral_cm (float relative_deg, float distance_cm)
 }
 
 /*!
+ * @brief One half of the width: along the face from the perpendicular foot
+ *        to an edge, by Pythagoras: edge² = perpendicular² + along².
+ */
+static float
+obstacle_leg_cm (float edge_cm, float perpendicular_cm)
+{
+    float const along_sq = (edge_cm * edge_cm) -
+                           (perpendicular_cm * perpendicular_cm);
+
+    return ((along_sq > 0.0f) ? rmath_sqrtf(along_sq) : 0.0f);
+}
+
+/*!
  * @brief How close the nearest reading must be to count as an obstacle
  *        (OBSTACLE_DETECT_CM unless the scan was asked to look further).
  */
@@ -283,8 +296,8 @@ obstacle_profile_build (obstacle_scan_t const * p_scan,
         obstacle_lateral_cm(p_profile->center_angle_deg,
                             p_profile->closest_cm);
     p_profile->width_cm           =
-        obstacle_lateral_cm(right_edge, p_profile->closest_cm) -
-        obstacle_lateral_cm(left_edge, p_profile->closest_cm);
+        obstacle_leg_cm(p_scan->points[last].distance_cm, p_profile->closest_cm) +
+        obstacle_leg_cm(p_scan->points[first].distance_cm, p_profile->closest_cm);
     p_profile->b_left_edge_out    = (0U == first);
     p_profile->b_right_edge_out   = ((last + 1U) == p_scan->count);
     p_profile->left_clearance_cm  = p_profile->b_left_edge_out ? 0.0f :
@@ -293,6 +306,8 @@ obstacle_profile_build (obstacle_scan_t const * p_scan,
         obstacle_nearest_cm(p_scan, last + 1U, p_scan->count - 1U);
     p_profile->left_edge_cm       = p_scan->points[first].distance_cm;
     p_profile->right_edge_cm      = p_scan->points[last].distance_cm;
+    p_profile->left_angle_deg     = p_scan->points[first].angle_deg;
+    p_profile->right_angle_deg    = p_scan->points[last].angle_deg;
 }
 
 /*!
