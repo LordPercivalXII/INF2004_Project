@@ -1,0 +1,6 @@
+Buddy 1: Host-side telemetry codec test
+2026-11-24T18:51:11+08:00
+Tested commit: e61bdc4
+Environment: WSL GCC
+test_telemetry_codec: all tests passed
+Exit code: 0

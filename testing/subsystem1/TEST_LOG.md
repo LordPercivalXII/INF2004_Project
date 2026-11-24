@@ -19,6 +19,7 @@ See `testing/README.md` for how to run tests and record results.
 | S1-U07 | MQTT message size configuration | | auto | `subsystem1_test.c` | PASS |
 | S1-U08 | MQTT queue length configuration | | auto | `subsystem1_test.c` | PASS |
 | S1-U09 | Independent telemetry and MQTT message buffers | IF-04 | auto | `subsystem1_test.c` | PASS |
+| S1-U10 | Binary telemetry codec encoding and boundary handling | IF-04 | auto (host) | Compile and execute `test_telemetry_codec.c` using GCC in WSL | All codec assertions pass |
 | S1-M01 | Wi-Fi connectivity | | manual | Configure Wi-Fi credentials and boot Pico W | Wi-Fi connection established |
 | S1-M02 | MQTT broker connection | | manual | Start Mosquitto and boot Pico W | MQTT connection established |
 | S1-M03 | MQTT telemetry publishing | IF-04 | manual | Subscribe to configured telemetry topic | Telemetry messages received |
@@ -49,8 +50,11 @@ Add a new row for every test run. Never edit or delete previous results.
 | 2026-11-24 | S1-U07 | `798f6df` | That Hmuu Shwe Eain | PASS | `logs/2026-11-24_unit.txt` | Packed MQTT message size configured as 4 bytes |
 | 2026-11-24 | S1-U08 | `798f6df` | That Hmuu Shwe Eain | PASS | `logs/2026-11-24_unit.txt` | MQTT queue length configured for four frames per snapshot |
 | 2026-11-24 | S1-U09 | `798f6df` | That Hmuu Shwe Eain | PASS | `logs/2026-11-24_unit.txt` | Independent telemetry and MQTT buffers verified |
+| 2026-11-24 | S1-U10 | `HOST_COMMIT` | That Hmuu Shwe Eain | PASS | `logs/2026-11-24_codec.txt` (pending save confirmation) | All host-side telemetry codec assertions passed |
 
 ## Test environment
+
+### On-target automated testing
 
 | Item | Configuration |
 |---|---|
@@ -67,22 +71,102 @@ Add a new row for every test run. Never edit or delete previous results.
 | Serial port | COM5 |
 | Evidence | `logs/2026-11-24_unit.txt` |
 
+### Host-side telemetry codec testing
+
+| Item | Configuration |
+|---|---|
+| Test date | 2026-11-24 |
+| Tested commit | `HOST_COMMIT` |
+| Branch | `main` |
+| Execution environment | Windows Subsystem for Linux (WSL) |
+| Compiler | GCC |
+| Language standard | C99 |
+| Compiler flags | `-Wall -Wextra` |
+| Test source | `app_program/subsystem1/test_telemetry_codec.c` |
+| Implementation source | `app_program/subsystem1/telemetry_codec.c` |
+| Shared packing source | `app_program/common/robot_packed.c` |
+| Physical hardware required | No |
+| MQTT broker required | No |
+| Result | PASS |
+| Evidence | `logs/2026-11-24_codec.txt` (pending save confirmation) |
+
+### Host-side test execution
+
+Run the following commands from the repository root:
+
+```bash
+cd app_program/subsystem1
+
+gcc -std=c99 -Wall -Wextra \
+    test_telemetry_codec.c \
+    telemetry_codec.c \
+    ../common/robot_packed.c \
+    -o /tmp/test_codec
+
+/tmp/test_codec
+```
+
+Observed output:
+
+```text
+test_telemetry_codec: all tests passed
+```
+
+The test executable completed successfully with all codec assertions passing.
+
 ## Automated test summary
 
 | Metric | Result |
 |---|---|
-| Subsystem 1 automated tests executed | 8 |
-| Passed | 8 |
-| Failed | 0 |
-| Pass rate | 100% |
+| On-target Subsystem 1 automated tests executed | 8 |
+| On-target tests passed | 8 |
+| On-target tests failed | 0 |
+| On-target pass rate | 100% |
+| Host-side codec test suites executed | 1 |
+| Host-side codec test suites passed | 1 |
+| Host-side codec test suites failed | 0 |
+| Total recorded automated test cases and suites | 9 |
+| Total passed | 9 |
+| Total failed | 0 |
+| Recorded automated pass rate | 100% |
 
 All eight automated Subsystem 1 tests passed on the Pico W using the simulation-enabled test firmware.
 
-The tests verified fixed-point formatting, message buffer creation, packed MQTT message size configuration, queue length configuration and independent telemetry message buffers.
+The on-target tests verified fixed-point formatting, message buffer creation, packed MQTT message size configuration, queue length configuration and independent telemetry message buffers.
 
-These results verify the implemented unit checks but do not establish complete end-to-end MQTT communication, actual binary encoding correctness or dashboard functionality.
+The additional host-side telemetry codec test suite passed successfully using GCC in WSL. This provides further verification of the binary telemetry encoding implementation and its tested boundary conditions.
+
+The host-side codec suite contains multiple assertions but is recorded as one test suite under S1-U10.
+
+These results verify the implemented automated checks and tested binary encoding behaviour. They do not establish complete end-to-end MQTT communication, successful over-the-air transmission or dashboard functionality.
+
+## Host-side telemetry codec verification
+
+The standalone telemetry codec test suite was executed independently of the embedded hardware and MQTT network.
+
+The test suite exercises the following implementation areas:
+
+- Mission state encoding.
+- Fault mask encoding.
+- Speed conversion and quantisation.
+- Line error encoding.
+- Hump height conversion.
+- Obstacle distance encoding.
+- Numeric saturation and boundary handling.
+- Invalid output buffer size handling.
+- Starting state encoding.
+- IMU waiting state encoding.
+- Fault state prioritisation.
+
+All assertions in the executed test suite passed.
+
+This test provides verification of the codec independently of RTOS scheduling, Wi-Fi connectivity and MQTT broker availability.
+
+Actual transmission of packed telemetry records remains subject to manual communication and integration testing.
 
 ## Test run observations (2026-11-24)
+
+### On-target automated test run
 
 - micro T-Kernel started successfully and reported that all tasks had started.
 - Bit packing was enabled, with a configured MQTT payload size of 4 bytes and buffer size of 384 bytes.
@@ -91,15 +175,48 @@ These results verify the implemented unit checks but do not establish complete e
 - Subsystem 2 test S2-U03 failed during the shared test run. This is outside the Subsystem 1 unit test scope.
 - The captured serial output contains a gap during Subsystem 4 testing. No missing results have been inferred.
 - All eight Subsystem 1 automated test results and the subsystem summary were captured successfully.
-- Manual communication, hardware and dashboard tests remain pending.
+
+### Host-side codec test run
+
+- The telemetry codec test was compiled using GCC in WSL.
+- Compilation completed without visible compiler errors or warnings.
+- The standalone test executable ran successfully.
+- The terminal reported `test_telemetry_codec: all tests passed`.
+- No Pico W hardware or MQTT broker connection was required.
+- Binary encoding correctness was verified for the cases covered by the existing test suite.
+- End-to-end MQTT transmission remains pending verification.
+
+## Remaining verification
+
+| Test ID | Verification | Status |
+|---|---|---|
+| S1-U05 | Confirm current JSON snapshot and heartbeat behaviour | Pending review |
+| S1-M01 | Wi-Fi connectivity | Partial evidence |
+| S1-M02 | MQTT broker connection | Partial evidence |
+| S1-M03 | MQTT telemetry publishing | Pending verification; errors observed |
+| S1-M04 | Actual four-byte MQTT payload transmission | Pending |
+| S1-M05 | MQTT speed command forwarding | Pending |
+| S1-M06 | MQTT disconnection detection | Pending |
+| S1-M07 | MQTT reconnection and recovery | Pending |
+| S1-M08 | Dashboard live telemetry | Pending |
+| S1-M09 | Dashboard mission status | Pending |
+| S1-M10 | Dashboard speed display | Pending |
+| S1-M11 | Dashboard obstacle distance | Pending |
+| S1-M12 | Dashboard obstacle width | Proposed |
+| S1-M13 | Dashboard pickup and collision indication | Proposed |
+| S1-M14 | Dashboard width reset | Proposed |
+| S1-M15 | Dashboard collision display reset | Proposed |
 
 ## Notes
 
-- Automated tests are executed using the test firmware built with `TEST=1`.
+- On-target automated tests are executed using the test firmware built with `TEST=1`.
+- Host-side codec tests are executed independently using GCC.
 - Packed telemetry configuration is controlled by `USE_BIT_PACKING`.
+- Host-side codec testing does not replace on-target communication testing.
 - Manual hardware tests must be conducted under safe and controlled conditions.
 - Results are recorded only after the corresponding test has been executed.
 - Proposed tests require verification against the current implementation.
 - S1-U05 requires confirmation against the current telemetry implementation before it can be retained as an active test or marked as dropped.
 - Integration tests involving multiple subsystems should also be documented in `testing/integration/TEST_LOG.md`.
 - Failed tests must retain their original result, with a new result added after the fix.
+- Wi-Fi credentials must not be included in test evidence or technical reports.
