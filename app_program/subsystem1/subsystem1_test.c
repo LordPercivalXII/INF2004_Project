@@ -1,6 +1,7 @@
 /** @file subsystem1_test.c
  *
- * @brief On-target tests for subsystem 1 (telemetry).  make TEST=1.
+ * @brief On-target tests for subsystem 1 (telemetry).
+ *        make TEST=1.
  *        Record results in testing/subsystem1/TEST_LOG.md.
  */
 
@@ -30,6 +31,8 @@ subsystem1_test (void)
 
     TEST_INIT();
 
+    /* Existing fixed-point formatting tests */
+
     telemetry_format_fixed(text, 0.35f, 3U);
     TEST_CHECK("S1-U01", s1_text_equal(text, "0.350"),
                "fixed-point 0.35 -> \"0.350\"");
@@ -42,8 +45,49 @@ subsystem1_test (void)
     TEST_CHECK("S1-U03", s1_text_equal(text, "24.0"),
                "fixed-point 1 decimal -> \"24.0\"");
 
-    TEST_CHECK("S1-U04", (E_OK == tk_ref_mbf(gh_telemetry_mbf, &rmbf)),
+    /* Controller-to-telemetry message buffer */
+
+    TEST_CHECK("S1-U04",
+               (E_OK == tk_ref_mbf(gh_telemetry_mbf, &rmbf)),
                "telemetry message buffer exists");
+
+    /* MQTT telemetry message buffer */
+
+    TEST_CHECK("S1-U06",
+               (E_OK == tk_ref_mbf(gh_mqtt_telemetry_mbf, &rmbf)),
+               "MQTT telemetry message buffer exists");
+
+    /* MQTT payload configuration */
+
+#if USE_BIT_PACKING
+
+    TEST_CHECK("S1-U07",
+               (S1_MQTT_MESSAGE_SIZE == 4U),
+               "packed MQTT message size is 4 bytes");
+
+    TEST_CHECK("S1-U08",
+               (S1_MQTT_QUEUE_LENGTH == ROBOT_QUEUE_LENGTH * 4U),
+               "MQTT queue supports four frames per snapshot");
+
+#else
+
+    TEST_CHECK("S1-U07",
+               (S1_MQTT_MESSAGE_SIZE == sizeof(telemetry_message_t)),
+               "MQTT snapshot message size is correct");
+
+    TEST_CHECK("S1-U08",
+               (S1_MQTT_QUEUE_LENGTH == ROBOT_QUEUE_LENGTH),
+               "MQTT snapshot queue length is correct");
+
+#endif
+
+    /* Independent message buffers */
+
+    TEST_CHECK("S1-U09",
+               (gh_telemetry_mbf > E_OK) &&
+               (gh_mqtt_telemetry_mbf > E_OK) &&
+               (gh_telemetry_mbf != gh_mqtt_telemetry_mbf),
+               "telemetry and MQTT buffers are separate");
 
     TEST_SUMMARY("subsystem1");
 }
