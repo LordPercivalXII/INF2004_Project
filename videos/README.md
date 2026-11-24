@@ -39,8 +39,8 @@ Newest at the bottom. Never delete a row.
 | Date | Subsystem | Test ID / demo | Commit | Student ID | Link | Notes |
 |---|---|---|---|---|---|---|
 | 2026-11-20 | S4 | IMU Ramp Height Detection | | | <https://youtu.be/uVAXxTT2UN4> | hump height on the ramp (FR11) |
-| 2026-11-20 | Integration | Barcode Junction Right (INT-J1) | | | <https://youtu.be/oEcwkz3duA4> | RIGHT barcode, turns at the junction |
-| 2026-11-20 | System | Full Track IMU Pickup | | | <https://youtu.be/GMN_msi8kEA> | full track run, IMU pickup |
-| 2026-11-20 | Integration | Barcode Junction Left (INT-J1) | | | <https://youtu.be/rHV7J_s4asU> | LEFT barcode, turns at the junction |
-| 2026-11-20 | Integration | Barcode Junction U-Turn (INT-J1) | | | <https://youtu.be/jiD_DmmuEf0> | U-turn barcode at the junction |
+| 2026-11-20 | S3 | Barcode Junction Right (INT-J1) | | | <https://youtu.be/oEcwkz3duA4> | RIGHT barcode, turns at the junction |
+| 2026-11-20 | S2/S4 | Full Track IMU Pickup | | | <https://youtu.be/GMN_msi8kEA> | full track run, IMU pickup |
+| 2026-11-20 | S3 | Barcode Junction Left (INT-J1) | | | <https://youtu.be/rHV7J_s4asU> | LEFT barcode, turns at the junction |
+| 2026-11-20 | S3 | Barcode Junction U-Turn (INT-J1) | | | <https://youtu.be/jiD_DmmuEf0> | U-turn barcode at the junction |
 | 2026-11-20 | S5 | Obstacle Detection + Width (S5-U09) | | | <https://youtu.be/oIFwEuMKTjY> | obstacle detected, width measured |
