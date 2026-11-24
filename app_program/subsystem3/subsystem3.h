@@ -52,14 +52,21 @@ typedef struct
 {
     uint32_t width_us;      /* duration of the element that just ended */
     uint32_t end_us;        /* timestamp of the edge that ended it     */
-    uint8_t  is_black;      /* 1 = bar, 0 = space                      */
+    uint8_t  is_black;      /* 1 = bar, 0 = space,
+                               BARCODE_ELEMENT_DECODE_NOW: not an edge */
 } barcode_element_t;
+
+/* Sent by line_task (barcode_request_decode) when a junction is reached
+   while a scan is still open: try to decode what has been read so far
+   now, instead of waiting for the quiet-zone timeout. */
+#define BARCODE_ELEMENT_DECODE_NOW  (0xA5U)
 
 /* One decoded barcode, from barcode_task to line_task. */
 typedef struct
 {
     char     text[BARCODE_TEXT_MAX + 1U];
     bool     b_reversed;    /* crossed right-to-left */
+    uint32_t last_bar_end_us;   /* board_micros() when its last bar ended */
 } barcode_result_t;
 
 /* ---- Route table and waypoint memory (route.c) ---- */
@@ -123,6 +130,9 @@ void     barcode_task(INT stacd, void * p_exinf);
 void     barcode_result_put(barcode_result_t const * p_result);
 bool     barcode_result_take(barcode_result_t * p_result);
 bool     barcode_scan_active(void);
+uint32_t barcode_scan_elements(void);       /* elements in the open scan */
+uint32_t barcode_last_bar_end_us(void);     /* last real bar of the scan */
+void     barcode_request_decode(void);
 
 /* Junction detector state (line.c). */
 typedef struct

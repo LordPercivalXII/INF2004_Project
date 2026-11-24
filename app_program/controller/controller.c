@@ -139,6 +139,7 @@ typedef struct
     uint32_t            shock_until_ms;
     float               line_error;
     float               distance_m;
+    float               wheel_speed_m_s;    /* measured, mean of wheels */
     float               heading_deg;    /* from the encoders, + = left */
     float               hump_m;
     float               obstacle_cm;
@@ -175,6 +176,10 @@ typedef struct
     avoid_t             avoid;
     avoid_phase_t       avoid_phase_shown;  /* last phase printed */
     uint32_t            last_telemetry_ms;
+    uint32_t            last_height_telemetry_ms;
+    uint32_t            height_sent_count;   /* hump_count last sent    */
+    uint32_t            height_sent_rejected;
+    bool                b_height_was_active;
     bool                b_start_pending;
     bool                b_recovery_pending;
     uint32_t            recovery_requested_ms;
@@ -874,6 +879,7 @@ ctrl_junction_angle (uint16_t action)
  */
 static void ctrl_junction_pivot(ctrl_state_t * p_ctrl, float angle_deg,
                                 char symbol);
+static void ctrl_junction_step(ctrl_state_t * p_ctrl);
 
 /*!
  * @brief Junction detected (line sensors on the crossing): keep driving
@@ -884,22 +890,35 @@ static void ctrl_junction_pivot(ctrl_state_t * p_ctrl, float angle_deg,
  *        the junction, leaving the car beside the new branch.
  */
 static void
-ctrl_junction_begin (ctrl_state_t * p_ctrl, float angle_deg, char symbol)
+ctrl_junction_begin (ctrl_state_t * p_ctrl, float angle_deg, char symbol,
+                     uint32_t age_ms)
 {
     float const speed = ctrl_drive_speed(p_ctrl);
+    /* S3 may have waited for a barcode that was still being read when
+       the sensors reached the junction: the car has already driven
+       part of the approach since.  Count it, so it still pivots over
+       the junction centre (never more than the whole approach). */
+    float const travelled = rmath_clampf(
+        rmath_maxf(p_ctrl->wheel_speed_m_s, 0.0f) *
+            ((float) age_ms / 1000.0f),
+        0.0f, JUNCTION_PIVOT_OFFSET_M);
 
     p_ctrl->junction_turn_deg   = angle_deg;
     p_ctrl->junction_symbol     = symbol;
     p_ctrl->b_junction_approach = true;
     p_ctrl->b_turn_in_progress  = true;     /* suspends line steering */
     p_ctrl->active_turn_id      = 0U;
-    p_ctrl->junction_start_m    = p_ctrl->distance_m;
-    p_ctrl->junction_start_ms   = board_millis();
+    p_ctrl->junction_start_m    = p_ctrl->distance_m - travelled;
+    p_ctrl->junction_start_ms   = board_millis() - age_ms;
     ctrl_set_motion(speed, speed);
     tm_printf((UB *) "CTRL: junction -> barcode '%c' -> turn %d deg after "
-              "%d mm (axle to centre)\n",
+              "%d mm (axle to centre, decided %u ms late)\n",
               ('\0' != symbol) ? symbol : '-', (int) angle_deg,
-              (int) (JUNCTION_PIVOT_OFFSET_M * 1000.0f));
+              (int) ((JUNCTION_PIVOT_OFFSET_M - travelled) * 1000.0f),
+              (unsigned int) age_ms);
+
+    /* Decided so late that the axle is already over the centre. */
+    ctrl_junction_step(p_ctrl);
 }
 
 /*!
@@ -1112,7 +1131,8 @@ ctrl_handle_line (ctrl_state_t * p_ctrl, line_event_t const * p_line)
         }
         else
         {
-            ctrl_junction_begin(p_ctrl, angle_deg, p_line->junction_char);
+            ctrl_junction_begin(p_ctrl, angle_deg, p_line->junction_char,
+                                (uint32_t) p_line->junction_age_ms);
         }
     }
 
@@ -1242,8 +1262,10 @@ ctrl_handle_imu (ctrl_state_t * p_ctrl, imu_event_t const * p_imu)
         ((p_imu->sample_interval_ms < 5U) ||
          (p_imu->sample_interval_ms > IMU_RECOVERABLE_INTERVAL_MS));
     p_ctrl->imu = *p_imu;
-    p_ctrl->b_pickup_active = p_imu->b_pickup_detected;
-    if (p_imu->b_pickup_detected)
+    p_ctrl->b_pickup_active = p_imu->b_pickup_detected &&
+        (0 == p_ctrl->ramp_state) &&
+        rmath_absf(p_ctrl->pitch_deg) < CTRL_RAMP_EXIT_DEG;
+    if (p_ctrl->b_pickup_active)
     {
         p_ctrl->b_pickup_latched = true;
     }
@@ -1295,18 +1317,10 @@ ctrl_handle_imu (ctrl_state_t * p_ctrl, imu_event_t const * p_imu)
                                         (float) (int) p_ctrl->pitch_deg) * 10.0f));
         }
 
-        if (p_imu->b_hump_height_valid || p_imu->estimated_hump_height_m > 0.001f)
-        {
-            tm_printf((UB *) "[S4] height: hump=%d.%03d m, rise=%d.%03d m, peak=%d.%03d m, valid=%u active=%u\n",
-                      (int) p_imu->estimated_hump_height_m,
-                      (int) ((p_imu->estimated_hump_height_m * 1000.0f) - (int) p_imu->estimated_hump_height_m * 1000),
-                      (int) p_imu->terrain_rise_m,
-                      (int) ((p_imu->terrain_rise_m * 1000.0f) - (int) p_imu->terrain_rise_m * 1000),
-                      (int) p_imu->terrain_peak_m,
-                      (int) ((p_imu->terrain_peak_m * 1000.0f) - (int) p_imu->terrain_peak_m * 1000),
-                      (unsigned int) p_imu->b_hump_height_valid,
-                      (unsigned int) p_imu->b_hump_active);
-        }
+        /* (The per-sample "[S4] height: hump=..." print was removed: it
+           showed the raw accelerometer-only estimator, not the encoder
+           height that is published, at 100 lines/s.  The height that goes
+           to MQTT is printed once per snapshot by ctrl_print_height().) */
 
         /* A transient IMU timing gap (e.g. motor noise or a blocked I2C
          * read) is not fatal; only an uncalibrated IMU stops the car. */
@@ -1377,6 +1391,17 @@ ctrl_report_height_rejection (ctrl_state_t const * p_ctrl, bool b_active,
               (unsigned int) p_ctrl->imu.b_tilt_valid,
               (unsigned int) p_ctrl->imu.b_saturated,
               (unsigned int) p_ctrl->imu.b_shock_detected);
+    if ((HEIGHT_REJECT_DOWNHILL_START == p_ctrl->height.last_rejection) &&
+        (p_ctrl->wheel_speed_m_s > 0.02f) &&
+        (p_ctrl->imu.tilt_pitch_deg > 2.0f))
+    {
+        /* Driving forward from level ground the first slope is normally a
+           climb, which must read NEGATIVE pitch.  If this appears while
+           going UP a ramp the IMU mounting setting is wrong. */
+        tm_printf((UB *) "S4: positive (nose-down) pitch at the start of a "
+                  "slope; if the car was CLIMBING, flip "
+                  "IMU_MOUNT_ROTATED_180 in robot_config.h\n");
+    }
     if (HEIGHT_REJECT_GAP_ACCELERATION == p_ctrl->height.last_rejection)
     {
         float const ax = p_ctrl->imu.acceleration_x_g;
@@ -1551,6 +1576,9 @@ ctrl_handle_event (ctrl_state_t * p_ctrl, system_event_t const * p_event)
                 p_event->timestamp_ms - p_ctrl->height.last_ms;
             float const ds = p_event->data.motion.distance_m - p_ctrl->distance_m;
             p_ctrl->distance_m = p_event->data.motion.distance_m;
+            p_ctrl->wheel_speed_m_s = 0.5f *
+                (p_event->data.motion.left_speed_m_s +
+                 p_event->data.motion.right_speed_m_s);
             p_ctrl->heading_deg = ctrl_heading_deg(&p_event->data.motion);
             /* S5 looks where the car is going: from how tightly the
                wheels say it is turning (curves, junction spins, line
@@ -1573,13 +1601,20 @@ ctrl_handle_event (ctrl_state_t * p_ctrl, system_event_t const * p_event)
                                                   p_event->timestamp_ms,
                                                   interval_ms);
                     ctrl_report_height_wheels(&p_event->data.motion);
-                    tm_printf((UB *) "S4: [diagnostic] rise=%d.%03d m peak=%d.%03d m\n",
-                              (int) p_ctrl->height.rise_m,
-                              (int) ((p_ctrl->height.rise_m * 1000.0f) - 
-                                     (int) p_ctrl->height.rise_m * 1000),
-                              (int) p_ctrl->height.peak_m,
-                              (int) ((p_ctrl->height.peak_m * 1000.0f) - 
-                                     (int) p_ctrl->height.peak_m * 1000));
+                    {
+                        /* The estimate was already cleared: print the
+                           crossing that was lost, not the zeros. */
+                        char rise[S1_FIXED_TEXT_MAX];
+                        char peak[S1_FIXED_TEXT_MAX];
+                        bool const b_lost = b_was_active &&
+                            p_ctrl->height.b_interrupted_available;
+                        telemetry_format_fixed(rise, b_lost
+                            ? p_ctrl->height.interrupted_rise_m : 0.0f, 3U);
+                        telemetry_format_fixed(peak, b_lost
+                            ? p_ctrl->height.interrupted_peak_m : 0.0f, 3U);
+                        tm_printf((UB *) "S4: [diagnostic] lost crossing "
+                                  "rise=%s m peak=%s m\n", rise, peak);
+                    }
                 }
                 if (p_ctrl->height.gap_count != gap_count)
                 {
@@ -1588,8 +1623,12 @@ ctrl_handle_event (ctrl_state_t * p_ctrl, system_event_t const * p_event)
                 }
                 if (p_ctrl->height.b_complete)
                 {
-                    tm_printf((UB *) "S4: encoder hump complete peak_mm=%d\n",
-                              (int) (p_ctrl->height.last_peak_m * 1000.0f));
+                    char hump[S1_FIXED_TEXT_MAX];
+                    telemetry_format_fixed(hump, p_ctrl->height.last_peak_m,
+                                           3U);
+                    tm_printf((UB *) "S4: hump complete height=%s m "
+                              "count=%u\n", hump,
+                              (unsigned int) p_ctrl->height.count);
                 }
                 ctrl_apply_height(p_ctrl);
 #if IMU_HEIGHT_TRACE_ENABLED
@@ -1629,7 +1668,8 @@ ctrl_handle_event (ctrl_state_t * p_ctrl, system_event_t const * p_event)
                                    p_ctrl->imu_ms);
             reason = HEIGHT_REJECT_NONE;
             if (p_ctrl->height.b_have_distance &&
-                 ((p_ctrl->imu_ms - p_ctrl->height.last_ms) > 100U) &&
+                 ((p_ctrl->imu_ms - p_ctrl->height.last_ms) >
+                  IMU_HEIGHT_MAX_MOTION_MS) &&
                  ((p_ctrl->height.last_ms - p_ctrl->imu_ms) > 60U))
             {
                 reason = HEIGHT_REJECT_WHEEL_AGE;
@@ -1818,12 +1858,84 @@ ctrl_step_avoidance (ctrl_state_t * p_ctrl, uint32_t now_ms)
     }
 }
 
+/*!
+ * @brief One console line with exactly the height values of a telemetry
+ *        snapshot - the same struct that is encoded for MQTT - rounded to
+ *        the millimetre like the MQTT records, so the console and the
+ *        dashboard always agree.  (The old line printed the estimator's
+ *        own fields with "%d.%03d", which showed -0.027 m as "0.-27".)
+ */
+static void
+ctrl_print_height (telemetry_message_t const * p_msg)
+{
+    char rise[S1_FIXED_TEXT_MAX];
+    char peak[S1_FIXED_TEXT_MAX];
+    char hump[S1_FIXED_TEXT_MAX];
+    char pitch[S1_FIXED_TEXT_MAX];
+
+    telemetry_format_fixed(rise, p_msg->imu.terrain_rise_m, 3U);
+    telemetry_format_fixed(peak, p_msg->imu.terrain_peak_m, 3U);
+    telemetry_format_fixed(hump, p_msg->hump_height_m, 3U);
+    telemetry_format_fixed(pitch, p_msg->imu.tilt_pitch_deg, 1U);
+    tm_printf((UB *) "[S4] height: rise=%s m peak=%s m hump=%s m "
+              "count=%u pitch=%s tracking=%u active=%u valid=%u gap=%u\n",
+              rise, peak, hump, (unsigned int) p_msg->imu.hump_count, pitch,
+              (unsigned int) p_msg->imu.b_height_tracking_valid,
+              (unsigned int) p_msg->imu.b_hump_active,
+              (unsigned int) p_msg->imu.b_hump_height_valid,
+              (unsigned int) p_msg->imu.height_gap_count);
+}
+
+/*!
+ * @brief Between full snapshots, send the ramp height on its own while it
+ *        is changing: on a slope, during a crossing, right after one ends
+ *        (completed or rejected).  A finished hump goes out at once.
+ */
+static void
+ctrl_publish_height (ctrl_state_t * p_ctrl, uint32_t now_ms)
+{
+    telemetry_message_t telemetry = {0};
+    bool const b_new_result =
+        (p_ctrl->imu.hump_count != p_ctrl->height_sent_count) ||
+        (p_ctrl->imu.rejected_hump_count != p_ctrl->height_sent_rejected);
+    bool const b_moving_height = p_ctrl->height.b_active ||
+        p_ctrl->height.b_start_pending || p_ctrl->b_height_was_active ||
+        (0 != p_ctrl->ramp_state) ||
+        (rmath_absf(p_ctrl->imu.tilt_pitch_deg) > IMU_HEIGHT_LEVEL_DEG);
+
+    if (b_new_result ||
+        (b_moving_height &&
+         ((now_ms - p_ctrl->last_height_telemetry_ms) >=
+          ROBOT_HEIGHT_TELEMETRY_MS)))
+    {
+        telemetry.timestamp_ms  = now_ms;
+        telemetry.mission_state = p_ctrl->state;
+        telemetry.hump_height_m = p_ctrl->hump_m;
+        telemetry.imu           = p_ctrl->imu;
+        telemetry.b_height_only = true;
+
+        if (telemetry_publish(&telemetry))
+        {
+            p_ctrl->last_height_telemetry_ms = now_ms;
+            p_ctrl->height_sent_count    = p_ctrl->imu.hump_count;
+            p_ctrl->height_sent_rejected = p_ctrl->imu.rejected_hump_count;
+            /* One more update after a crossing ends, so the dashboard
+               sees it finish (back to 0 / the completed height). */
+            p_ctrl->b_height_was_active  = p_ctrl->height.b_active;
+        }
+    }
+}
+
 static void
 ctrl_publish_telemetry (ctrl_state_t * p_ctrl, uint32_t now_ms)
 {
     telemetry_message_t telemetry = {0};
 
-    if ((now_ms - p_ctrl->last_telemetry_ms) >= ROBOT_TELEMETRY_PERIOD_MS)
+    if ((now_ms - p_ctrl->last_telemetry_ms) < ROBOT_TELEMETRY_PERIOD_MS)
+    {
+        ctrl_publish_height(p_ctrl, now_ms);
+    }
+    else
     {
         telemetry.timestamp_ms         = now_ms;
         telemetry.mission_state        = p_ctrl->state;
@@ -1850,24 +1962,13 @@ ctrl_publish_telemetry (ctrl_state_t * p_ctrl, uint32_t now_ms)
                       (unsigned int) now_ms);
         }
 
-        if (p_ctrl->height.b_active || p_ctrl->height.b_valid || 
-            p_ctrl->height.b_complete)
-        {
-            tm_printf((UB *) "[S4] height: rise=%d.%03d m peak=%d.%03d m "
-                      "valid=%u active=%u complete=%u gap=%u\n",
-                      (int) p_ctrl->height.rise_m,
-                      (int) ((p_ctrl->height.rise_m * 1000.0f) - 
-                             (int) p_ctrl->height.rise_m * 1000),
-                      (int) p_ctrl->height.peak_m,
-                      (int) ((p_ctrl->height.peak_m * 1000.0f) - 
-                             (int) p_ctrl->height.peak_m * 1000),
-                      (unsigned int) p_ctrl->height.b_valid,
-                      (unsigned int) p_ctrl->height.b_active,
-                      (unsigned int) p_ctrl->height.b_complete,
-                      (unsigned int) p_ctrl->height.gap_count);
-        }
+        ctrl_print_height(&telemetry);
 
         p_ctrl->last_telemetry_ms = now_ms;
+        p_ctrl->last_height_telemetry_ms = now_ms;
+        p_ctrl->height_sent_count    = p_ctrl->imu.hump_count;
+        p_ctrl->height_sent_rejected = p_ctrl->imu.rejected_hump_count;
+        p_ctrl->b_height_was_active  = p_ctrl->height.b_active;
     }
 }
 

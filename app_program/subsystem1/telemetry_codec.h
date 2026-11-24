@@ -24,8 +24,11 @@
  *
  * The bump/obstacle byte alternates between the two kinds on successive
  * status packets; the dashboard keeps the last value of each. State 6
- * identifies a four-byte ramp record (flags, signed rise mm, peak mm,
- * last completed hump mm). State 7 identifies metadata (simulation flag,
+ * identifies a four-byte ramp record (flags, rise mm + 32 i.e.
+ * -32..223 mm, live peak mm 0..255, last completed hump mm 0..255; all
+ * rounded to the nearest mm).  The dashboard takes the hump height from
+ * the ramp record (8 bits) and ignores the 7-bit status value once one
+ * has arrived, so a hump over 12.7 cm is not shown two ways. State 7 identifies metadata (simulation flag,
  * barcode, junction character, action/count); state 7 with bit 3 set is
  * an IMU record (motion, pitch quarter-degrees, count, sensor-valid,
  * approximate and gap flags).
@@ -62,6 +65,7 @@
 bool telemetry_encode(telemetry_message_t const * p_telemetry,
                       bool b_obstacle_slot,
                       uint8_t * p_payload, uint32_t payload_size);
+
 
 #endif /* TELEMETRY_CODEC_H */
 

@@ -29,6 +29,86 @@ extern volatile UW tm_usb_dropped;
 #define TELEMETRY_LINE_MAX (896U)
 #define TELEMETRY_FIXED_LIMIT (1000000.0f)
 
+#if USE_BIT_PACKING
+#define TELEMETRY_HEIGHT_STATE (6U)
+#define TELEMETRY_RISE_OFFSET_MM (32U)   /* byte 1 = rise mm + 32 */
+
+static void telemetry_encode_height(telemetry_message_t const *p_message,
+                                    uint8_t packet[4])
+{
+    /* Live values.  These used to be replaced by the last *interrupted*
+       crossing whenever one existed - and that flag is never cleared - so
+       after the first rejected crossing the dashboard showed the same
+       stale rise/peak for the rest of the run.  The interrupted values
+       are diagnostics and stay on the USB console. */
+    float rise_mm = p_message->imu.terrain_rise_m * 1000.0f;
+    float peak_mm = p_message->imu.terrain_peak_m * 1000.0f;
+    float hump_mm = p_message->hump_height_m * 1000.0f;
+    uint32_t flags = 0U;
+
+    if (p_message->imu.b_tilt_valid) flags |= 0x01U;
+    if (p_message->imu.b_calibrated) flags |= 0x02U;
+    if (p_message->imu.b_height_tracking_valid) flags |= 0x04U;
+    if (p_message->imu.b_hump_active) flags |= 0x08U;
+    if (p_message->imu.b_hump_height_valid) flags |= 0x10U;
+
+    /* Byte 1: rise + 32 mm, so -32..+223 mm (a signed byte clipped any
+       ramp over 12.7 cm while peak/hump went to 25.5 cm, and the console
+       and dashboard then disagreed).  Rounded to the nearest mm like the
+       console (telemetry_format_fixed); truncation lost up to 1 mm. */
+    rise_mm += (float)TELEMETRY_RISE_OFFSET_MM + 0.5f;
+    peak_mm += 0.5f;
+    hump_mm += 0.5f;
+    if (!(rise_mm >= 0.0f)) rise_mm = 0.0f;
+    if (rise_mm > 255.0f) rise_mm = 255.0f;
+    if (!(peak_mm >= 0.0f)) peak_mm = 0.0f;
+    if (peak_mm > 255.0f) peak_mm = 255.0f;
+    if (!(hump_mm >= 0.0f)) hump_mm = 0.0f;
+    if (hump_mm > 255.0f) hump_mm = 255.0f;
+
+    packet[0] = (uint8_t)(TELEMETRY_HEIGHT_STATE | (flags << 3));
+    packet[1] = (uint8_t)rise_mm;
+    packet[2] = (uint8_t)peak_mm;
+    packet[3] = (uint8_t)hump_mm;
+}
+
+static void telemetry_encode_metadata(telemetry_message_t const *p_message,
+                                      uint8_t packet[4])
+{
+    packet[0] = (uint8_t)(7U | (p_message->b_simulation ? 0x80U : 0U));
+    packet[1] = ((p_message->last_barcode >= TELEMETRY_ASCII_FIRST) &&
+                 (p_message->last_barcode <= TELEMETRY_ASCII_LAST))
+                    ? (uint8_t)p_message->last_barcode : 0U;
+    packet[2] = (((uint8_t)p_message->last_junction_char >=
+                  TELEMETRY_ASCII_FIRST) &&
+                 ((uint8_t)p_message->last_junction_char <=
+                  TELEMETRY_ASCII_LAST))
+                    ? (uint8_t)p_message->last_junction_char : 0U;
+    packet[3] = (uint8_t)(((uint32_t)p_message->last_junction_action & 0x03U) |
+                          (((uint32_t)p_message->junction_count & 0x3FU) << 2));
+}
+
+static void telemetry_encode_imu(telemetry_message_t const *p_message,
+                                 uint8_t packet[4])
+{
+    float pitch_qdeg = p_message->imu.tilt_pitch_deg * 4.0f;
+    uint32_t flags = 0U;
+
+    if (p_message->imu.b_sensor_valid) flags |= 0x10U;
+    if (p_message->imu.b_height_approximate) flags |= 0x20U;
+    if (p_message->imu.b_height_gap_pending) flags |= 0x40U;
+    if (pitch_qdeg > 127.0f) pitch_qdeg = 127.0f;
+    if (pitch_qdeg < -128.0f) pitch_qdeg = -128.0f;
+    if (p_message->imu.b_pickup_detected) flags |= 0x80U;
+
+    packet[0] = (uint8_t)(7U | 0x08U | flags);
+    packet[1] = (uint8_t)p_message->imu.motion_state;
+    packet[2] = (uint8_t)(int8_t)pitch_qdeg;
+    packet[3] = (uint8_t)((p_message->imu.hump_count > 255U)
+                              ? 255U : p_message->imu.hump_count);
+}
+#endif
+
 /*!
  * @brief Queue a telemetry snapshot without waiting.
  *
@@ -384,6 +464,7 @@ static void telemetry_print(telemetry_message_t const *p_msg)
                            "\"hump_count\":%u,\"imu_saturated\":%u,"
                            "\"tilt_valid\":%u,\"shock_count\":%u,"
                            "\"hump_rejected_count\":%u,\"imu_model\":\"LSM303DLHC\","
+                           "\"pickup_detected\":%u,"
                            "\"heading_deg\":%s,\"heading_valid\":%u,"
                            "\"turn_valid\":%u,\"mag_disturbed\":%u,"
                            "\"has_gyro\":%u,\"turn_estimated\":%u,"
@@ -407,6 +488,7 @@ static void telemetry_print(telemetry_message_t const *p_msg)
                      (unsigned int)p_msg->imu.b_tilt_valid,
                      (unsigned int)p_msg->imu.shock_count,
                      (unsigned int)p_msg->imu.rejected_hump_count,
+                     (unsigned int)p_msg->imu.b_pickup_detected,
                      heading,
                      (unsigned int)p_msg->imu.b_heading_valid,
                      (unsigned int)p_msg->imu.b_turn_rate_valid,
@@ -497,6 +579,35 @@ uint32_t mqtt_utk_telemetry_read(char *buffer, uint32_t buffer_size)
         return 0U;
     }
 
+    if (message.b_height_only)
+    {
+        /* Fast ramp update: only the height fields; the dashboard merges
+           it into the last full snapshot ("height_only":1). */
+        telemetry_format_fixed(hump, message.hump_height_m, 3U);
+        telemetry_trace_fixed(pitch, message.imu.tilt_pitch_deg);
+        telemetry_trace_fixed(rise, message.imu.terrain_rise_m);
+        telemetry_trace_fixed(peak, message.imu.terrain_peak_m);
+        len = tm_sprintf(
+            (UB *)buffer,
+            (UB *)"{\"height_only\":1,\"t_ms\":%u,\"pitch_deg\":%s,"
+                  "\"rise_m\":%s,\"terrain_peak_m\":%s,\"hump_m\":%s,"
+                  "\"tilt_valid\":%u,\"motion\":%u,"
+                  "\"hump_active\":%u,\"hump_valid\":%u,"
+                  "\"hump_count\":%u,\"height_tracking_valid\":%u,"
+                  "\"height_gap_pending\":%u}",
+            (unsigned int)message.timestamp_ms, pitch, rise, peak, hump,
+            (unsigned int)message.imu.b_tilt_valid,
+            (unsigned int)message.imu.motion_state,
+            (unsigned int)message.imu.b_hump_active,
+            (unsigned int)message.imu.b_hump_height_valid,
+            (unsigned int)message.imu.hump_count,
+            (unsigned int)message.imu.b_height_tracking_valid,
+            (unsigned int)message.imu.b_height_gap_pending);
+
+        return ((len <= 0) || ((uint32_t)len >= buffer_size))
+               ? 0U : (uint32_t)len;
+    }
+
     telemetry_format_fixed(speed, message.speed_m_s, 3U);
     telemetry_format_fixed(error, message.line_error, 3U);
     telemetry_format_fixed(dist, message.distance_m, 3U);
@@ -523,7 +634,8 @@ uint32_t mqtt_utk_telemetry_read(char *buffer, uint32_t buffer_size)
               "\"hump_count\":%u,"
               "\"height_tracking_valid\":%u,"
               "\"height_approx\":%u,"
-              "\"height_gap_pending\":%u}",
+              "\"height_gap_pending\":%u,"
+              "\"pickup_detected\":%u}",
         (unsigned int)message.timestamp_ms,
         (unsigned int)message.mission_state,
         speed,
@@ -547,7 +659,8 @@ uint32_t mqtt_utk_telemetry_read(char *buffer, uint32_t buffer_size)
         (unsigned int)message.imu.hump_count,
         (unsigned int)message.imu.b_height_tracking_valid,
         (unsigned int)message.imu.b_height_approximate,
-        (unsigned int)message.imu.b_height_gap_pending);
+        (unsigned int)message.imu.b_height_gap_pending,
+        (unsigned int)message.imu.b_pickup_detected);
 
     if ((len <= 0) || ((uint32_t)len >= buffer_size))
     {
@@ -584,6 +697,28 @@ void telemetry_task(INT stacd, void *p_exinf)
             {
                 telemetry_print_height_trace(&message);
             }
+            else if (message.b_height_only)
+            {
+                /* Fast ramp update between full snapshots: MQTT only. */
+#if TM_MQTT
+                if (gh_mqtt_telemetry_mbf > 0)
+                {
+#if USE_BIT_PACKING
+                    uint8_t packed[TELEMETRY_PACKED_SIZE];
+
+                    telemetry_encode_height(&message, packed);
+                    (void)tk_snd_mbf(gh_mqtt_telemetry_mbf, packed,
+                                     (INT)sizeof(packed), TMO_POL);
+                    telemetry_encode_imu(&message, packed);
+                    (void)tk_snd_mbf(gh_mqtt_telemetry_mbf, packed,
+                                     (INT)sizeof(packed), TMO_POL);
+#else
+                    (void)tk_snd_mbf(gh_mqtt_telemetry_mbf, (void *)&message,
+                                     (INT)sizeof(message), TMO_POL);
+#endif
+                }
+#endif
+            }
             else
             {
                 telemetry_print(&message);
@@ -592,28 +727,43 @@ void telemetry_task(INT stacd, void *p_exinf)
                 if (gh_mqtt_telemetry_mbf > 0)
                 {
 #if USE_BIT_PACKING
-                    /* Two existing status frame kinds: hump and obstacle. */
+                    /* Byte 3 alternates hump / obstacle each packet. */
                     static bool obstacle_slot = false;
                     uint8_t packed[TELEMETRY_PACKED_SIZE];
-                    bool encoded = telemetry_encode(&message, obstacle_slot,
-                                                     packed, sizeof(packed));
-                    if (encoded)
+                    (void)telemetry_encode(&message, obstacle_slot,
+                                           packed, sizeof(packed));
+                    obstacle_slot = !obstacle_slot;
+                    if (E_OK != tk_snd_mbf(gh_mqtt_telemetry_mbf, packed,
+                                            (INT)sizeof(packed), TMO_POL) &&
+                        !b_mqtt_queue_error)
                     {
-                        obstacle_slot = !obstacle_slot;
+                        tm_printf((UB *)"S1: MQTT packed telemetry queue failed\n");
+                        b_mqtt_queue_error = true;
                     }
-                    if (!encoded ||
-                        (E_OK != tk_snd_mbf(gh_mqtt_telemetry_mbf,
-                                            packed, (INT)sizeof(packed), TMO_POL)))
+
+                    telemetry_encode_height(&message, packed);
+                    if (E_OK != tk_snd_mbf(gh_mqtt_telemetry_mbf, packed,
+                                            (INT)sizeof(packed), TMO_POL) &&
+                        !b_mqtt_queue_error)
                     {
-                        if (!b_mqtt_queue_error)
-                        {
-                            tm_printf((UB *)"S1: MQTT packed telemetry queue failed\n");
-                            b_mqtt_queue_error = true;
-                        }
+                        tm_printf((UB *)"S1: MQTT height record dropped\n");
+                        b_mqtt_queue_error = true;
                     }
-                    else
+                    telemetry_encode_metadata(&message, packed);
+                    if (E_OK != tk_snd_mbf(gh_mqtt_telemetry_mbf, packed,
+                                            (INT)sizeof(packed), TMO_POL) &&
+                        !b_mqtt_queue_error)
                     {
-                        b_mqtt_queue_error = false;
+                        tm_printf((UB *)"S1: MQTT metadata record dropped\n");
+                        b_mqtt_queue_error = true;
+                    }
+                    telemetry_encode_imu(&message, packed);
+                    if (E_OK != tk_snd_mbf(gh_mqtt_telemetry_mbf, packed,
+                                            (INT)sizeof(packed), TMO_POL) &&
+                        !b_mqtt_queue_error)
+                    {
+                        tm_printf((UB *)"S1: MQTT IMU record dropped\n");
+                        b_mqtt_queue_error = true;
                     }
                     /* Dedicated 4-byte width record: 0x17, width in 0.1 cm,
                        valid=1. Send on change, retry if queue is full. */

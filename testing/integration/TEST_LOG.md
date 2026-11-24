@@ -39,3 +39,5 @@ Add a new row for every run. Never edit or delete old rows.
 | Date | Test ID | Commit | Tester | Result | Log / evidence | Notes |
 |---|---|---|---|---|---|---|
 | YYYY-MM-DD | INT-01 | `abc1234` | | PASS / FAIL | `logs/YYYY-MM-DD_….txt` | |
+| 2026-11-24 | INT-J4 | `7119ddd`+fix | Claude (host test) | PASS | `logs/2026-11-24_junction_defer_host.txt` | Barcode close to junction: junction during an open scan waits (≤ `LINE_JUNCTION_DEFER_MAX_MS`), asks barcode_task to decode now and uses that barcode; a barcode's own wide bar is not taken as a junction; age sent to controller. Old 300 ms hold dropped such junctions. Needs real-car confirmation. |
+| 2026-11-24 | INT-H1 | `7119ddd`+fix | Claude (host test) | PASS | `logs/2026-11-24_height_mqtt_consistency.txt` | Ramp height console vs dashboard: firmware MQTT ramp record decoded by `dashboard/server.py` equals the `[S4] height` console text to the mm for 8 cases (negative rise, 15 and 21 cm ramps); status frame's 7-bit hump no longer overrides the 8-bit value. |

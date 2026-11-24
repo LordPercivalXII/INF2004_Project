@@ -10,6 +10,7 @@
 #include "../../app_program/subsystem3/barcode.c"
 ID gh_barcode_edge_mbf = 1, gh_barcode_result_mtx = 1;
 INT tk_rcv_mbf(ID id, void *m, TMO t){(void)id;(void)m;(void)t;return 0;}
+INT tk_snd_mbf(ID id, void *m, INT n, TMO t){(void)id;(void)m;(void)n;(void)t;return 0;}
 uint32_t board_micros(void){return 0;}
 uint32_t board_millis(void){return 0;}
 void barcode_sensor_take_counts(uint32_t*a,uint32_t*b){*a=*b=0;}
@@ -46,4 +47,28 @@ int main(void){
   /* 5: partial code then quiet: no false decode */
   { uint32_t w[60]; uint32_t n=code39_encode_widths("A",13000,32000,w,60);
     for(uint32_t i=0;i<20;i++) feed((i%2)==0,w[i]); feed(0,300000); assert(!take(&c)); puts("5 partial: no decode (ok)"); }
+  /* 6: decoded result carries when its last bar ended (line.c tells a
+        junction after the barcode from the barcode's own wide bar) */
+  barcode_session_reset(&s);
+  { uint32_t w[60]; uint32_t n=code39_encode_widths("L",13000,32000,w,60);
+    uint32_t bar_end=0; barcode_result_t r;
+    feed(0,200000);
+    for(uint32_t i=0;i<n;i++){ feed((i%2)==0,w[i]); if((i%2)==0) bar_end=t_us; }
+    assert(barcode_scan_elements()>=3);
+    feed(0,300000);
+    assert(barcode_result_take(&r) && r.text[0]=='L' && r.last_bar_end_us==bar_end);
+    assert(barcode_scan_elements()==0);
+    puts("6 last bar end reported with the decode: ok"); }
+  /* 7: decode-now at a junction, before any quiet-zone edge or timeout:
+        a whole symbol decodes; a partial one stays open */
+  barcode_session_reset(&s);
+  { uint32_t w[60]; uint32_t n=code39_encode_widths("R",13000,32000,w,60);
+    feed(0,200000);
+    for(uint32_t i=0;i<10;i++) feed((i%2)==0,w[i]);
+    assert(!barcode_session_finish(&s,false) && s.b_active); /* partial: kept */
+    for(uint32_t i=10;i<n-1;i++) feed((i%2)==0,w[i]);
+    /* last bar is still 'pending' (no closing edge yet) */
+    { barcode_element_t e={0}; e.is_black=1; e.width_us=w[n-1]; t_us+=w[n-1]; e.end_us=t_us; barcode_session_add(&s,&e); }
+    assert(barcode_session_finish(&s,false) && take(&c) && c=='R');
+    puts("7 decode-now: partial kept open, whole symbol decoded at once: ok"); }
   puts("all barcode session tests passed"); return 0; }

@@ -99,6 +99,22 @@ test_line (void)
     assert((BARCODE_CMD_UTURN == out.junction_action) &&
            ('C' == out.junction_char));
     assert(!out.b_barcode_valid && (0U == out.barcode));
+    assert(0U == out.junction_age_ms);
+
+    /* Junction age (decision waited for a barcode): 50 ms steps, 350 cap */
+    in.junction_age_ms = 30U;
+    pack_line(&in, &wire);
+    unpack_line(&wire, &out);
+    assert(50U == out.junction_age_ms);
+    in.junction_age_ms = 300U;
+    pack_line(&in, &wire);
+    unpack_line(&wire, &out);
+    assert(300U == out.junction_age_ms);
+    in.junction_age_ms = 5000U;
+    pack_line(&in, &wire);
+    unpack_line(&wire, &out);
+    assert(350U == out.junction_age_ms);
+    in.junction_age_ms = 0U;
 
     in.b_junction      = false;
     in.junction_char   = '\0';

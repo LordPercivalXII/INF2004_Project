@@ -25,6 +25,11 @@
 
 /* ---- Task periods, ms ---- */
 #define ROBOT_TELEMETRY_PERIOD_MS       (1000U)
+/* Ramp/hump height to the dashboard: while on a slope, measuring a
+   crossing, or just after a result, a height-only update (two 4-byte MQTT
+   records, no console line) is sent this often, between the full 1 s
+   snapshots.  A completed hump is sent at once. */
+#define ROBOT_HEIGHT_TELEMETRY_MS       (200U)
 #define ROBOT_LINE_PERIOD_MS            (10U)
 #define ROBOT_MOTION_PERIOD_MS          (20U)
 #define ROBOT_IMU_PERIOD_MS             (10U)
@@ -99,6 +104,18 @@
 
 /* ---- Buddy 4: LSM303DLHC on I2C0 through kernel "iica" ---- */
 #define IMU_I2C_DEVICE_NAME             "iica"
+/* How the LSM303DLHC board sits on the car.  The software expects X
+ * forward, Y left, Z up (pitch NEGATIVE when the nose goes UP a ramp).
+ * 1 = board turned 180 degrees about Z (X backwards, Y right): X and Y of
+ * the accelerometer and magnetometer are negated when read.
+ * Set to 1 from the 2026-11-24 ramp log: climbing the ramp read pitch
+ * +2.5..+5.1 deg (X went from -14 to -42 mg), so the height estimator saw
+ * a descent, rejected it as "downhill_start" and hump stayed 0.000 m.
+ * Check after any remount: lift the FRONT of the car by hand - the
+ * console's pitch must go NEGATIVE.  If it goes positive, flip this. */
+#ifndef IMU_MOUNT_ROTATED_180
+#define IMU_MOUNT_ROTATED_180           (1)
+#endif
 #define IMU_ACCEL_ADDRESS               (0x19U)
 #define IMU_MAG_ADDRESS                 (0x1EU)
 #define IMU_SAMPLE_RATE_HZ              (100U)
@@ -261,6 +278,20 @@
                                                     quiet zone: decode now */
 #define BARCODE_EDGE_QUEUE_LENGTH       (512U)   /* absorbs comparator chatter */
 
+/* Junction reached while a barcode is still being read (barcode close to
+ * the junction): line.c holds the junction decision until the scan
+ * resolves, at most this long, then acts on it.  The controller is told
+ * how late the decision is so it still pivots over the junction centre.
+ * Must not exceed 350 ms (3-bit, 50 ms age field in the packed event). */
+#define LINE_JUNCTION_DEFER_MAX_MS      (300U)
+/* A junction confirmed within this time of a bar still under the sensors
+ * is that bar (a wide Code 39 bar covers both line sensors), not a
+ * crossing: the barcode is kept for the real junction after it. */
+#define LINE_JUNCTION_BAR_MARGIN_US     (15000U)
+/* Defer only for a scan holding at least this many elements: a lone dark
+ * patch on GP28 (the junction tape itself) is 1. */
+#define LINE_JUNCTION_DEFER_MIN_ELEMENTS (3U)
+
 /* ---- Buddy 3: junction routing from MQTT (subsystem3/route.c) ----
  * Which character means left/right/straight/U-turn is NOT set here: it
  * arrives at run time on MQTT_ROUTE_TOPIC (config/wifi_secrets.h). */
@@ -275,11 +306,13 @@
 #ifndef S3_BARCODE_HW
 #define S3_BARCODE_HW                   (1)
 #endif
-/* 1 = print every scan's bar/space widths and the decode result. */
-/* 1 = print every bar/space width as it is read (very verbose). */
+/* 1 = print every bar/space width as it is read (very verbose).  Off by
+ * default: a console line per bar slows barcode_task enough to delay the
+ * decode, and a barcode close to a junction then decodes too late. */
 #ifndef S3_BARCODE_EDGE_DEBUG
-#define S3_BARCODE_EDGE_DEBUG           (1)
+#define S3_BARCODE_EDGE_DEBUG           (0)
 #endif
+/* 1 = print every scan's bar/space widths and the decode result. */
 #ifndef S3_BARCODE_DEBUG
 #define S3_BARCODE_DEBUG                (1)
 #endif

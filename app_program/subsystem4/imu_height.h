@@ -1,6 +1,20 @@
 /** @file imu_height.h
  * @brief Relative terrain height from signed wheel travel and IMU pitch.
  *
+ * Tuning (2026-11-24, real car; the IMU_HEIGHT_* values below supersede
+ * the figures in the original description that follows): the level-ground
+ * pitch offset is learned slowly on sustained level travel and removed
+ * before integrating; the wheel-speed difference is no longer a gate (line
+ * following steers all the time and a pivot adds no mean travel); level is
+ * within IMU_HEIGHT_LEVEL_DEG; an initial dip must fall more than
+ * IMU_HEIGHT_START_MAX_FALL_M (within IMU_HEIGHT_START_MAX_MS / _PATH_M)
+ * to be rejected; tilt gaps up to IMU_HEIGHT_MAX_GAP_MS,
+ * IMU_HEIGHT_MAX_GAP_PATH_M and IMU_HEIGHT_MAX_GAP_PITCH_DEG are bridged,
+ * IMU_HEIGHT_MAX_BRIDGED_M per datum; motion updates may be
+ * IMU_HEIGHT_MAX_MOTION_MS apart; a hump completes back within
+ * max(5 mm, 50 % of peak) of its start.
+ *
+ *
  * X forward, Y left, Z up; pitch is positive nose-down. Encoders measure
  * distance along the surface, so dz = -ds * sin(pitch). Start on level
  * ground. No absolute altitude or wheel-slip detection is provided.
@@ -74,7 +88,16 @@ typedef enum
     HEIGHT_REJECT_SAMPLE_TIMING
 } imu_height_rejection_t;
 
-#define IMU_HEIGHT_GAP_SEGMENTS (16U)
+#define IMU_HEIGHT_MAX_MOTION_MS (250U)  /* longest motion update gap */
+#define IMU_HEIGHT_MAX_GAP_MS    (500U)  /* longest bridged tilt gap   */
+#define IMU_HEIGHT_LEVEL_DEG     (1.5f)  /* level ground, after offset */
+#define IMU_HEIGHT_GAP_SEGMENTS  (32U)   /* 500 ms of 20 ms updates    */
+#define IMU_HEIGHT_MAX_GAP_PATH_M    (0.050f) /* travel in one tilt gap */
+#define IMU_HEIGHT_MAX_BRIDGED_M     (0.300f) /* bridged travel / datum */
+#define IMU_HEIGHT_MAX_GAP_PITCH_DEG (10.0f)  /* pitch change over gap  */
+#define IMU_HEIGHT_START_MAX_MS      (400U)   /* initial-dip window     */
+#define IMU_HEIGHT_START_MAX_PATH_M  (0.040f)
+#define IMU_HEIGHT_START_MAX_FALL_M  (0.002f) /* fall that is a real dip */
 
 typedef struct
 {
@@ -116,6 +139,8 @@ typedef struct
     float interrupted_rise_m;
     float interrupted_peak_m;
     imu_height_rejection_t interrupted_reason;
+    float pitch_offset_deg;     /* learned level-ground pitch */
+    uint32_t level_run;         /* consecutive level updates  */
 } imu_height_t;
 
 void imu_height_init(imu_height_t * p_height);

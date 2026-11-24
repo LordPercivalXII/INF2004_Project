@@ -5,19 +5,34 @@
 #include "imu_processing.h"
 #include "../common/rmath.h"
 
-#define HEIGHT_MAX_MOTION_MS     (100U)
-#define HEIGHT_MAX_GAP_MS        (250U)
-#define HEIGHT_MAX_GAP_PATH_M    (0.020f)
-#define HEIGHT_MAX_BRIDGED_M     (0.060f)
-#define HEIGHT_MAX_GAP_PITCH_DEG (6.0f)
+/* Limits tuned on the real car (testing/subsystem5/logs/2026-11-24_*):
+   with the earlier, tighter values ordinary line following (steering
+   wheel-speed differences, 1-1.5 degree tilt noise, 200-300 ms tilt gaps
+   from motor vibration) threw away a crossing every few seconds, so a
+   ramp was rarely measured from start to finish and the dashboard showed
+   stale or partial heights. */
+#define HEIGHT_MAX_MOTION_MS     (IMU_HEIGHT_MAX_MOTION_MS)
+#define HEIGHT_MAX_GAP_MS        (IMU_HEIGHT_MAX_GAP_MS)
+#define HEIGHT_MAX_GAP_PATH_M    (IMU_HEIGHT_MAX_GAP_PATH_M)
+#define HEIGHT_MAX_BRIDGED_M     (IMU_HEIGHT_MAX_BRIDGED_M)
+#define HEIGHT_MAX_GAP_PITCH_DEG (IMU_HEIGHT_MAX_GAP_PITCH_DEG)
 #define HEIGHT_GAP_MIN_G         (0.65f)
 #define HEIGHT_GAP_MAX_G         (1.35f)
-#define HEIGHT_START_MAX_MS      (250U)
-#define HEIGHT_START_MAX_PATH_M  (0.020f)
-#define HEIGHT_START_MAX_FALL_M  (0.0005f)
+#define HEIGHT_START_MAX_MS      (IMU_HEIGHT_START_MAX_MS)
+#define HEIGHT_START_MAX_PATH_M  (IMU_HEIGHT_START_MAX_PATH_M)
+#define HEIGHT_START_MAX_FALL_M  (IMU_HEIGHT_START_MAX_FALL_M)
 #define HEIGHT_FLAT_SAMPLES      (10U)
-#define HEIGHT_LEVEL_DEG         (1.0f)
+#define HEIGHT_LEVEL_DEG         (IMU_HEIGHT_LEVEL_DEG)
 #define HEIGHT_MIN_PEAK_M        (0.005f)
+/* Level-ground pitch (mounting/calibration offset) is learned while the
+   car drives on level ground and removed before integrating: a 1 degree
+   offset alone adds 1.7 mm of false height per 10 cm travelled. */
+#define HEIGHT_OFFSET_ALPHA      (0.01f)
+#define HEIGHT_OFFSET_RUN        (10U)    /* ...after this many level  */
+#define HEIGHT_OFFSET_MAX_DEG    (3.0f)
+/* A completed hump must come back to within this of its start level. */
+#define HEIGHT_ENDPOINT_MIN_M    (0.005f)
+#define HEIGHT_ENDPOINT_FRACTION (0.5f)
 
 void
 imu_height_init (imu_height_t * p_height)
@@ -192,13 +207,9 @@ imu_height_integrate (imu_height_t * p_height, float ds, float slope,
                the initial fall would turn recovery from a dip into a hump. */
             p_height->rise_m += dz;
             p_height->path_m += rmath_absf(ds);
-            if (p_height->rise_m < -HEIGHT_START_MAX_FALL_M)
-            {
-                imu_height_invalidate(p_height, HEIGHT_REJECT_DOWNHILL_START);
-                return;
-            }
-            if (rmath_absf(p_height->path_m - p_height->start_path_m) >
-                HEIGHT_START_MAX_PATH_M)
+            if ((p_height->rise_m < -HEIGHT_START_MAX_FALL_M) ||
+                (rmath_absf(p_height->path_m - p_height->start_path_m) >
+                 HEIGHT_START_MAX_PATH_M))
             {
                 imu_height_invalidate(p_height, HEIGHT_REJECT_DOWNHILL_START);
                 return;
@@ -254,7 +265,7 @@ imu_height_update (imu_height_t * p_height, motion_event_t const * p_motion,
     uint32_t const interval = motion_ms - p_height->last_ms;
     uint32_t const newer_delta = imu_ms - motion_ms;
     uint32_t const older_delta = motion_ms - imu_ms;
-    float const pitch = p_imu->tilt_pitch_deg;
+    float pitch = p_imu->tilt_pitch_deg;
     float const distance = p_motion->distance_m;
     float const left = p_motion->left_speed_m_s;
     float const right = p_motion->right_speed_m_s;
@@ -314,14 +325,16 @@ imu_height_update (imu_height_t * p_height, motion_event_t const * p_motion,
         else if (!(left >= -1.0f && left <= 1.0f) ||
                  !(right >= -1.0f && right <= 1.0f))
             reason = HEIGHT_REJECT_SPEED;
-        else if (rmath_absf(left - right) > 0.20f)
-            reason = HEIGHT_REJECT_TURN;
+        /* No wheel-speed-difference gate: line following steers all the
+           time.  distance_m is the mean of both wheels, so a pivot adds
+           (almost) no travel and therefore no height. */
     }
     if (HEIGHT_REJECT_NONE != reason)
     {
         imu_height_invalidate(p_height, reason);
         return;
     }
+    pitch = pitch - p_height->pitch_offset_deg;
     slope = rmath_sinf(pitch * RMATH_DEG_TO_RAD);
     b_level = (rmath_absf(pitch) <= HEIGHT_LEVEL_DEG);
     if (!p_height->b_have_distance)
@@ -410,6 +423,18 @@ imu_height_update (imu_height_t * p_height, motion_event_t const * p_motion,
         return;
     }
     p_height->gap_pitch = pitch;
+    p_height->level_run = b_level ? (p_height->level_run + 1U) : 0U;
+    if ((p_height->level_run >= HEIGHT_OFFSET_RUN) &&
+        !p_height->b_active && !p_height->b_start_pending)
+    {
+        /* Sustained level ground: track the residual so slope is measured
+           relative to the floor the car stands on, not to the boot
+           attitude.  Slow, and only after a run of level updates, so the
+           gentle start of a ramp is never learned as "level". */
+        p_height->pitch_offset_deg = rmath_clampf(
+            p_height->pitch_offset_deg + HEIGHT_OFFSET_ALPHA * pitch,
+            -HEIGHT_OFFSET_MAX_DEG, HEIGHT_OFFSET_MAX_DEG);
+    }
     if (!p_height->b_ready)
     {
         p_height->last_slope = slope;
@@ -425,7 +450,8 @@ imu_height_update (imu_height_t * p_height, motion_event_t const * p_motion,
     {
         if ((p_height->peak_m >= HEIGHT_MIN_PEAK_M) &&
             (rmath_absf(p_height->rise_m) <=
-             rmath_maxf(0.003f, p_height->peak_m * 0.35f)))
+             rmath_maxf(HEIGHT_ENDPOINT_MIN_M,
+                        p_height->peak_m * HEIGHT_ENDPOINT_FRACTION)))
         {
             p_height->last_peak_m = p_height->peak_m;
             p_height->b_peak_valid = true;

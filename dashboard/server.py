@@ -9,7 +9,7 @@ from flask import Flask, jsonify, request
 import paho.mqtt.client as mqtt
 
 app = Flask(__name__, static_folder='static', static_url_path='')
-HOST = os.getenv('MQTT_BROKER_HOST', '192.168.137.1')
+HOST = os.getenv('MQTT_BROKER_HOST', '172.20.10.3')
 PORT = int(os.getenv('MQTT_BROKER_PORT', '1883'))
 TELEMETRY = 'inf2004/car/telemetry'
 ROUTE = 'inf2004/car/route'
@@ -113,6 +113,7 @@ def on_disconnect(c, userdata, disconnect_flags, reason_code, properties):
 
 PACKET_SIZES = (4, 5, 7)
 ACTIONS = ('STRAIGHT', 'LEFT', 'RIGHT', 'U-TURN')
+RISE_OFFSET_MM = 32   # ramp record byte 1 = rise in mm + 32 (-32..223 mm)
 
 
 def decode_packet(payload, previous):
@@ -132,7 +133,7 @@ def decode_packet(payload, previous):
     if len(payload) == 4 and (b0 & 0x07) == 6:
         value = dict(previous or {})
         flags = (b0 >> 3) & 0x1F
-        rise_mm = b1 if b1 < 0x80 else b1 - 0x100
+        rise_mm = b1 - RISE_OFFSET_MM   # firmware sends rise mm + 32
         value.update({
             'imu_valid': bool(flags & 0x01),
             'tilt_valid': bool(flags & 0x01),
@@ -144,6 +145,7 @@ def decode_packet(payload, previous):
             'rise_m': rise_mm / 1000.0,
             'terrain_peak_m': b2 / 1000.0,
             'hump_m': b3 / 1000.0,
+            'height_record': True,
             'binary': True,
         })
         return value
@@ -175,14 +177,14 @@ def decode_packet(payload, previous):
         })
         return value
 
-    value = {
+    value = dict(previous or {})
+    value.update({
         'mission': b0 & 0x07,
         'fault': (b0 >> 3) & 0x1F,
         'speed': b1 / 100.0,
         'line': (b2 - 128) / 128.0,
         'obstacle_width_cm': (previous or {}).get('obstacle_width_cm'),
         'obstacle_width_valid': (previous or {}).get('obstacle_width_valid'),
-        'hump_m': (previous or {}).get('hump_m'),
         'obstacle_cm': (previous or {}).get('obstacle_cm'),
         'barcode': (previous or {}).get('barcode', 0),
         'simulation': (previous or {}).get('simulation', False),
@@ -190,7 +192,7 @@ def decode_packet(payload, previous):
         'junction_action': (previous or {}).get('junction_action'),
         'junction_count': (previous or {}).get('junction_count', 0),
         'binary': True,
-    }
+    })
     if len(payload) >= 5:
         value['barcode'] = payload[4] & 0x7F
         value['simulation'] = bool(payload[4] & 0x80)
@@ -200,7 +202,10 @@ def decode_packet(payload, previous):
         value['junction_count'] = payload[6] >> 2
     if b3 & 0x80:
         value['obstacle_cm'] = (b3 & 0x7F) * 2.0
-    else:
+    elif not (previous or {}).get('height_record'):
+        # 7-bit (<= 12.7 cm) copy of the hump height.  Once the 8-bit ramp
+        # record has arrived it is the only source, so the two never
+        # disagree (e.g. 0.150 m vs 0.127 m) on the dashboard.
         value['hump_m'] = (b3 & 0x7F) / 1000.0
     return value
 
@@ -227,6 +232,12 @@ def on_message(c, userdata, msg):
                 return
         except (UnicodeDecodeError, ValueError):
             return
+        if value.get('height_only'):
+            # Fast ramp-height update between full snapshots: merge it.
+            with lock:
+                merged = dict(state['latest'] or {})
+            merged.update({k: v for k, v in value.items() if k != 'height_only'})
+            value = merged
     with lock:
         if barcode_baseline['pending']:
             barcode_baseline['value'] = value.get('barcode')

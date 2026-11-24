@@ -86,4 +86,5 @@ telemetry_encode (telemetry_message_t const * p_telemetry,
     return (true);
 }
 
+
 /*** end of file ***/

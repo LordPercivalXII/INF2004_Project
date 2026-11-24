@@ -11,6 +11,9 @@ ID gh_system_flg = 1, gh_line_tsk=1;
 uint32_t board_millis(void){return 0;} uint32_t board_micros(void){return 0;}
 bool controller_post_event(system_event_t const*p){(void)p;return true;}
 bool barcode_scan_active(void){return false;}
+uint32_t barcode_scan_elements(void){return 0;}
+uint32_t barcode_last_bar_end_us(void){return 0;}
+void barcode_request_decode(void){}
 bool barcode_result_take(barcode_result_t*p){(void)p;return false;}
 uint8_t route_take_junction_action(char*c){*c=0;return 0;}
 void route_init(void){} void route_poll_config(void){}
