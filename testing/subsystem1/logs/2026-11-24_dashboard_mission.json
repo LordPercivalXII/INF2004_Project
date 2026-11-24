@@ -1,0 +1,272 @@
+{
+  "events": [
+    {
+      "at": 1795518125.5235448,
+      "details": {
+        "mission_state": 4,
+        "speed_m_s": 0.15
+      },
+      "message": "Robot reported mission started",
+      "type": "MISSION"
+    },
+    {
+      "at": 1795518128.5235448,
+      "details": {},
+      "message": "Robot entered avoidance state",
+      "type": "OBSTACLE"
+    },
+    {
+      "at": 1795518128.5235448,
+      "details": {
+        "previous_m_s": 0.15,
+        "speed_m_s": 0.1
+      },
+      "message": "Reported speed changed",
+      "type": "SPEED"
+    },
+    {
+      "at": 1795518129.5235448,
+      "details": {},
+      "message": "Robot returned to line following",
+      "type": "MISSION"
+    },
+    {
+      "at": 1795518129.5235448,
+      "details": {
+        "previous_m_s": 0.1,
+        "speed_m_s": 0.15
+      },
+      "message": "Reported speed changed",
+      "type": "SPEED"
+    },
+    {
+      "at": 1795518131.5235448,
+      "details": {
+        "height_m": 0.025,
+        "hump_count": 1
+      },
+      "message": "Hump detection completed",
+      "type": "RAMP"
+    },
+    {
+      "at": 1795518132.5235448,
+      "details": {
+        "previous_m_s": 0.15,
+        "speed_m_s": 0
+      },
+      "message": "Reported speed changed",
+      "type": "SPEED"
+    },
+    {
+      "at": 1795518132.5235448,
+      "details": {
+        "distance_m": 1.75
+      },
+      "message": "Robot reported stopped",
+      "type": "MISSION"
+    }
+  ],
+  "limits": {
+    "events_per_mission": 100,
+    "missions": 30
+  },
+  "mission": {
+    "barcode_count": 0,
+    "ended_at": 1795518132.5235448,
+    "final_distance_m": 1.75,
+    "hump_count": 1,
+    "id": 14,
+    "initial_speed": 0.15,
+    "last_speed": 0,
+    "obstacle_count": 1,
+    "peak_hump_m": 0.025,
+    "started_at": 1795518125.5235448,
+    "status": "Stopped"
+  },
+  "missions": [
+    {
+      "barcode_count": 0,
+      "ended_at": 1795518132.5235448,
+      "final_distance_m": 1.75,
+      "hump_count": 1,
+      "id": 14,
+      "initial_speed": 0.15,
+      "last_speed": 0,
+      "obstacle_count": 1,
+      "peak_hump_m": 0.025,
+      "started_at": 1795518125.5235448,
+      "status": "Stopped"
+    },
+    {
+      "barcode_count": 0,
+      "ended_at": 1795517774.1125178,
+      "final_distance_m": null,
+      "hump_count": null,
+      "id": 13,
+      "initial_speed": 0.15,
+      "last_speed": 0.15,
+      "obstacle_count": 3,
+      "peak_hump_m": null,
+      "started_at": 1795517742.2123742,
+      "status": "Fault"
+    },
+    {
+      "barcode_count": 0,
+      "ended_at": 1795517587.9237237,
+      "final_distance_m": null,
+      "hump_count": null,
+      "id": 12,
+      "initial_speed": 0.15,
+      "last_speed": 0.15,
+      "obstacle_count": 1,
+      "peak_hump_m": null,
+      "started_at": 1795517583.0062408,
+      "status": "Fault"
+    },
+    {
+      "barcode_count": 0,
+      "ended_at": 1795517553.5345798,
+      "final_distance_m": null,
+      "hump_count": null,
+      "id": 11,
+      "initial_speed": 0.15,
+      "last_speed": 0.15,
+      "obstacle_count": 1,
+      "peak_hump_m": null,
+      "started_at": 1795517543.3758261,
+      "status": "Fault"
+    },
+    {
+      "barcode_count": 0,
+      "ended_at": 1795517314.6403406,
+      "final_distance_m": null,
+      "hump_count": null,
+      "id": 10,
+      "initial_speed": 0.15,
+      "last_speed": 0.15,
+      "obstacle_count": 1,
+      "peak_hump_m": null,
+      "started_at": 1795517314.5304348,
+      "status": "Fault"
+    },
+    {
+      "barcode_count": 0,
+      "ended_at": 1795514348.157869,
+      "final_distance_m": null,
+      "hump_count": null,
+      "id": 9,
+      "initial_speed": 0.15,
+      "last_speed": 0.15,
+      "obstacle_count": 0,
+      "peak_hump_m": null,
+      "started_at": 1795514313.1395817,
+      "status": "Stopped"
+    },
+    {
+      "barcode_count": 0,
+      "ended_at": 1795514279.1406748,
+      "final_distance_m": null,
+      "hump_count": null,
+      "id": 8,
+      "initial_speed": 0.15,
+      "last_speed": 0.15,
+      "obstacle_count": 0,
+      "peak_hump_m": null,
+      "started_at": 1795514276.1113086,
+      "status": "Fault"
+    },
+    {
+      "barcode_count": 0,
+      "ended_at": 1795513661.953407,
+      "final_distance_m": null,
+      "hump_count": null,
+      "id": 7,
+      "initial_speed": 0.15,
+      "last_speed": 0.15,
+      "obstacle_count": 1,
+      "peak_hump_m": null,
+      "started_at": 1795513588.8355358,
+      "status": "Fault"
+    },
+    {
+      "barcode_count": 0,
+      "ended_at": 1795172769.6447704,
+      "final_distance_m": null,
+      "hump_count": null,
+      "id": 6,
+      "initial_speed": 0.15,
+      "last_speed": 0.15,
+      "obstacle_count": 1,
+      "peak_hump_m": null,
+      "started_at": 1795172753.7451725,
+      "status": "Fault"
+    },
+    {
+      "barcode_count": 0,
+      "ended_at": 1795172749.9521625,
+      "final_distance_m": null,
+      "hump_count": null,
+      "id": 5,
+      "initial_speed": 0.15,
+      "last_speed": 0.15,
+      "obstacle_count": 0,
+      "peak_hump_m": null,
+      "started_at": 1795172715.2415314,
+      "status": "Stopped"
+    },
+    {
+      "barcode_count": 0,
+      "ended_at": 1795172255.3816786,
+      "final_distance_m": null,
+      "hump_count": null,
+      "id": 4,
+      "initial_speed": 0.15,
+      "last_speed": 0.15,
+      "obstacle_count": 1,
+      "peak_hump_m": null,
+      "started_at": 1795172243.3651981,
+      "status": "Fault"
+    },
+    {
+      "barcode_count": 0,
+      "ended_at": 1795170920.9322903,
+      "final_distance_m": null,
+      "hump_count": null,
+      "id": 3,
+      "initial_speed": 0.15,
+      "last_speed": 0.15,
+      "obstacle_count": 1,
+      "peak_hump_m": null,
+      "started_at": 1795170899.5729942,
+      "status": "Fault"
+    },
+    {
+      "barcode_count": 0,
+      "ended_at": 1795168770.8710558,
+      "final_distance_m": null,
+      "hump_count": 0,
+      "id": 2,
+      "initial_speed": 0.15,
+      "last_speed": 0.15,
+      "obstacle_count": 1,
+      "peak_hump_m": 0,
+      "started_at": 1795168753.820988,
+      "status": "Fault"
+    },
+    {
+      "barcode_count": 0,
+      "ended_at": 1795168156.1572907,
+      "final_distance_m": null,
+      "hump_count": 0,
+      "id": 1,
+      "initial_speed": 0.15,
+      "last_speed": 0.15,
+      "obstacle_count": 0,
+      "peak_hump_m": 0,
+      "started_at": 1795168150.112424,
+      "status": "Stopped"
+    }
+  ],
+  "note": "Saved in local SQLite. Only reported telemetry is recorded; unknown values remain unknown.",
+  "source": "received MQTT telemetry"
+}
