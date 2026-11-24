@@ -1,0 +1,157 @@
+INF2004 Embedded Systems Programming
+Subsystem 1 - Automated Unit Test Evidence
+
+Date: 2026-11-24
+Tester: That Hmuu Shwe Eain
+Student ID: 2502722
+Subsystem: Buddy 1 - Telemetry
+Branch: buddy1/wifi-telemetry
+Tested commit: 798f6df
+
+Hardware: Raspberry Pi Pico W (RP2040)
+RTOS: micro T-Kernel Version 3.00
+Build command: make TEST=1 -j8
+Firmware: mtk3pico_smp1_usb_cdc_wifi_lwip_mqtt_test_sim_speed015.uf2
+Simulation mode: Enabled
+Bit packing: USE_BIT_PACKING=1
+Serial port: COM5
+
+Subsystem 1 result: 8 passed, 0 failed
+
+Capture note:
+The serial output contains a gap during Subsystem 4 testing.
+All Subsystem 1 automated test results were captured.
+The original captured output is preserved below.
+
+================ RAW SERIAL OUTPUT ================
+
+---- Opened the serial port COM5 ----
+
+
+microT-Kernel Version 3.00
+
+
+=== INF2004 autonomous car on micro T-Kernel (spec 0x6300) simulation=1 ===
+[PACK] USE_BIT_PACKING=1 (message B / buffer B)
+[PACK] cmd_q_motion   4 / 96
+[PACK] evt_q_terrain  1
+[PACK] nav_q_line     4 (unpacked 28)
+[PACK] nav_q_obstacle 9 (unpacked 48)
+[PACK] mqtt payload   4 / 384
+S3: route table empty; waiting for MQTT route
+[S3 barcode] sensor GP28 reads WHITE at start
+all tasks started
+
+[TEST] === test run start ===
+[TEST] S1-U01 PASS  fixed-point 0.35 -> "0.350"
+S4: keep car STILL and LEVEL for 2 seconds; LSM303DLHC X forward, Y left, Z up
+[TEST] S1-U02 PASS  fixed-point -1.25 -> "-1.250"
+S4: magnetic heading is UNCALIBRATED; motors/magnets affect turn estimates; hump height is APPROXIMATE
+[TEST] S1-U03 PASS  fixed-point 1 decimal -> "24.0"
+S4: height uses IMU pitch + wheel travel; start LEVEL, roll straight, no lifting/slip; live rise is not altitude
+[TEST] S1-U04 PASS  telemetry message buffer exists
+[TEST] S1-U06 PASS  MQTT telemetry message buffer exists
+[TEST] S1-U07 PASS  packed MQTT message size is 4 bytes
+[TEST] S1-U08 PASS  MQTT queue supports four frames per snapshot
+[TEST] S1-U09 PASS  telemetry and MQTT buffers are separate
+[TEST] subsystem1 SUMMARY 8 passed, 0 failed
+[TEST] S2-U01 PASS  PID output = target when there is no error
+[TEST] S2-U02 PASS  PID pushes harder when the wheel is too slow
+[TEST] S2-U05 PASS  PID clamps output and prevents integral windup
+S3: route msg "A:L,B:R,C:S,D:U": 4 applied, 0 rejected
+S3: route map: AL BR CS DU (others STRAIGHT)
+wifi: cyw43_utk_task starting (proc 1)
+wifi: cyw43_init() ...
+wifi: cyw43_init() returned, bringing interface up ...
+[TEST] S2-U03 FAIL  encoder counts advance while driving (simulation)   (../app_program/subsystem2/subsystem2_test.c:136)
+[TEST] subsystem2 SUMMARY 3 passed, 1 failed
+[TEST] S3-U01 PASS  Code 39 "*L*" read left-to-right
+[TEST] S3-U02 PASS  Code 39 read right-to-left, direction reported
+[TEST] S3-U03 PASS  corrupted symbol is rejected or still correct
+[TEST] S3-U04 PASS  punctuation characters decode both ways
+[TEST] S3-U14 PASS  edge-biased scan with stray edges decodes "A"
+[TEST] S3-U15 PASS  stretched first bar, right-to-left "F" decodes
+[TEST] S3-U16 PASS  speed varying 50% during the scan, R-to-L "R"
+[TEST] S3-U05 PASS  both edge sensors grey: centred, error 0
+[TEST] S3-U17 PASS  drift left/right, lost line steers to last side
+[TEST] S3-U18 PASS  junction after 2 black cycles, once per crossing
+[TEST] S3-U06 PASS  empty table: every character goes straight
+[TEST] S3-U07 PASS  MQTT "A:L,B:R,C:S,D:U" -> left/right/straight/U-turn
+[TEST] S3-U08 PASS  JSON form accepted; updates are cumulative
+[TEST] S3-U09 PASS  bad entries rejected without changing the table
+[TEST] S3-U10 PASS  CLEAR and default action "*" for unmapped characters
+[TEST] S3-U11 PASS  route message reached line_task through the MQTT hook
+[   1.0 s] IDLE   spd=0.150 line=0.000 dist=0.000m pitch=0.0 roll=0.0 obst=100.0cm bc=- fault=0 IMU-CAL
+[TEST] S3-U13 PASS  microsecond TIMER runs at 1 MHz (200 ms delay)
+[TEST] subsystem3 SUMMARY 17 passed, 0 failed
+[TEST] S4-U01 PASS  moving average and ring wrap
+[TEST] S4-U02 PASS  45 degree roll
+[TEST] S4-U03 PASS  30 degree pitch
+[TEST] S4-U04 PASS  12-bit left-aligned little-endian 4g acceleration scale
+[TEST] S4-U05 PASS  magnetometer big-endian X,Z,Y and separate Z scale
+[TEST] S4-U06 PASS  magnetometer overflow sentinel rejected
+[TEST] S4-U07 PASS  requires 200 stable acceleration samples
+[TEST] S4-U08 PASS  level accelerometer bias calibration
+[TEST] S4-U09 PASS  no fabricated gyro or magnetic calibration claims
+[TEST] S4-U10 PASS  movement restarts calibration
+[TEST] S4-U11 PASS  calibration recovers after movement
+[S3 junction] near miss: both sensors dark but below 70%: left 50% (raw 1215, black 2200), middle 50% (raw 1215, black 2200)
+[TEST] S4-U12 PASS  quiet flat data does not produce humps
+[TEST] S4-U13 PASS  magnetic heading derivative detects sustained positive turn
+[TEST] S4-U14 PASS  negative magnetic turn rate
+[TEST] S4-U15 PASS  heading wrap 0 to 359 does not create spike
+[TEST] S4-U16 PASS  stale magnetometer invalidates rate rather than reporting zero turn
+[TEST] S4-U17 PASS  field disturbance disables turns, not acceleration
+[TEST] S4-U18 PASS  heading recovers after field returns to baseline
+[TEST] S4-U19 PASS  impla[  44.0 s] IDLE   spd=0.150 line=-0.980 dist=0.000m pitch=0.0 roll=0.0 obst=100.0cm bc=- fault=0
+[CTRL] RAMP UP (climb boost) pitch=-6.1 deg
+S4: encoder height rejected reason=tilt_gap_pitch_change active=0 imu_ms=44869 motion_ms=44879 interval_ms=40 sensor=1 cal=1 tilt=1 saturated=0 shock=0
+S4: rejected wheel data left_m_s=0.000 right_m_s=0.000 left_ticks=0 right_ticks=0
+S4: [diagnostic] rise=0.000 m peak=0.000 m
+[  45.0 s] IDLE   spd=0.150 line=-0.020 dist=0.000m pitch=-12.6 roll=0.0 obst=24.0cm bc=- fault=0
+S4: LSM303 init=1 read=1 valid=1 cal=200/200 dt_ms=11 accel_mg=250,0,1000
+[S3 junction] near miss: both sensors dark but below 70%: left 50% (raw 1215, black 2200), middle 50% (raw 1215, black 2200)
+[CTRL] RAMP FLAT pitch=-2.9 deg
+[S4] height: rise=0.000 m peak=0.000 m valid=1 active=0 complete=0 gap=0
+[  46.0 s] IDLE   spd=0.150 line=0.980 dist=0.000m pitch=0.0 roll=0.0 obst=100.0cm bc=- fault=0
+mqtt: telemetry publish failed, err=-1
+S4: encoder height rejected reason=shock active=0 imu_ms=46650 motion_ms=46639 interval_ms=11 sensor=1 cal=1 tilt=0 saturated=0 shock=1
+[  47.0 s] IDLE   spd=0.150 line=0.020 dist=0.000m pitch=0.0 roll=0.0 obst=100.0cm bc=- fault=0
+mqtt: telemetry publish failed, err=-1
+[S3 junction] near miss: both sensors dark but below 70%: left 50% (raw 1215, black 2200), middle 50% (raw 1215, black 2200)
+mqtt: RX [mtk3smp-pico/heartbeat] "hb 3"
+[S4] height: rise=0.000 m peak=0.000 m valid=1 active=0 complete=0 gap=0
+[  48.0 s] IDLE   spd=0.150 line=-1.000 dist=0.000m pitch=0.0 roll=0.0 obst=100.0cm bc=- fault=0
+mqtt: TX [mtk3smp-pico/heartbeat] "hb 4"
+mqtt: RX [mtk3smp-pico/heartbeat] "hb 4"
+[S4] height: rise=0.000 m peak=0.000 m valid=1 active=0 complete=0 gap=0
+[  49.0 s] IDLE   spd=0.150 line=-0.020 dist=0.000m pitch=0.0 roll=0.0 obst=100.0cm bc=- fault=0
+[S3 junction] near miss: both sensors dark but below 70%: left 50% (raw 1215, black 2200), middle 50% (raw 1215, black 2200)
+[S4] height: rise=0.000 m peak=0.000 m valid=1 active=0 complete=0 gap=0
+[  50.0 s] IDLE   spd=0.150 line=0.980 dist=0.000m pitch=0.0 roll=0.0 obst=100.0cm bc=- fault=0
+S4: LSM303 init=1 read=1 valid=1 cal=200/200 dt_ms=10 accel_mg=0,0,1000
+[S4] height: rise=0.000 m peak=0.000 m valid=1 active=0 complete=0 gap=0
+[  51.0 s] IDLE   spd=0.150 line=0.020 dist=0.000m pitch=0.0 roll=0.0 obst=100.0cm bc=- fault=0
+[S3 junction] near miss: both sensors dark but below 70%: left 50% (raw 1215, black 2200), middle 50% (raw 1215, black 2200)
+S4: encoder height rejected reason=tilt_gap_timeout active=0 imu_ms=51640 motion_ms=51639 interval_ms=1 sensor=1 cal=1 tilt=0 saturated=0 shock=0
+[  52.0 s] IDLE   spd=0.150 line=-0.980 dist=0.000m pitch=0.0 roll=0.0 obst=100.0cm bc=- fault=0
+[CTRL] RAMP UP (climb boost) pitch=-6.2 deg
+S4: encoder height rejected reason=tilt_gap_pitch_change active=0 imu_ms=52849 motion_ms=52859 interval_ms=40 sensor=1 cal=1 tilt=1 saturated=0 shock=0
+S4: rejected wheel data left_m_s=0.000 right_m_s=0.000 left_ticks=0 right_ticks=0
+S4: [diagnostic] rise=0.000 m peak=0.000 m
+[  53.0 s] IDLE   spd=0.150 line=0.000 dist=0.000m pitch=-12.7 roll=0.0 obst=100.0cm bc=- fault=0
+[S3 junction] near miss: both sensors dark but below 70%: left 50% (raw 1215, black 2200), middle 50% (raw 1215, black 2200)
+[CTRL] RAMP FLAT pitch=-2.9 deg
+mqtt: TX [mtk3smp-pico/heartbeat] "hb 5"
+mqtt: RX [mtk3smp-pico/heartbeat] "hb 5"
+[S4] height: rise=0.000 m peak=0.000 m valid=1 active=0 complete=0 gap=0
+[  54.0 s] IDLE   spd=0.150 line=0.980 dist=0.000m pitch=0.0 roll=0.0 obst=100.0cm bc=- fault=0
+S4: encoder height rejected reason=shock active=0 imu_ms=54650 motion_ms=54619 interval_ms=31 sensor=1 cal=1 tilt=0 saturated=0 shock=1
+[  55.0 s] IDLE   spd=0.150 line=0.020 dist=0.000m pitch=0.0 roll=0.0 obst=100.0cm bc=- fault=0
+S4: LSM303 init=1 read=1 valid=1 cal=200/200 dt_ms=10 accel_mg=0,0,1000
+[S3 junction] near miss: both sensors dark but below 70%: left 50% (raw 1215, black 2200), middle 50% (raw 1215, black 2200)
+[S4] height: rise=0.000 m peak=0.000 m valid=1 active=0 complete=0 gap=0
+[  56.0 s] IDLE   spd=0.150 line=-1.000 dist=0.000m pitch=0.0 roll=0.0 obst=100.0cm bc=- fault=0
+[S4] height: rise=0.000 m peak=0.000 m valid=1 active=0 complete=0 gap=0
+[  57.0 s] IDLE   spd=0.150 line=-0.020 dist=0.000m pitch=0.0 roll=0.0 obst=100.0cm bc=- fault=0
+---- Closed the serial port COM5 ----
