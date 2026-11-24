@@ -41,6 +41,57 @@ Add a new row for every test run. Never edit or delete previous results.
 
 | Date | Test ID | Commit | Tester | Result | Log / evidence | Notes |
 |---|---|---|---|---|---|---|
+| 2026-11-24 | S1-U01 | `798f6df` | That Hmuu Shwe Eain | PASS | `logs/2026-11-24_unit.txt` | Fixed-point output "0.350" verified |
+| 2026-11-24 | S1-U02 | `798f6df` | That Hmuu Shwe Eain | PASS | `logs/2026-11-24_unit.txt` | Negative fixed-point output "-1.250" verified |
+| 2026-11-24 | S1-U03 | `798f6df` | That Hmuu Shwe Eain | PASS | `logs/2026-11-24_unit.txt` | Single decimal output "24.0" verified |
+| 2026-11-24 | S1-U04 | `798f6df` | That Hmuu Shwe Eain | PASS | `logs/2026-11-24_unit.txt` | Telemetry message buffer exists |
+| 2026-11-24 | S1-U06 | `798f6df` | That Hmuu Shwe Eain | PASS | `logs/2026-11-24_unit.txt` | MQTT telemetry message buffer exists |
+| 2026-11-24 | S1-U07 | `798f6df` | That Hmuu Shwe Eain | PASS | `logs/2026-11-24_unit.txt` | Packed MQTT message size configured as 4 bytes |
+| 2026-11-24 | S1-U08 | `798f6df` | That Hmuu Shwe Eain | PASS | `logs/2026-11-24_unit.txt` | MQTT queue length configured for four frames per snapshot |
+| 2026-11-24 | S1-U09 | `798f6df` | That Hmuu Shwe Eain | PASS | `logs/2026-11-24_unit.txt` | Independent telemetry and MQTT buffers verified |
+
+## Test environment
+
+| Item | Configuration |
+|---|---|
+| Test date | 2026-11-24 |
+| Hardware | Raspberry Pi Pico W (RP2040) |
+| RTOS | micro T-Kernel Version 3.00 |
+| Tested commit | `798f6df` |
+| Branch | `buddy1/wifi-telemetry` |
+| Build environment | WSL |
+| Build command | `make TEST=1 -j8` |
+| Firmware | `mtk3pico_smp1_usb_cdc_wifi_lwip_mqtt_test_sim_speed015.uf2` |
+| Simulation mode | Enabled |
+| Bit packing | Enabled (`USE_BIT_PACKING=1`) |
+| Serial port | COM5 |
+| Evidence | `logs/2026-11-24_unit.txt` |
+
+## Automated test summary
+
+| Metric | Result |
+|---|---|
+| Subsystem 1 automated tests executed | 8 |
+| Passed | 8 |
+| Failed | 0 |
+| Pass rate | 100% |
+
+All eight automated Subsystem 1 tests passed on the Pico W using the simulation-enabled test firmware.
+
+The tests verified fixed-point formatting, message buffer creation, packed MQTT message size configuration, queue length configuration and independent telemetry message buffers.
+
+These results verify the implemented unit checks but do not establish complete end-to-end MQTT communication, actual binary encoding correctness or dashboard functionality.
+
+## Test run observations (2026-11-24)
+
+- micro T-Kernel started successfully and reported that all tasks had started.
+- Bit packing was enabled, with a configured MQTT payload size of 4 bytes and buffer size of 384 bytes.
+- MQTT heartbeat transmission and reception were observed.
+- Intermittent MQTT telemetry publishing errors (`err=-1`) were observed and require further investigation during communication testing.
+- Subsystem 2 test S2-U03 failed during the shared test run. This is outside the Subsystem 1 unit test scope.
+- The captured serial output contains a gap during Subsystem 4 testing. No missing results have been inferred.
+- All eight Subsystem 1 automated test results and the subsystem summary were captured successfully.
+- Manual communication, hardware and dashboard tests remain pending.
 
 ## Notes
 
