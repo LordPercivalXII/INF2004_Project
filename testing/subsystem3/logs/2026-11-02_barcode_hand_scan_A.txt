@@ -1,0 +1,2330 @@
+{"t_ms":87000,"mission":1,"speed":0.350,"line":0.000,"distance":16.083,"hump_m":0.000,"obstacle_cm":100.0,"barcode":65,"fault":0}
+{"heartbeat_ms":87000}
+{"t_ms":88000,"mission":2,"speed":0.350,"line":-1.000,"distance":16.225,"hump_m":0.000,"obstacle_cm":100.0,"barcode":65,"fault":0}
+{"heartbeat_ms":88000}
+{"t_ms":89000,"mission":1,"speed":0.350,"line":0.000,"distance":16.392,"hump_m":0.000,"obstacle_cm":100.0,"barcode":65,"fault":0}
+{"heartbeat_ms":89000}
+{"t_ms":90000,"mission":2,"speed":0.350,"line":1.000,"distance":16.679,"hump_m":0.000,"obstacle_cm":24.0,"barcode":65,"fault":0}
+{"heartbeat_ms":90000}
+S3 dbg: white 9151966 us  (+0 glitch edges)
+S3 dbg: BLACK 16382 us  (+22 glitch edges)
+S3 dbg: white 72164 us  (+0 glitch edges)
+S3 dbg: BLACK 129054 us  (+128 glitch edges)
+S3 dbg: white 89617 us  (+0 glitch edges)
+{"t_ms":91000,"mission":2,"speed":0.350,"line":0.000,"distance":16.837,"hump_m":0.000,"obstacle_cm":100.0,"barcode":65,"fault":0}
+{"heartbeat_ms":91000}
+S3 dbg: BLACK 420780 us  (+148 glitch edges)
+S3 dbg: white 103320 us  (+0 glitch edges)
+S3 dbg: BLACK 19443 us  (+174 glitch edges)
+S3 dbg: white 129588 us  (+0 glitch edges)
+S3 dbg: BLACK 8010 us  (+52 glitch edges)
+S3 dbg: white 36179 us  (+0 glitch edges)
+S3 dbg: BLACK 48119 us  (+36 glitch edges)
+{"t_ms":92000,"mission":1,"speed":0.350,"line":-1.000,"distance":17.051,"hump_m":0.000,"obstacle_cm":100.0,"barcode":65,"fault":0}
+{"heartbeat_ms":92000}
+S3 dbg: white 411787 us  (+0 glitch edges)
+{"t_ms":93000,"mission":2,"speed":0.350,"line":0.000,"distance":17.256,"hump_m":0.000,"obstacle_cm":100.0,"barcode":65,"fault":0}
+{"heartbeat_ms":93000}
+S3 dbg: GP28 IRQs 2992, level changes 736, received 713, merged 701, now WHITE
+S3 dbg: 12 elements, NOT decoded
+B16382 s75941 B129054 s93798 B420780 s108234 B19443 s131034 B8010 s37152
+B48119 s416407 
+{"t_ms":94000,"mission":2,"speed":0.350,"line":1.000,"distance":17.406,"hump_m":0.000,"obstacle_cm":100.0,"barcode":65,"fault":0}
+{"heartbeat_ms":94000}
+{"t_ms":95000,"mission":1,"speed":0.350,"line":0.000,"distance":17.623,"hump_m":0.000,"obstacle_cm":100.0,"barcode":65,"fault":0}
+{"heartbeat_ms":95000}
+{"t_ms":96000,"mission":2,"speed":0.350,"line":-1.000,"distance":17.781,"hump_m":0.000,"obstacle_cm":100.0,"barcode":65,"fault":0}
+{"heartbeat_ms":96000}
+{"t_ms":97000,"mission":1,"speed":0.350,"line":0.000,"distance":17.931,"hump_m":0.000,"obstacle_cm":100.0,"barcode":65,"fault":0}
+{"heartbeat_ms":97000}
+{"t_ms":98000,"mission":2,"speed":0.350,"line":1.000,"distance":18.254,"hump_m":0.000,"obstacle_cm":24.0,"barcode":65,"fault":0}
+{"heartbeat_ms":98000}
+S3 dbg: white 6210267 us  (+163 glitch edges)
+S3 dbg: BLACK 14680 us  (+30 glitch edges)
+S3 dbg: white 13879 us  (+0 glitch edges)
+S3 dbg: BLACK 24541 us  (+58 glitch edges)
+S3 dbg: white 85172 us  (+0 glitch edges)
+S3 dbg: BLACK 11288 us  (+40 glitch edges)
+S3 dbg: white 36614 us  (+0 glitch edges)
+S3 dbg: BLACK 59539 us  (+32 glitch edges)
+S3 dbg: white 32491 us  (+0 glitch edges)
+S3 dbg: BLACK 52232 us  (+32 glitch edges)
+S3 dbg: white 30099 us  (+0 glitch edges)
+S3 dbg: BLACK 10036 us  (+34 glitch edges)
+S3 dbg: white 28905 us  (+0 glitch edges)
+S3 dbg: BLACK 46126 us  (+28 glitch edges)
+S3 dbg: white 28081 us  (+0 glitch edges)
+S3 dbg: BLACK 7007 us  (+36 glitch edges)
+S3 dbg: white 27063 us  (+0 glitch edges)
+S3 dbg: BLACK 6340 us  (+30 glitch edges)
+S3 dbg: white 59242 us  (+0 glitch edges)
+S3 dbg: BLACK 6380 us  (+26 glitch edges)
+S3 dbg: white 25873 us  (+0 glitch edges)
+{"t_ms":99000,"mission":2,"speed":0.350,"line":0.000,"distance":18.392,"hump_m":0.000,"obstacle_cm":100.0,"barcode":65,"fault":0}
+{"heartbeat_ms":99000}
+S3 dbg: BLACK 40760 us  (+30 glitch edges)
+S3 dbg: white 24921 us  (+0 glitch edges)
+S3 dbg: BLACK 6691 us  (+28 glitch edges)
+S3 dbg: white 57451 us  (+0 glitch edges)
+S3 dbg: BLACK 6314 us  (+28 glitch edges)
+S3 dbg: white 24544 us  (+0 glitch edges)
+S3 dbg: BLACK 38079 us  (+20 glitch edges)
+S3 dbg: white 24913 us  (+0 glitch edges)
+S3 dbg: BLACK 39291 us  (+32 glitch edges)
+S3 dbg: white 21843 us  (+0 glitch edges)
+S3 dbg: BLACK 9200 us  (+8 glitch edges)
+S3 dbg: GP28 IRQs 2114, level changes 524, received 493, merged 462, now WHITE
+S3 dbg: 31 elements, decoded "A" (left-to-right)
+B14680 s15614 B24541 s86290 B11288 s37582 B59539 s33475 B52232 s30926
+B10036 s29819 B46126 s29074 B7007 s27853 B6340 s60044 B6380 s26686
+B40760 s25640 B6691 s58336 B6314 s25145 B38079 s25752 B39291 s22519
+B9200 
+S3: barcode "A" (left-to-right) stored, 'A' -> LEFT at next junction
+{"t_ms":100000,"mission":2,"speed":0.350,"line":-1.000,"distance":18.485,"hump_m":0.000,"obstacle_cm":100.0,"barcode":65,"fault":0}
+{"heartbeat_ms":100000}
+{"t_ms":101000,"mission":2,"speed":0.350,"line":0.000,"distance":18.588,"hump_m":0.000,"obstacle_cm":100.0,"barcode":65,"fault":0}
+{"heartbeat_ms":101000}
+---- Closed the serial port /dev/tty.usbmodemMTK3PICO1 ----
+---- Opened the serial port /dev/tty.usbmodemMTK3PICO1 ----
+{"t_ms":102000,"mission":2,"speed":0.350,"line":1.000,"distance":18.758,"hump_m":0.000,"obstacle_cm":100.0,"barcode":65,"fault":0}
+{"heartbeat_ms":102000}
+S3: junction: 'A' -> LEFT
+{"t_ms":103000,"mission":1,"speed":0.350,"line":0.000,"distance":18.885,"hump_m":0.000,"obstacle_cm":100.0,"barcode":65,"fault":0}
+{"heartbeat_ms":103000}
+{"t_ms":104000,"mission":2,"speed":0.350,"line":-1.000,"distance":18.947,"hump_m":0.000,"obstacle_cm":100.0,"barcode":65,"fault":0}
+{"heartbeat_ms":104000}
+{"t_ms":105000,"mission":1,"speed":0.350,"line":0.000,"distance":19.082,"hump_m":0.000,"obstacle_cm":100.0,"barcode":65,"fault":0}
+{"heartbeat_ms":105000}
+{"t_ms":106000,"mission":1,"speed":0.350,"line":1.000,"distance":19.432,"hump_m":0.000,"obstacle_cm":100.0,"barcode":65,"fault":0}
+{"heartbeat_ms":106000}
+S3 dbg: white 6981470 us  (+0 glitch edges)
+S3 dbg: BLACK 7949 us  (+16 glitch edges)
+S3 dbg: white 10599 us  (+0 glitch edges)
+S3 dbg: BLACK 14581 us  (+38 glitch edges)
+S3 dbg: white 49910 us  (+0 glitch edges)
+S3 dbg: BLACK 5994 us  (+24 glitch edges)
+S3 dbg: white 17623 us  (+0 glitch edges)
+S3 dbg: BLACK 25760 us  (+18 glitch edges)
+S3 dbg: white 13936 us  (+0 glitch edges)
+S3 dbg: BLACK 22193 us  (+14 glitch edges)
+S3 dbg: white 13004 us  (+0 glitch edges)
+S3 dbg: BLACK 3794 us  (+16 glitch edges)
+S3 dbg: white 13148 us  (+0 glitch edges)
+S3 dbg: BLACK 21519 us  (+16 glitch edges)
+S3 dbg: white 12451 us  (+0 glitch edges)
+S3 dbg: BLACK 3738 us  (+16 glitch edges)
+S3 dbg: white 12389 us  (+0 glitch edges)
+S3 dbg: BLACK 3185 us  (+12 glitch edges)
+S3 dbg: white 27744 us  (+0 glitch edges)
+S3 dbg: BLACK 2958 us  (+18 glitch edges)
+S3 dbg: white 11887 us  (+0 glitch edges)
+S3 dbg: BLACK 19269 us  (+14 glitch edges)
+S3 dbg: white 12755 us  (+0 glitch edges)
+S3 dbg: BLACK 3510 us  (+14 glitch edges)
+S3 dbg: white 33069 us  (+0 glitch edges)
+S3 dbg: BLACK 3763 us  (+18 glitch edges)
+S3 dbg: white 16577 us  (+0 glitch edges)
+S3 dbg: BLACK 27698 us  (+18 glitch edges)
+S3 dbg: white 16662 us  (+0 glitch edges)
+S3 dbg: BLACK 35174 us  (+22 glitch edges)
+S3 dbg: white 19895 us  (+0 glitch edges)
+S3 dbg: BLACK 33726 us  (+24 glitch edges)
+S3 dbg: GP28 IRQs 1196, level changes 330, received 313, merged 282, now WHITE
+S3 dbg: 31 elements, NOT decoded
+B7949 s11631 B14581 s50622 B5994 s18120 B25760 s14311 B22193 s13433
+B3794 s13549 B21519 s12833 B3738 s12715 B3185 s28155 B2958 s12267
+B19269 s13140 B3510 s33607 B3763 s17078 B27698 s17249 B35174 s20508
+B33726 
+{"t_ms":107000,"mission":2,"speed":0.350,"line":0.000,"distance":19.558,"hump_m":0.000,"obstacle_cm":100.0,"barcode":65,"fault":0}
+{"heartbeat_ms":107000}
+{"t_ms":108000,"mission":2,"speed":0.350,"line":-1.000,"distance":19.659,"hump_m":0.000,"obstacle_cm":100.0,"barcode":65,"fault":0}
+{"heartbeat_ms":108000}
+{"t_ms":109000,"mission":2,"speed":0.350,"line":0.000,"distance":19.792,"hump_m":0.000,"obstacle_cm":100.0,"barcode":65,"fault":0}
+{"heartbeat_ms":109000}
+{"t_ms":110000,"mission":2,"speed":0.350,"line":1.000,"distance":19.966,"hump_m":0.000,"obstacle_cm":100.0,"barcode":65,"fault":0}
+{"heartbeat_ms":110000}
+{"t_ms":111000,"mission":1,"speed":0.350,"line":0.000,"distance":20.158,"hump_m":0.000,"obstacle_cm":100.0,"barcode":65,"fault":0}
+{"heartbeat_ms":111000}
+{"t_ms":112000,"mission":2,"speed":0.350,"line":-1.000,"distance":20.347,"hump_m":0.000,"obstacle_cm":100.0,"barcode":65,"fault":0}
+{"heartbeat_ms":112000}
+{"t_ms":113000,"mission":2,"speed":0.350,"line":0.000,"distance":20.479,"hump_m":0.000,"obstacle_cm":100.0,"barcode":65,"fault":0}
+{"heartbeat_ms":113000}
+S3 dbg: white 6245147 us  (+0 glitch edges)
+S3 dbg: BLACK 2942 us  (+136 glitch edges)
+S3 dbg: white 25274 us  (+0 glitch edges)
+S3 dbg: BLACK 20056 us  (+46 glitch edges)
+S3 dbg: white 93798 us  (+0 glitch edges)
+S3 dbg: BLACK 10729 us  (+54 glitch edges)
+S3 dbg: white 35325 us  (+0 glitch edges)
+S3 dbg: BLACK 57437 us  (+40 glitch edges)
+S3 dbg: white 32950 us  (+0 glitch edges)
+S3 dbg: BLACK 54089 us  (+40 glitch edges)
+S3 dbg: white 30515 us  (+0 glitch edges)
+S3 dbg: BLACK 10523 us  (+32 glitch edges)
+S3 dbg: white 30066 us  (+0 glitch edges)
+S3 dbg: BLACK 46244 us  (+30 glitch edges)
+S3 dbg: white 28508 us  (+0 glitch edges)
+S3 dbg: BLACK 7135 us  (+32 glitch edges)
+S3 dbg: white 28741 us  (+0 glitch edges)
+S3 dbg: BLACK 6684 us  (+40 glitch edges)
+S3 dbg: white 63688 us  (+0 glitch edges)
+S3 dbg: BLACK 6614 us  (+34 glitch edges)
+S3 dbg: white 25676 us  (+0 glitch edges)
+S3 dbg: BLACK 42685 us  (+20 glitch edges)
+S3 dbg: white 27823 us  (+0 glitch edges)
+S3 dbg: BLACK 6880 us  (+36 glitch edges)
+S3 dbg: white 62705 us  (+0 glitch edges)
+S3 dbg: BLACK 6812 us  (+36 glitch edges)
+S3 dbg: white 25834 us  (+0 glitch edges)
+S3 dbg: BLACK 40330 us  (+32 glitch edges)
+S3 dbg: white 26985 us  (+0 glitch edges)
+S3 dbg: BLACK 46467 us  (+36 glitch edges)
+S3 dbg: white 27696 us  (+0 glitch edges)
+{"t_ms":114000,"mission":1,"speed":0.350,"line":1.000,"distance":20.817,"hump_m":0.000,"obstacle_cm":100.0,"barcode":65,"fault":0}
+{"heartbeat_ms":114000}
+S3 dbg: BLACK 39287 us  (+38 glitch edges)
+S3 dbg: GP28 IRQs 2760, level changes 714, received 577, merged 546, now WHITE
+S3 dbg: 31 elements, NOT decoded
+B2942 s26546 B20056 s95038 B10729 s36441 B57437 s34004 B54089 s31466
+B10523 s31074 B46244 s29445 B7135 s29914 B6684 s64613 B6614 s26422
+B42685 s28756 B6880 s63670 B6812 s26676 B40330 s27888 B46467 s28809
+B39287 
+{"t_ms":115000,"mission":2,"speed":0.350,"line":0.000,"distance":20.959,"hump_m":0.000,"obstacle_cm":100.0,"barcode":65,"fault":0}
+{"heartbeat_ms":115000}
+{"t_ms":116000,"mission":2,"speed":0.350,"line":-1.000,"distance":21.067,"hump_m":0.000,"obstacle_cm":100.0,"barcode":65,"fault":0}
+{"heartbeat_ms":116000}
+{"t_ms":117000,"mission":2,"speed":0.350,"line":0.000,"distance":21.235,"hump_m":0.000,"obstacle_cm":24.0,"barcode":65,"fault":0}
+{"heartbeat_ms":117000}
+S3 dbg: white 3868233 us  (+0 glitch edges)
+S3 dbg: BLACK 12600 us  (+106 glitch edges)
+S3 dbg: white 38854 us  (+0 glitch edges)
+S3 dbg: BLACK 47955 us  (+86 glitch edges)
+{"t_ms":118000,"mission":2,"speed":0.350,"line":1.000,"distance":21.393,"hump_m":0.000,"obstacle_cm":100.0,"barcode":65,"fault":0}
+{"heartbeat_ms":118000}
+S3 dbg: GP28 IRQs 765, level changes 196, received 89, merged 86, now WHITE
+S3 dbg: 3 elements, NOT decoded
+B12600 s41292 B47955 
+S3 dbg: white 182718 us  (+0 glitch edges)
+S3 dbg: BLACK 23461 us  (+102 glitch edges)
+S3 dbg: white 65929 us  (+0 glitch edges)
+S3 dbg: BLACK 110026 us  (+64 glitch edges)
+S3 dbg: white 64434 us  (+0 glitch edges)
+S3 dbg: BLACK 103301 us  (+64 glitch edges)
+S3 dbg: white 57223 us  (+0 glitch edges)
+S3 dbg: BLACK 19977 us  (+64 glitch edges)
+S3 dbg: white 63513 us  (+0 glitch edges)
+S3 dbg: BLACK 101357 us  (+78 glitch edges)
+S3 dbg: white 64833 us  (+0 glitch edges)
+S3 dbg: BLACK 16540 us  (+98 glitch edges)
+S3 dbg: white 71673 us  (+0 glitch edges)
+S3 dbg: BLACK 19565 us  (+94 glitch edges)
+{"t_ms":119000,"mission":1,"speed":0.350,"line":0.000,"distance":21.589,"hump_m":0.000,"obstacle_cm":100.0,"barcode":65,"fault":0}
+{"heartbeat_ms":119000}
+S3 dbg: white 174416 us  (+0 glitch edges)
+S3 dbg: BLACK 17824 us  (+80 glitch edges)
+S3 dbg: white 63803 us  (+0 glitch edges)
+S3 dbg: BLACK 110476 us  (+60 glitch edges)
+S3 dbg: white 74909 us  (+0 glitch edges)
+S3 dbg: BLACK 20724 us  (+90 glitch edges)
+S3 dbg: white 180585 us  (+0 glitch edges)
+S3 dbg: BLACK 19588 us  (+110 glitch edges)
+S3 dbg: white 82452 us  (+0 glitch edges)
+S3 dbg: BLACK 110270 us  (+82 glitch edges)
+S3 dbg: white 66369 us  (+0 glitch edges)
+{"t_ms":120000,"mission":2,"speed":0.350,"line":-1.000,"distance":21.794,"hump_m":0.000,"obstacle_cm":100.0,"barcode":65,"fault":0}
+{"heartbeat_ms":120000}
+S3 dbg: BLACK 113379 us  (+86 glitch edges)
+S3 dbg: white 61054 us  (+0 glitch edges)
+S3 dbg: BLACK 28500 us  (+62 glitch edges)
+S3 dbg: white 31197 us  (+0 glitch edges)
+S3 dbg: BLACK 19706 us  (+30 glitch edges)
+S3 dbg: GP28 IRQs 4689, level changes 1194, received 1091, merged 1062, now WHITE
+S3 dbg: 29 elements, NOT decoded
+B23461 s67641 B110026 s66196 B103301 s59258 B19977 s65604 B101357 s67507
+B16540 s74147 B19565 s176585 B17824 s65551 B110476 s77448 B20724 s183752
+B19588 s84787 B110270 s68701 B113379 s62926 B28500 s32039 B19706 
+{"t_ms":121000,"mission":2,"speed":0.350,"line":0.000,"distance":21.944,"hump_m":0.000,"obstacle_cm":100.0,"barcode":65,"fault":0}
+{"heartbeat_ms":121000}
+{"t_ms":122000,"mission":1,"speed":0.350,"line":1.000,"distance":22.247,"hump_m":0.000,"obstacle_cm":100.0,"barcode":65,"fault":0}
+{"heartbeat_ms":122000}
+{"t_ms":123000,"mission":2,"speed":0.350,"line":0.000,"distance":22.405,"hump_m":0.000,"obstacle_cm":100.0,"barcode":65,"fault":0}
+{"heartbeat_ms":123000}
+{"t_ms":124000,"mission":2,"speed":0.350,"line":-1.000,"distance":22.520,"hump_m":0.000,"obstacle_cm":100.0,"barcode":65,"fault":0}
+{"heartbeat_ms":124000}
+S3 dbg: white 4451587 us  (+0 glitch edges)
+S3 dbg: BLACK 24592 us  (+8 glitch edges)
+S3 dbg: white 30978 us  (+0 glitch edges)
+S3 dbg: BLACK 4440 us  (+16 glitch edges)
+S3 dbg: white 12090 us  (+0 glitch edges)
+S3 dbg: BLACK 19688 us  (+4 glitch edges)
+S3 dbg: white 10879 us  (+0 glitch edges)
+S3 dbg: BLACK 18061 us  (+10 glitch edges)
+S3 dbg: white 10637 us  (+0 glitch edges)
+S3 dbg: BLACK 3398 us  (+0 glitch edges)
+S3 dbg: white 10076 us  (+0 glitch edges)
+S3 dbg: BLACK 15760 us  (+10 glitch edges)
+S3 dbg: white 9758 us  (+0 glitch edges)
+S3 dbg: BLACK 2437 us  (+12 glitch edges)
+S3 dbg: white 9915 us  (+0 glitch edges)
+S3 dbg: BLACK 2342 us  (+14 glitch edges)
+S3 dbg: white 22745 us  (+0 glitch edges)
+S3 dbg: BLACK 2506 us  (+14 glitch edges)
+S3 dbg: white 10033 us  (+0 glitch edges)
+S3 dbg: BLACK 15876 us  (+12 glitch edges)
+S3 dbg: white 10032 us  (+0 glitch edges)
+S3 dbg: BLACK 2671 us  (+12 glitch edges)
+S3 dbg: white 24009 us  (+0 glitch edges)
+S3 dbg: BLACK 2807 us  (+14 glitch edges)
+S3 dbg: white 10843 us  (+0 glitch edges)
+S3 dbg: BLACK 17827 us  (+12 glitch edges)
+S3 dbg: white 11419 us  (+0 glitch edges)
+S3 dbg: BLACK 19177 us  (+10 glitch edges)
+S3 dbg: white 10767 us  (+0 glitch edges)
+S3 dbg: BLACK 4469 us  (+14 glitch edges)
+{"t_ms":125000,"mission":2,"speed":0.350,"line":0.000,"distance":22.724,"hump_m":0.000,"obstacle_cm":24.0,"barcode":65,"fault":0}
+{"heartbeat_ms":125000}
+S3 dbg: GP28 IRQs 664, level changes 192, received 183, merged 154, now WHITE
+S3 dbg: 29 elements, NOT decoded
+B24592 s31380 B4440 s12274 B19688 s11180 B18061 s10637 B3398 s10335
+B15760 s10098 B2437 s10238 B2342 s23070 B2506 s10292 B15876 s10404
+B2671 s24382 B2807 s11099 B17827 s11743 B19177 s11139 B4469 
+{"t_ms":126000,"mission":2,"speed":0.350,"line":1.000,"distance":22.862,"hump_m":0.000,"obstacle_cm":100.0,"barcode":65,"fault":0}
+{"heartbeat_ms":126000}
+{"t_ms":127000,"mission":1,"speed":0.350,"line":0.000,"distance":23.060,"hump_m":0.000,"obstacle_cm":100.0,"barcode":65,"fault":0}
+{"heartbeat_ms":127000}
+S3 dbg: white 2370680 us  (+0 glitch edges)
+S3 dbg: BLACK 5667 us  (+24 glitch edges)
+S3 dbg: white 8185 us  (+0 glitch edges)
+S3 dbg: BLACK 10887 us  (+32 glitch edges)
+S3 dbg: white 33955 us  (+0 glitch edges)
+S3 dbg: BLACK 4578 us  (+16 glitch edges)
+S3 dbg: white 13422 us  (+0 glitch edges)
+S3 dbg: BLACK 22450 us  (+10 glitch edges)
+S3 dbg: white 12949 us  (+0 glitch edges)
+S3 dbg: BLACK 21154 us  (+10 glitch edges)
+S3 dbg: white 12520 us  (+0 glitch edges)
+S3 dbg: BLACK 3739 us  (+18 glitch edges)
+S3 dbg: white 12661 us  (+0 glitch edges)
+S3 dbg: BLACK 21212 us  (+14 glitch edges)
+S3 dbg: white 13113 us  (+0 glitch edges)
+S3 dbg: BLACK 3813 us  (+12 glitch edges)
+S3 dbg: white 13274 us  (+0 glitch edges)
+S3 dbg: BLACK 3349 us  (+8 glitch edges)
+S3 dbg: white 30982 us  (+0 glitch edges)
+S3 dbg: BLACK 3261 us  (+8 glitch edges)
+S3 dbg: white 13900 us  (+0 glitch edges)
+S3 dbg: BLACK 21700 us  (+12 glitch edges)
+S3 dbg: white 13325 us  (+0 glitch edges)
+S3 dbg: BLACK 3811 us  (+20 glitch edges)
+S3 dbg: white 31684 us  (+0 glitch edges)
+S3 dbg: BLACK 3541 us  (+10 glitch edges)
+S3 dbg: white 14248 us  (+0 glitch edges)
+S3 dbg: BLACK 23292 us  (+12 glitch edges)
+S3 dbg: white 14648 us  (+0 glitch edges)
+S3 dbg: BLACK 24232 us  (+12 glitch edges)
+S3 dbg: white 14804 us  (+0 glitch edges)
+S3 dbg: BLACK 4963 us  (+10 glitch edges)
+S3 dbg: GP28 IRQs 1026, level changes 260, received 235, merged 204, now WHITE
+S3 dbg: 31 elements, decoded "A" (left-to-right)
+B5667 s9092 B10887 s34304 B4578 s13786 B22450 s13242 B21154 s12933
+B3739 s13027 B21212 s13519 B3813 s13687 B3349 s31384 B3261 s14243
+B21700 s13806 B3811 s32025 B3541 s14541 B23292 s15047 B24232 s15225
+B4963 
+S3: barcode "A" (left-to-right) stored, 'A' -> LEFT at next junction
+{"t_ms":128000,"mission":2,"speed":0.350,"line":-1.000,"distance":23.281,"hump_m":0.000,"obstacle_cm":100.0,"barcode":65,"fault":0}
+{"heartbeat_ms":128000}
+{"t_ms":129000,"mission":2,"speed":0.350,"line":0.000,"distance":23.451,"hump_m":0.000,"obstacle_cm":100.0,"barcode":65,"fault":0}
+{"heartbeat_ms":129000}
+{"t_ms":130000,"mission":1,"speed":0.350,"line":1.000,"distance":23.719,"hump_m":0.000,"obstacle_cm":100.0,"barcode":65,"fault":0}
+{"heartbeat_ms":130000}
+{"t_ms":131000,"mission":2,"speed":0.350,"line":0.000,"distance":23.892,"hump_m":0.000,"obstacle_cm":100.0,"barcode":65,"fault":0}
+{"heartbeat_ms":131000}
+S3: junction: 'A' -> LEFT
+{"t_ms":132000,"mission":2,"speed":0.350,"line":-1.000,"distance":24.014,"hump_m":0.000,"obstacle_cm":100.0,"barcode":65,"fault":0}
+{"heartbeat_ms":132000}
+{"t_ms":133000,"mission":1,"speed":0.350,"line":0.000,"distance":24.246,"hump_m":0.000,"obstacle_cm":100.0,"barcode":65,"fault":0}
+{"heartbeat_ms":133000}
+S3 dbg: white 6187356 us  (+0 glitch edges)
+S3 dbg: BLACK 27609 us  (+102 glitch edges)
+{"t_ms":134000,"mission":2,"speed":0.350,"line":1.000,"distance":24.372,"hump_m":0.000,"obstacle_cm":100.0,"barcode":65,"fault":0}
+{"heartbeat_ms":134000}
+S3 dbg: GP28 IRQs 409, level changes 104, received 1, merged 0, now WHITE
+S3 dbg: 1 elements, NOT decoded
+B27609 
+S3 dbg: white 199862 us  (+0 glitch edges)
+S3 dbg: BLACK 23641 us  (+110 glitch edges)
+S3 dbg: white 97622 us  (+0 glitch edges)
+S3 dbg: GP28 IRQs 924, level changes 229, received 118, merged 116, now BLACK
+S3 dbg: 2 elements, NOT decoded
+B23641 s101005 
+S3 dbg: BLACK 164863 us  (+116 glitch edges)
+S3 dbg: white 80382 us  (+0 glitch edges)
+S3 dbg: BLACK 143125 us  (+96 glitch edges)
+S3 dbg: white 89739 us  (+0 glitch edges)
+S3 dbg: BLACK 31446 us  (+106 glitch edges)
+S3 dbg: white 60583 us  (+0 glitch edges)
+S3 dbg: BLACK 100572 us  (+68 glitch edges)
+{"t_ms":135000,"mission":1,"speed":0.350,"line":0.000,"distance":24.554,"hump_m":0.000,"obstacle_cm":100.0,"barcode":65,"fault":0}
+{"heartbeat_ms":135000}
+S3 dbg: white 89076 us  (+0 glitch edges)
+S3 dbg: BLACK 27131 us  (+106 glitch edges)
+S3 dbg: white 132384 us  (+0 glitch edges)
+S3 dbg: BLACK 17540 us  (+34 glitch edges)
+S3 dbg: white 278438 us  (+0 glitch edges)
+S3 dbg: BLACK 33978 us  (+148 glitch edges)
+S3 dbg: white 127948 us  (+0 glitch edges)
+S3 dbg: BLACK 234575 us  (+148 glitch edges)
+{"t_ms":136000,"mission":2,"speed":0.350,"line":-1.000,"distance":24.807,"hump_m":0.000,"obstacle_cm":100.0,"barcode":65,"fault":0}
+{"heartbeat_ms":136000}
+S3 dbg: white 116838 us  (+0 glitch edges)
+S3 dbg: BLACK 34530 us  (+56 glitch edges)
+S3 dbg: white 294974 us  (+0 glitch edges)
+S3 dbg: BLACK 42315 us  (+152 glitch edges)
+S3 dbg: white 129208 us  (+0 glitch edges)
+S3 dbg: BLACK 234882 us  (+150 glitch edges)
+S3 dbg: white 166468 us  (+0 glitch edges)
+{"t_ms":137000,"mission":2,"speed":0.350,"line":0.000,"distance":24.980,"hump_m":0.000,"obstacle_cm":100.0,"barcode":65,"fault":0}
+{"heartbeat_ms":137000}
+S3 dbg: BLACK 290291 us  (+180 glitch edges)
+S3 dbg: white 348603 us  (+0 glitch edges)
+{"t_ms":138000,"mission":1,"speed":0.350,"line":1.000,"distance":25.213,"hump_m":0.000,"obstacle_cm":100.0,"barcode":65,"fault":0}
+{"heartbeat_ms":138000}
+S3 dbg: GP28 IRQs 8395, level changes 2056, received 1780, merged 1756, now BLACK
+S3 dbg: 24 elements, NOT decoded (overflow)
+B164863 s83066 B143125 s92554 B31446 s62460 B100572 s92255 B27131 s134601
+B17540 s282575 B33978 s132139 B234575 s120775 B34530 s299158 B42315 s133539
+B234882 s171298 B290291 s364634 
+{"t_ms":139000,"mission":2,"speed":0.350,"line":0.000,"distance":25.402,"hump_m":0.000,"obstacle_cm":100.0,"barcode":65,"fault":0}
+{"heartbeat_ms":139000}
+S3 dbg: BLACK 1993274 us  (+512 glitch edges)
+{"t_ms":140000,"mission":2,"speed":0.350,"line":-1.000,"distance":25.533,"hump_m":0.000,"obstacle_cm":100.0,"barcode":65,"fault":0}
+{"heartbeat_ms":140000}
+S3 dbg: GP28 IRQs 1, level changes 1, received 1, merged 0, now WHITE
+S3 dbg: 1 elements, NOT decoded
+B1993274 
+{"t_ms":141000,"mission":1,"speed":0.350,"line":0.000,"distance":25.763,"hump_m":0.000,"obstacle_cm":100.0,"barcode":65,"fault":0}
+{"heartbeat_ms":141000}
+S3 dbg: white 1447438 us  (+0 glitch edges)
+S3 dbg: BLACK 8902 us  (+24 glitch edges)
+S3 dbg: white 47114 us  (+0 glitch edges)
+S3 dbg: BLACK 6253 us  (+28 glitch edges)
+S3 dbg: white 20249 us  (+0 glitch edges)
+S3 dbg: BLACK 33343 us  (+18 glitch edges)
+S3 dbg: white 19711 us  (+0 glitch edges)
+S3 dbg: BLACK 32382 us  (+20 glitch edges)
+S3 dbg: white 18977 us  (+0 glitch edges)
+S3 dbg: BLACK 5710 us  (+22 glitch edges)
+S3 dbg: white 18596 us  (+0 glitch edges)
+S3 dbg: BLACK 29739 us  (+22 glitch edges)
+S3 dbg: white 17822 us  (+0 glitch edges)
+S3 dbg: BLACK 5977 us  (+18 glitch edges)
+S3 dbg: white 17916 us  (+0 glitch edges)
+S3 dbg: BLACK 6572 us  (+24 glitch edges)
+S3 dbg: white 44861 us  (+0 glitch edges)
+S3 dbg: BLACK 8543 us  (+18 glitch edges)
+S3 dbg: white 20364 us  (+0 glitch edges)
+S3 dbg: BLACK 45079 us  (+8 glitch edges)
+S3 dbg: white 26257 us  (+0 glitch edges)
+S3 dbg: BLACK 13386 us  (+34 glitch edges)
+S3 dbg: white 83839 us  (+0 glitch edges)
+S3 dbg: BLACK 12470 us  (+16 glitch edges)
+S3 dbg: white 32445 us  (+0 glitch edges)
+S3 dbg: BLACK 62723 us  (+42 glitch edges)
+S3 dbg: white 38443 us  (+0 glitch edges)
+S3 dbg: BLACK 68308 us  (+40 glitch edges)
+S3 dbg: white 42589 us  (+0 glitch edges)
+S3 dbg: BLACK 52619 us  (+42 glitch edges)
+{"t_ms":142000,"mission":2,"speed":0.350,"line":1.000,"distance":25.905,"hump_m":0.000,"obstacle_cm":100.0,"barcode":65,"fault":0}
+{"heartbeat_ms":142000}
+S3 dbg: GP28 IRQs 1606, level changes 406, received 381, merged 352, now WHITE
+S3 dbg: 29 elements, NOT decoded
+B8902 s47841 B6253 s20743 B33343 s20232 B32382 s19504 B5710 s19169
+B29739 s18421 B5977 s18565 B6572 s45463 B8543 s20906 B45079 s27277
+B13386 s85095 B12470 s33531 B62723 s39653 B68308 s43997 B52619 
+{"t_ms":143000,"mission":1,"speed":0.350,"line":0.000,"distance":26.071,"hump_m":0.000,"obstacle_cm":100.0,"barcode":65,"fault":0}
+{"heartbeat_ms":143000}
+{"t_ms":144000,"mission":2,"speed":0.350,"line":-1.000,"distance":26.358,"hump_m":0.000,"obstacle_cm":24.0,"barcode":65,"fault":0}
+{"heartbeat_ms":144000}
+S3 dbg: white 2214126 us  (+0 glitch edges)
+S3 dbg: BLACK 89486 us  (+2 glitch edges)
+S3 dbg: white 140006 us  (+0 glitch edges)
+S3 dbg: BLACK 87470 us  (+58 glitch edges)
+S3 dbg: white 47326 us  (+0 glitch edges)
+S3 dbg: BLACK 66719 us  (+50 glitch edges)
+S3 dbg: white 35873 us  (+0 glitch edges)
+S3 dbg: BLACK 7777 us  (+38 glitch edges)
+{"t_ms":145000,"mission":2,"speed":0.350,"line":0.000,"distance":26.516,"hump_m":0.000,"obstacle_cm":100.0,"barcode":65,"fault":0}
+{"heartbeat_ms":145000}
+S3 dbg: GP28 IRQs 647, level changes 156, received 153, merged 146, now WHITE
+S3 dbg: 7 elements, NOT decoded
+B89486 s141764 B87470 s48721 B66719 s36901 B7777 
+{"t_ms":146000,"mission":1,"speed":0.350,"line":1.000,"distance":26.730,"hump_m":0.000,"obstacle_cm":100.0,"barcode":65,"fault":0}
+{"heartbeat_ms":146000}
+S3 dbg: white 2105771 us  (+0 glitch edges)
+S3 dbg: BLACK 9005 us  (+18 glitch edges)
+S3 dbg: white 39509 us  (+0 glitch edges)
+S3 dbg: BLACK 5296 us  (+20 glitch edges)
+S3 dbg: white 15340 us  (+0 glitch edges)
+S3 dbg: BLACK 25035 us  (+12 glitch edges)
+S3 dbg: white 13793 us  (+0 glitch edges)
+S3 dbg: BLACK 22478 us  (+16 glitch edges)
+S3 dbg: white 12880 us  (+0 glitch edges)
+S3 dbg: BLACK 4034 us  (+6 glitch edges)
+S3 dbg: white 12381 us  (+0 glitch edges)
+S3 dbg: BLACK 19745 us  (+14 glitch edges)
+S3 dbg: white 12143 us  (+0 glitch edges)
+S3 dbg: BLACK 3072 us  (+12 glitch edges)
+S3 dbg: white 11967 us  (+0 glitch edges)
+S3 dbg: BLACK 2910 us  (+12 glitch edges)
+S3 dbg: white 27252 us  (+0 glitch edges)
+S3 dbg: BLACK 2970 us  (+16 glitch edges)
+S3 dbg: white 12246 us  (+0 glitch edges)
+S3 dbg: BLACK 20125 us  (+14 glitch edges)
+{"t_ms":147000,"mission":2,"speed":0.350,"line":0.000,"distance":26.935,"hump_m":0.000,"obstacle_cm":100.0,"barcode":65,"fault":0}
+{"heartbeat_ms":147000}
+S3 dbg: white 13565 us  (+0 glitch edges)
+S3 dbg: BLACK 3345 us  (+16 glitch edges)
+S3 dbg: white 30358 us  (+0 glitch edges)
+S3 dbg: BLACK 3196 us  (+14 glitch edges)
+S3 dbg: white 12769 us  (+0 glitch edges)
+S3 dbg: BLACK 20976 us  (+12 glitch edges)
+S3 dbg: white 13809 us  (+0 glitch edges)
+S3 dbg: BLACK 24140 us  (+14 glitch edges)
+S3 dbg: white 16151 us  (+0 glitch edges)
+S3 dbg: BLACK 4738 us  (+22 glitch edges)
+S3 dbg: white 9908 us  (+0 glitch edges)
+S3 dbg: BLACK 5037 us  (+8 glitch edges)
+S3 dbg: GP28 IRQs 949, level changes 258, received 239, merged 208, now WHITE
+S3 dbg: 31 elements, decoded "A" (left-to-right)
+B9005 s39976 B5296 s15705 B25035 s14174 B22478 s13047 B4034 s12681
+B19745 s12484 B3072 s12374 B2910 s27641 B2970 s12624 B20125 s13973
+B3345 s30712 B3196 s13145 B20976 s14126 B24140 s16714 B4738 s10114
+B5037 
+S3: barcode "A" (left-to-right) stored, 'A' -> LEFT at next junction
+{"t_ms":148000,"mission":2,"speed":0.350,"line":-1.000,"distance":27.085,"hump_m":0.000,"obstacle_cm":100.0,"barcode":65,"fault":0}
+{"heartbeat_ms":148000}
+{"t_ms":149000,"mission":1,"speed":0.350,"line":0.000,"distance":27.302,"hump_m":0.000,"obstacle_cm":100.0,"barcode":65,"fault":0}
+{"heartbeat_ms":149000}
+S3 dbg: white 2443103 us  (+0 glitch edges)
+S3 dbg: BLACK 1992 us  (+44 glitch edges)
+S3 dbg: white 11556 us  (+0 glitch edges)
+S3 dbg: BLACK 11638 us  (+22 glitch edges)
+S3 dbg: white 39729 us  (+0 glitch edges)
+S3 dbg: BLACK 5517 us  (+16 glitch edges)
+S3 dbg: white 15577 us  (+0 glitch edges)
+S3 dbg: BLACK 24800 us  (+14 glitch edges)
+S3 dbg: white 13972 us  (+0 glitch edges)
+S3 dbg: BLACK 22429 us  (+4 glitch edges)
+S3 dbg: white 12765 us  (+0 glitch edges)
+S3 dbg: BLACK 3920 us  (+16 glitch edges)
+S3 dbg: white 12485 us  (+0 glitch edges)
+S3 dbg: BLACK 19690 us  (+12 glitch edges)
+S3 dbg: white 12988 us  (+0 glitch edges)
+S3 dbg: BLACK 3136 us  (+16 glitch edges)
+S3 dbg: white 13670 us  (+0 glitch edges)
+S3 dbg: BLACK 3106 us  (+12 glitch edges)
+S3 dbg: white 27680 us  (+0 glitch edges)
+S3 dbg: BLACK 2909 us  (+12 glitch edges)
+S3 dbg: white 11474 us  (+0 glitch edges)
+S3 dbg: BLACK 18656 us  (+12 glitch edges)
+S3 dbg: white 12135 us  (+0 glitch edges)
+S3 dbg: BLACK 3133 us  (+6 glitch edges)
+S3 dbg: white 30564 us  (+0 glitch edges)
+S3 dbg: BLACK 3495 us  (+12 glitch edges)
+S3 dbg: white 14111 us  (+0 glitch edges)
+S3 dbg: BLACK 22600 us  (+14 glitch edges)
+S3 dbg: white 15180 us  (+0 glitch edges)
+{"t_ms":150000,"mission":2,"speed":0.350,"line":1.000,"distance":27.460,"hump_m":0.000,"obstacle_cm":100.0,"barcode":65,"fault":0}
+{"heartbeat_ms":150000}
+S3 dbg: BLACK 25163 us  (+6 glitch edges)
+S3 dbg: white 16002 us  (+0 glitch edges)
+S3 dbg: BLACK 5843 us  (+20 glitch edges)
+S3 dbg: white 10154 us  (+0 glitch edges)
+S3 dbg: BLACK 4781 us  (+16 glitch edges)
+S3 dbg: GP28 IRQs 1138, level changes 288, received 243, merged 210, now WHITE
+S3 dbg: 33 elements, decoded "A" (left-to-right)
+B1992 s12128 B11638 s40209 B5517 s15901 B24800 s14374 B22429 s13168
+B3920 s12858 B19690 s13447 B3136 s14105 B3106 s28091 B2909 s11802
+B18656 s12516 B3133 s30965 B3495 s14456 B22600 s15567 B25163 s16613
+B5843 s10575 B4781 
+S3: waypoint 'A' replaced before junction
+S3: barcode "A" (left-to-right) stored, 'A' -> LEFT at next junction
+{"t_ms":151000,"mission":1,"speed":0.350,"line":0.000,"distance":27.611,"hump_m":0.000,"obstacle_cm":100.0,"barcode":65,"fault":0}
+{"heartbeat_ms":151000}
+{"t_ms":152000,"mission":2,"speed":0.350,"line":-1.000,"distance":27.933,"hump_m":0.000,"obstacle_cm":24.0,"barcode":65,"fault":0}
+{"heartbeat_ms":152000}
+S3 dbg: white 2586982 us  (+0 glitch edges)
+S3 dbg: BLACK 23012 us  (+8 glitch edges)
+S3 dbg: white 31817 us  (+0 glitch edges)
+S3 dbg: BLACK 5337 us  (+22 glitch edges)
+S3 dbg: white 13922 us  (+0 glitch edges)
+S3 dbg: BLACK 24008 us  (+10 glitch edges)
+S3 dbg: white 14203 us  (+0 glitch edges)
+S3 dbg: BLACK 24025 us  (+16 glitch edges)
+S3 dbg: white 14487 us  (+0 glitch edges)
+S3 dbg: BLACK 4493 us  (+20 glitch edges)
+S3 dbg: white 14933 us  (+0 glitch edges)
+S3 dbg: BLACK 24518 us  (+16 glitch edges)
+S3 dbg: white 15241 us  (+0 glitch edges)
+S3 dbg: BLACK 3653 us  (+28 glitch edges)
+S3 dbg: white 14563 us  (+0 glitch edges)
+S3 dbg: BLACK 3298 us  (+18 glitch edges)
+S3 dbg: white 31510 us  (+0 glitch edges)
+S3 dbg: BLACK 3200 us  (+18 glitch edges)
+S3 dbg: white 13251 us  (+0 glitch edges)
+S3 dbg: BLACK 20460 us  (+12 glitch edges)
+S3 dbg: white 12618 us  (+0 glitch edges)
+S3 dbg: BLACK 3244 us  (+16 glitch edges)
+S3 dbg: white 28364 us  (+0 glitch edges)
+S3 dbg: BLACK 3198 us  (+14 glitch edges)
+{"t_ms":153000,"mission":2,"speed":0.350,"line":0.000,"distance":28.072,"hump_m":0.000,"obstacle_cm":100.0,"barcode":65,"fault":0}
+{"heartbeat_ms":153000}
+S3 dbg: white 12501 us  (+0 glitch edges)
+S3 dbg: BLACK 20507 us  (+16 glitch edges)
+S3 dbg: white 13587 us  (+0 glitch edges)
+S3 dbg: BLACK 21626 us  (+8 glitch edges)
+S3 dbg: white 13153 us  (+0 glitch edges)
+S3 dbg: BLACK 4112 us  (+10 glitch edges)
+S3 dbg: GP28 IRQs 920, level changes 262, received 253, merged 224, now WHITE
+S3 dbg: 29 elements, NOT decoded
+B23012 s32365 B5337 s14316 B24008 s14570 B24025 s14958 B4493 s15383
+B24518 s15851 B3653 s15052 B3298 s31992 B3200 s13524 B20460 s13023
+B3244 s28824 B3198 s12860 B20507 s13924 B21626 s13499 B4112 
+S3: junction: 'A' -> LEFT
+{"t_ms":154000,"mission":1,"speed":0.350,"line":1.000,"distance":28.270,"hump_m":0.000,"obstacle_cm":100.0,"barcode":65,"fault":0}
+{"heartbeat_ms":154000}
+{"t_ms":155000,"mission":2,"speed":0.350,"line":0.000,"distance":28.491,"hump_m":0.000,"obstacle_cm":100.0,"barcode":65,"fault":0}
+{"heartbeat_ms":155000}
+{"t_ms":156000,"mission":2,"speed":0.350,"line":-1.000,"distance":28.660,"hump_m":0.000,"obstacle_cm":100.0,"barcode":65,"fault":0}
+{"heartbeat_ms":156000}
+S3 dbg: white 3295167 us  (+0 glitch edges)
+S3 dbg: BLACK 2544 us  (+34 glitch edges)
+S3 dbg: white 11437 us  (+0 glitch edges)
+S3 dbg: BLACK 11066 us  (+22 glitch edges)
+S3 dbg: white 42935 us  (+0 glitch edges)
+S3 dbg: BLACK 6287 us  (+24 glitch edges)
+S3 dbg: white 17907 us  (+0 glitch edges)
+S3 dbg: BLACK 29070 us  (+20 glitch edges)
+S3 dbg: white 16765 us  (+0 glitch edges)
+S3 dbg: BLACK 27190 us  (+16 glitch edges)
+S3 dbg: white 15609 us  (+0 glitch edges)
+S3 dbg: BLACK 4493 us  (+18 glitch edges)
+S3 dbg: white 15304 us  (+0 glitch edges)
+S3 dbg: BLACK 23750 us  (+20 glitch edges)
+S3 dbg: white 15085 us  (+0 glitch edges)
+S3 dbg: BLACK 3740 us  (+20 glitch edges)
+S3 dbg: white 14932 us  (+0 glitch edges)
+S3 dbg: BLACK 3683 us  (+18 glitch edges)
+S3 dbg: white 32500 us  (+0 glitch edges)
+S3 dbg: BLACK 3869 us  (+16 glitch edges)
+S3 dbg: white 13957 us  (+0 glitch edges)
+S3 dbg: BLACK 21362 us  (+10 glitch edges)
+S3 dbg: white 13005 us  (+0 glitch edges)
+S3 dbg: BLACK 3697 us  (+16 glitch edges)
+S3 dbg: white 32355 us  (+0 glitch edges)
+S3 dbg: BLACK 3844 us  (+16 glitch edges)
+S3 dbg: white 15261 us  (+0 glitch edges)
+S3 dbg: BLACK 25189 us  (+20 glitch edges)
+S3 dbg: white 15183 us  (+0 glitch edges)
+S3 dbg: BLACK 26492 us  (+14 glitch edges)
+S3 dbg: white 14864 us  (+0 glitch edges)
+S3 dbg: BLACK 5720 us  (+16 glitch edges)
+{"t_ms":157000,"mission":1,"speed":0.350,"line":0.000,"distance":28.865,"hump_m":0.000,"obstacle_cm":100.0,"barcode":65,"fault":0}
+{"heartbeat_ms":157000}
+S3 dbg: GP28 IRQs 1213, level changes 332, received 297, merged 266, now WHITE
+S3 dbg: 31 elements, decoded "A" (left-to-right)
+B2544 s12113 B11066 s43598 B6287 s18393 B29070 s17206 B27190 s16081
+B4493 s15780 B23750 s15636 B3740 s15379 B3683 s32947 B3869 s14211
+B21362 s13404 B3697 s32788 B3844 s15745 B25189 s15593 B26492 s15252
+B5720 
+S3: barcode "A" (left-to-right) stored, 'A' -> LEFT at next junction
+{"t_ms":158000,"mission":2,"speed":0.350,"line":1.000,"distance":29.038,"hump_m":0.000,"obstacle_cm":100.0,"barcode":65,"fault":0}
+{"heartbeat_ms":158000}
+{"t_ms":159000,"mission":1,"speed":0.350,"line":0.000,"distance":29.173,"hump_m":0.000,"obstacle_cm":100.0,"barcode":65,"fault":0}
+{"heartbeat_ms":159000}
+{"t_ms":160000,"mission":1,"speed":0.350,"line":-1.000,"distance":29.523,"hump_m":0.000,"obstacle_cm":100.0,"barcode":65,"fault":0}
+{"heartbeat_ms":160000}
+S3: junction: 'A' -> LEFT
+{"t_ms":161000,"mission":2,"speed":0.350,"line":0.000,"distance":29.650,"hump_m":0.000,"obstacle_cm":100.0,"barcode":65,"fault":0}
+{"heartbeat_ms":161000}
+{"t_ms":162000,"mission":2,"speed":0.350,"line":1.000,"distance":29.750,"hump_m":0.000,"obstacle_cm":100.0,"barcode":65,"fault":0}
+{"heartbeat_ms":162000}
+S3 dbg: white 5596531 us  (+0 glitch edges)
+S3 dbg: BLACK 15487 us  (+32 glitch edges)
+S3 dbg: white 52680 us  (+0 glitch edges)
+S3 dbg: BLACK 7985 us  (+22 glitch edges)
+S3 dbg: white 22674 us  (+0 glitch edges)
+S3 dbg: BLACK 37099 us  (+22 glitch edges)
+S3 dbg: white 21313 us  (+0 glitch edges)
+S3 dbg: BLACK 35317 us  (+26 glitch edges)
+S3 dbg: white 19389 us  (+0 glitch edges)
+S3 dbg: BLACK 6263 us  (+24 glitch edges)
+S3 dbg: white 18447 us  (+0 glitch edges)
+S3 dbg: BLACK 29216 us  (+20 glitch edges)
+S3 dbg: white 17801 us  (+0 glitch edges)
+S3 dbg: BLACK 4693 us  (+22 glitch edges)
+S3 dbg: white 17474 us  (+0 glitch edges)
+S3 dbg: BLACK 4385 us  (+18 glitch edges)
+S3 dbg: white 39907 us  (+0 glitch edges)
+S3 dbg: BLACK 4666 us  (+18 glitch edges)
+S3 dbg: white 16880 us  (+0 glitch edges)
+S3 dbg: BLACK 26876 us  (+18 glitch edges)
+S3 dbg: white 15668 us  (+0 glitch edges)
+S3 dbg: BLACK 4751 us  (+18 glitch edges)
+S3 dbg: white 38719 us  (+0 glitch edges)
+S3 dbg: BLACK 4445 us  (+16 glitch edges)
+S3 dbg: white 17269 us  (+0 glitch edges)
+S3 dbg: BLACK 30005 us  (+16 glitch edges)
+{"t_ms":163000,"mission":2,"speed":0.350,"line":0.000,"distance":29.884,"hump_m":0.000,"obstacle_cm":100.0,"barcode":65,"fault":0}
+{"heartbeat_ms":163000}
+S3 dbg: white 20448 us  (+0 glitch edges)
+S3 dbg: BLACK 37752 us  (+24 glitch edges)
+S3 dbg: white 21446 us  (+0 glitch edges)
+S3 dbg: BLACK 7761 us  (+24 glitch edges)
+S3 dbg: GP28 IRQs 1336, level changes 350, received 317, merged 288, now WHITE
+S3 dbg: 29 elements, decoded "A" (left-to-right)
+B15487 s53397 B7985 s23227 B37099 s21968 B35317 s20015 B6263 s19041
+B29216 s18361 B4693 s18038 B4385 s40394 B4666 s17290 B26876 s16216
+B4751 s39203 B4445 s17743 B30005 s21048 B37752 s22084 B7761 
+S3: barcode "A" (left-to-right) stored, 'A' -> LEFT at next junction
+{"t_ms":164000,"mission":2,"speed":0.350,"line":-1.000,"distance":30.057,"hump_m":0.000,"obstacle_cm":100.0,"barcode":65,"fault":0}
+{"heartbeat_ms":164000}
+{"t_ms":165000,"mission":1,"speed":0.350,"line":0.000,"distance":30.250,"hump_m":0.000,"obstacle_cm":100.0,"barcode":65,"fault":0}
+{"heartbeat_ms":165000}
+{"t_ms":166000,"mission":2,"speed":0.350,"line":1.000,"distance":30.439,"hump_m":0.000,"obstacle_cm":100.0,"barcode":65,"fault":0}
+{"heartbeat_ms":166000}
+S3: junction: 'A' -> LEFT
+{"t_ms":167000,"mission":2,"speed":0.350,"line":0.000,"distance":30.570,"hump_m":0.000,"obstacle_cm":100.0,"barcode":65,"fault":0}
+{"heartbeat_ms":167000}
+{"t_ms":168000,"mission":1,"speed":0.350,"line":-1.000,"distance":30.908,"hump_m":0.000,"obstacle_cm":100.0,"barcode":65,"fault":0}
+{"heartbeat_ms":168000}
+{"t_ms":169000,"mission":2,"speed":0.350,"line":0.000,"distance":31.051,"hump_m":0.000,"obstacle_cm":100.0,"barcode":65,"fault":0}
+{"heartbeat_ms":169000}
+{"t_ms":170000,"mission":2,"speed":0.350,"line":1.000,"distance":31.158,"hump_m":0.000,"obstacle_cm":100.0,"barcode":65,"fault":0}
+{"heartbeat_ms":170000}
+{"t_ms":171000,"mission":2,"speed":0.350,"line":0.000,"distance":31.327,"hump_m":0.000,"obstacle_cm":24.0,"barcode":65,"fault":0}
+{"heartbeat_ms":171000}
+S3 dbg: white 8544046 us  (+0 glitch edges)
+S3 dbg: BLACK 33746 us  (+12 glitch edges)
+S3 dbg: white 48743 us  (+0 glitch edges)
+S3 dbg: BLACK 6922 us  (+28 glitch edges)
+S3 dbg: white 20945 us  (+0 glitch edges)
+S3 dbg: BLACK 33135 us  (+24 glitch edges)
+S3 dbg: white 18267 us  (+0 glitch edges)
+S3 dbg: BLACK 30486 us  (+20 glitch edges)
+S3 dbg: white 16865 us  (+0 glitch edges)
+S3 dbg: BLACK 4971 us  (+20 glitch edges)
+S3 dbg: white 16172 us  (+0 glitch edges)
+S3 dbg: BLACK 4148 us  (+6 glitch edges)
+S3 dbg: white 15677 us  (+0 glitch edges)
+S3 dbg: BLACK 25041 us  (+12 glitch edges)
+S3 dbg: white 15026 us  (+0 glitch edges)
+S3 dbg: BLACK 23329 us  (+8 glitch edges)
+S3 dbg: white 34670 us  (+0 glitch edges)
+S3 dbg: BLACK 4955 us  (+6 glitch edges)
+S3 dbg: white 14998 us  (+0 glitch edges)
+S3 dbg: BLACK 5211 us  (+2 glitch edges)
+{"t_ms":172000,"mission":2,"speed":0.350,"line":-1.000,"distance":31.484,"hump_m":0.000,"obstacle_cm":100.0,"barcode":65,"fault":0}
+{"heartbeat_ms":172000}
+S3 dbg: white 14478 us  (+0 glitch edges)
+S3 dbg: BLACK 4983 us  (+4 glitch edges)
+S3 dbg: white 34623 us  (+0 glitch edges)
+S3 dbg: BLACK 4222 us  (+10 glitch edges)
+S3 dbg: white 15273 us  (+0 glitch edges)
+S3 dbg: BLACK 24138 us  (+2 glitch edges)
+S3 dbg: white 14940 us  (+0 glitch edges)
+S3 dbg: BLACK 65474 us  (+18 glitch edges)
+S3 dbg: GP28 IRQs 825, level changes 200, received 187, merged 160, now WHITE
+S3 dbg: 27 elements, NOT decoded
+B33746 s49490 B6922 s21554 B33135 s18792 B30486 s17462 B4971 s16671
+B4148 s16076 B25041 s15286 B23329 s35082 B4955 s15162 B5211 s14864
+B4983 s35044 B4222 s15440 B24138 s15401 B65474 
+{"t_ms":173000,"mission":1,"speed":0.350,"line":0.000,"distance":31.680,"hump_m":0.000,"obstacle_cm":100.0,"barcode":65,"fault":0}
+{"heartbeat_ms":173000}
+{"t_ms":174000,"mission":2,"speed":0.350,"line":1.000,"distance":31.885,"hump_m":0.000,"obstacle_cm":100.0,"barcode":65,"fault":0}
+{"heartbeat_ms":174000}
+{"t_ms":175000,"mission":2,"speed":0.350,"line":0.000,"distance":32.036,"hump_m":0.000,"obstacle_cm":100.0,"barcode":65,"fault":0}
+{"heartbeat_ms":175000}
+{"t_ms":176000,"mission":1,"speed":0.350,"line":-1.000,"distance":32.339,"hump_m":0.000,"obstacle_cm":100.0,"barcode":65,"fault":0}
+{"heartbeat_ms":176000}
+S3 dbg: white 4111609 us  (+0 glitch edges)
+S3 dbg: BLACK 5898 us  (+26 glitch edges)
+S3 dbg: white 11565 us  (+0 glitch edges)
+S3 dbg: BLACK 12378 us  (+34 glitch edges)
+S3 dbg: white 50778 us  (+0 glitch edges)
+S3 dbg: BLACK 7071 us  (+22 glitch edges)
+S3 dbg: white 20317 us  (+0 glitch edges)
+S3 dbg: BLACK 33743 us  (+20 glitch edges)
+S3 dbg: white 19337 us  (+0 glitch edges)
+S3 dbg: BLACK 30561 us  (+8 glitch edges)
+S3 dbg: white 16919 us  (+0 glitch edges)
+S3 dbg: BLACK 5646 us  (+16 glitch edges)
+S3 dbg: white 16726 us  (+0 glitch edges)
+S3 dbg: BLACK 5158 us  (+20 glitch edges)
+S3 dbg: white 16636 us  (+0 glitch edges)
+S3 dbg: BLACK 26283 us  (+20 glitch edges)
+S3 dbg: white 15403 us  (+0 glitch edges)
+S3 dbg: BLACK 24538 us  (+14 glitch edges)
+S3 dbg: white 34890 us  (+0 glitch edges)
+S3 dbg: BLACK 5160 us  (+16 glitch edges)
+S3 dbg: white 14278 us  (+0 glitch edges)
+S3 dbg: BLACK 4371 us  (+14 glitch edges)
+S3 dbg: white 13576 us  (+0 glitch edges)
+S3 dbg: BLACK 4153 us  (+14 glitch edges)
+S3 dbg: white 31976 us  (+0 glitch edges)
+S3 dbg: BLACK 4088 us  (+20 glitch edges)
+S3 dbg: white 14598 us  (+0 glitch edges)
+S3 dbg: BLACK 23689 us  (+6 glitch edges)
+S3 dbg: white 14104 us  (+0 glitch edges)
+S3 dbg: BLACK 67074 us  (+18 glitch edges)
+{"t_ms":177000,"mission":2,"speed":0.350,"line":0.000,"distance":32.497,"hump_m":0.000,"obstacle_cm":100.0,"barcode":65,"fault":0}
+{"heartbeat_ms":177000}
+S3 dbg: GP28 IRQs 1107, level changes 298, received 271, merged 242, now WHITE
+S3 dbg: 29 elements, NOT decoded
+B5898 s12434 B12378 s51374 B7071 s20925 B33743 s19874 B30561 s17405
+B5646 s17338 B5158 s17192 B26283 s15745 B24538 s35328 B5160 s14718
+B4371 s14018 B4153 s32478 B4088 s15153 B23689 s14525 B67074 
+{"t_ms":178000,"mission":2,"speed":0.350,"line":1.000,"distance":32.611,"hump_m":0.000,"obstacle_cm":100.0,"barcode":65,"fault":0}
+{"heartbeat_ms":178000}
+{"t_ms":179000,"mission":2,"speed":0.350,"line":0.000,"distance":32.815,"hump_m":0.000,"obstacle_cm":24.0,"barcode":65,"fault":0}
+{"heartbeat_ms":179000}
+{"t_ms":180000,"mission":2,"speed":0.350,"line":-1.000,"distance":32.953,"hump_m":0.000,"obstacle_cm":100.0,"barcode":65,"fault":0}
+{"heartbeat_ms":180000}
+S3 dbg: white 3416940 us  (+0 glitch edges)
+S3 dbg: BLACK 29924 us  (+6 glitch edges)
+S3 dbg: white 44727 us  (+0 glitch edges)
+S3 dbg: BLACK 6486 us  (+30 glitch edges)
+S3 dbg: white 19179 us  (+0 glitch edges)
+S3 dbg: BLACK 31793 us  (+22 glitch edges)
+S3 dbg: white 16892 us  (+0 glitch edges)
+S3 dbg: BLACK 26803 us  (+16 glitch edges)
+S3 dbg: white 16130 us  (+0 glitch edges)
+S3 dbg: BLACK 4880 us  (+18 glitch edges)
+S3 dbg: white 16670 us  (+0 glitch edges)
+S3 dbg: BLACK 4437 us  (+18 glitch edges)
+S3 dbg: white 16763 us  (+0 glitch edges)
+S3 dbg: BLACK 24526 us  (+18 glitch edges)
+S3 dbg: white 14745 us  (+0 glitch edges)
+S3 dbg: BLACK 23250 us  (+4 glitch edges)
+S3 dbg: white 34912 us  (+0 glitch edges)
+S3 dbg: BLACK 4669 us  (+14 glitch edges)
+S3 dbg: white 15620 us  (+0 glitch edges)
+S3 dbg: BLACK 4487 us  (+20 glitch edges)
+S3 dbg: white 16139 us  (+0 glitch edges)
+S3 dbg: BLACK 4415 us  (+14 glitch edges)
+S3 dbg: white 38128 us  (+0 glitch edges)
+S3 dbg: BLACK 4619 us  (+16 glitch edges)
+S3 dbg: white 16717 us  (+0 glitch edges)
+S3 dbg: BLACK 26742 us  (+18 glitch edges)
+S3 dbg: white 15384 us  (+0 glitch edges)
+S3 dbg: BLACK 68611 us  (+16 glitch edges)
+{"t_ms":181000,"mission":1,"speed":0.350,"line":0.000,"distance":33.152,"hump_m":0.000,"obstacle_cm":100.0,"barcode":65,"fault":0}
+{"heartbeat_ms":181000}
+S3 dbg: GP28 IRQs 994, level changes 258, received 251, merged 224, now WHITE
+S3 dbg: 27 elements, NOT decoded
+B29924 s45408 B6486 s19741 B31793 s17321 B26803 s16567 B4880 s17160
+B4437 s17269 B24526 s14954 B23250 s35310 B4669 s16118 B4487 s16577
+B4415 s38568 B4619 s17234 B26742 s15819 B68611 
+{"t_ms":182000,"mission":2,"speed":0.350,"line":1.000,"distance":33.372,"hump_m":0.000,"obstacle_cm":100.0,"barcode":65,"fault":0}
+{"heartbeat_ms":182000}
+{"t_ms":183000,"mission":2,"speed":0.350,"line":0.000,"distance":33.542,"hump_m":0.000,"obstacle_cm":100.0,"barcode":65,"fault":0}
+{"heartbeat_ms":183000}
+{"t_ms":184000,"mission":1,"speed":0.350,"line":-1.000,"distance":33.810,"hump_m":0.000,"obstacle_cm":100.0,"barcode":65,"fault":0}
+{"heartbeat_ms":184000}
+S3 dbg: white 4115524 us  (+0 glitch edges)
+S3 dbg: BLACK 5140 us  (+22 glitch edges)
+S3 dbg: white 38062 us  (+0 glitch edges)
+S3 dbg: BLACK 4447 us  (+18 glitch edges)
+S3 dbg: white 16439 us  (+0 glitch edges)
+{"t_ms":185000,"mission":2,"speed":0.350,"line":0.000,"distance":33.984,"hump_m":0.000,"obstacle_cm":100.0,"barcode":65,"fault":0}
+{"heartbeat_ms":185000}
+S3 dbg: BLACK 26394 us  (+12 glitch edges)
+S3 dbg: white 16161 us  (+0 glitch edges)
+S3 dbg: BLACK 28444 us  (+18 glitch edges)
+S3 dbg: white 19124 us  (+0 glitch edges)
+S3 dbg: BLACK 5558 us  (+30 glitch edges)
+S3 dbg: white 20732 us  (+0 glitch edges)
+S3 dbg: BLACK 5171 us  (+24 glitch edges)
+S3 dbg: white 21588 us  (+0 glitch edges)
+S3 dbg: BLACK 32120 us  (+26 glitch edges)
+S3 dbg: white 18864 us  (+0 glitch edges)
+S3 dbg: BLACK 27769 us  (+20 glitch edges)
+S3 dbg: white 40530 us  (+0 glitch edges)
+S3 dbg: BLACK 4316 us  (+24 glitch edges)
+S3 dbg: white 16597 us  (+0 glitch edges)
+S3 dbg: BLACK 4276 us  (+20 glitch edges)
+S3 dbg: white 15768 us  (+0 glitch edges)
+S3 dbg: BLACK 3946 us  (+20 glitch edges)
+S3 dbg: white 37699 us  (+0 glitch edges)
+S3 dbg: BLACK 3823 us  (+26 glitch edges)
+S3 dbg: white 17329 us  (+0 glitch edges)
+S3 dbg: BLACK 27053 us  (+8 glitch edges)
+S3 dbg: white 16537 us  (+0 glitch edges)
+S3 dbg: BLACK 72566 us  (+18 glitch edges)
+S3 dbg: GP28 IRQs 1201, level changes 314, received 291, merged 264, now WHITE
+S3 dbg: 27 elements, NOT decoded
+B5140 s38579 B4447 s16824 B26394 s16660 B28444 s19874 B5558 s21396
+B5171 s22300 B32120 s19479 B27769 s41147 B4316 s17167 B4276 s16268
+B3946 s38474 B3823 s17843 B27053 s16996 B72566 
+{"t_ms":186000,"mission":2,"speed":0.350,"line":1.000,"distance":34.105,"hump_m":0.000,"obstacle_cm":100.0,"barcode":65,"fault":0}
+{"heartbeat_ms":186000}
+{"t_ms":187000,"mission":1,"speed":0.350,"line":0.000,"distance":34.337,"hump_m":0.000,"obstacle_cm":100.0,"barcode":65,"fault":0}
+{"heartbeat_ms":187000}
+{"t_ms":188000,"mission":2,"speed":0.350,"line":-1.000,"distance":34.463,"hump_m":0.000,"obstacle_cm":100.0,"barcode":65,"fault":0}
+{"heartbeat_ms":188000}
+S3 dbg: white 3166932 us  (+0 glitch edges)
+S3 dbg: BLACK 3460 us  (+20 glitch edges)
+S3 dbg: white 11566 us  (+0 glitch edges)
+S3 dbg: BLACK 8696 us  (+22 glitch edges)
+S3 dbg: white 44496 us  (+0 glitch edges)
+S3 dbg: BLACK 5076 us  (+28 glitch edges)
+S3 dbg: white 19123 us  (+0 glitch edges)
+S3 dbg: BLACK 30036 us  (+18 glitch edges)
+S3 dbg: white 17919 us  (+0 glitch edges)
+S3 dbg: BLACK 29159 us  (+24 glitch edges)
+S3 dbg: white 17686 us  (+0 glitch edges)
+S3 dbg: BLACK 4488 us  (+22 glitch edges)
+S3 dbg: white 17602 us  (+0 glitch edges)
+S3 dbg: BLACK 3729 us  (+28 glitch edges)
+S3 dbg: white 16934 us  (+0 glitch edges)
+S3 dbg: BLACK 25205 us  (+20 glitch edges)
+S3 dbg: white 15809 us  (+0 glitch edges)
+S3 dbg: BLACK 23729 us  (+6 glitch edges)
+S3 dbg: white 35345 us  (+0 glitch edges)
+S3 dbg: BLACK 3904 us  (+20 glitch edges)
+{"t_ms":189000,"mission":1,"speed":0.350,"line":0.000,"distance":34.646,"hump_m":0.000,"obstacle_cm":100.0,"barcode":65,"fault":0}
+{"heartbeat_ms":189000}
+S3 dbg: white 16148 us  (+0 glitch edges)
+S3 dbg: BLACK 3746 us  (+8 glitch edges)
+S3 dbg: white 15554 us  (+0 glitch edges)
+S3 dbg: BLACK 3626 us  (+6 glitch edges)
+S3 dbg: white 35045 us  (+0 glitch edges)
+S3 dbg: BLACK 3319 us  (+20 glitch edges)
+S3 dbg: white 15742 us  (+0 glitch edges)
+S3 dbg: BLACK 25639 us  (+16 glitch edges)
+S3 dbg: white 16456 us  (+0 glitch edges)
+S3 dbg: BLACK 64891 us  (+18 glitch edges)
+S3 dbg: GP28 IRQs 1191, level changes 306, received 285, merged 256, now WHITE
+S3 dbg: 29 elements, NOT decoded
+B3460 s12200 B8696 s45261 B5076 s19725 B30036 s18481 B29159 s18373
+B4488 s18383 B3729 s17527 B25205 s16155 B23729 s35883 B3904 s16708
+B3746 s16150 B3626 s35658 B3319 s16215 B25639 s16947 B64891 
+{"t_ms":190000,"mission":2,"speed":0.350,"line":1.000,"distance":34.898,"hump_m":0.000,"obstacle_cm":100.0,"barcode":65,"fault":0}
+{"heartbeat_ms":190000}
+{"t_ms":191000,"mission":2,"speed":0.350,"line":0.000,"distance":35.071,"hump_m":0.000,"obstacle_cm":100.0,"barcode":65,"fault":0}
+{"heartbeat_ms":191000}
+S3 dbg: white 2476814 us  (+0 glitch edges)
+S3 dbg: BLACK 4505 us  (+12 glitch edges)
+S3 dbg: white 9114 us  (+0 glitch edges)
+S3 dbg: BLACK 7951 us  (+20 glitch edges)
+S3 dbg: white 39040 us  (+0 glitch edges)
+S3 dbg: BLACK 4413 us  (+24 glitch edges)
+S3 dbg: white 17850 us  (+0 glitch edges)
+S3 dbg: BLACK 28741 us  (+20 glitch edges)
+S3 dbg: white 17264 us  (+0 glitch edges)
+S3 dbg: BLACK 28041 us  (+16 glitch edges)
+S3 dbg: white 16936 us  (+0 glitch edges)
+S3 dbg: BLACK 4330 us  (+8 glitch edges)
+S3 dbg: white 17139 us  (+0 glitch edges)
+S3 dbg: BLACK 3576 us  (+24 glitch edges)
+S3 dbg: white 16087 us  (+0 glitch edges)
+S3 dbg: BLACK 24191 us  (+18 glitch edges)
+S3 dbg: white 15774 us  (+0 glitch edges)
+S3 dbg: BLACK 25462 us  (+16 glitch edges)
+S3 dbg: white 37865 us  (+0 glitch edges)
+{"t_ms":192000,"mission":1,"speed":0.350,"line":-1.000,"distance":35.304,"hump_m":0.000,"obstacle_cm":100.0,"barcode":65,"fault":0}
+{"heartbeat_ms":192000}
+S3 dbg: BLACK 4121 us  (+26 glitch edges)
+S3 dbg: white 16852 us  (+0 glitch edges)
+S3 dbg: BLACK 4189 us  (+24 glitch edges)
+S3 dbg: white 17551 us  (+0 glitch edges)
+S3 dbg: BLACK 4381 us  (+24 glitch edges)
+S3 dbg: white 41666 us  (+0 glitch edges)
+S3 dbg: BLACK 3867 us  (+24 glitch edges)
+S3 dbg: white 16506 us  (+0 glitch edges)
+S3 dbg: BLACK 26558 us  (+22 glitch edges)
+S3 dbg: white 17966 us  (+0 glitch edges)
+S3 dbg: BLACK 74405 us  (+18 glitch edges)
+S3 dbg: GP28 IRQs 1198, level changes 326, received 313, merged 284, now WHITE
+S3 dbg: 29 elements, NOT decoded
+B4505 s9609 B7951 s39663 B4413 s18347 B28741 s17744 B28041 s17647
+B4330 s17801 B3576 s16673 B24191 s16253 B25462 s38501 B4121 s17531
+B4189 s18206 B4381 s42264 B3867 s17086 B26558 s18457 B74405 
+{"t_ms":193000,"mission":2,"speed":0.350,"line":0.000,"distance":35.494,"hump_m":0.000,"obstacle_cm":100.0,"barcode":65,"fault":0}
+{"heartbeat_ms":193000}
+{"t_ms":194000,"mission":2,"speed":0.350,"line":1.000,"distance":35.625,"hump_m":0.000,"obstacle_cm":100.0,"barcode":65,"fault":0}
+{"heartbeat_ms":194000}
+S3 dbg: white 2236041 us  (+0 glitch edges)
+S3 dbg: BLACK 4062 us  (+14 glitch edges)
+S3 dbg: white 10293 us  (+0 glitch edges)
+S3 dbg: BLACK 8227 us  (+18 glitch edges)
+S3 dbg: white 39154 us  (+0 glitch edges)
+S3 dbg: BLACK 4602 us  (+20 glitch edges)
+S3 dbg: white 16892 us  (+0 glitch edges)
+S3 dbg: BLACK 26062 us  (+18 glitch edges)
+S3 dbg: white 15119 us  (+0 glitch edges)
+S3 dbg: BLACK 24135 us  (+6 glitch edges)
+S3 dbg: white 14721 us  (+0 glitch edges)
+S3 dbg: BLACK 3904 us  (+10 glitch edges)
+S3 dbg: white 14705 us  (+0 glitch edges)
+S3 dbg: BLACK 3207 us  (+20 glitch edges)
+S3 dbg: white 13941 us  (+0 glitch edges)
+S3 dbg: BLACK 20937 us  (+18 glitch edges)
+S3 dbg: white 13618 us  (+0 glitch edges)
+S3 dbg: BLACK 21587 us  (+14 glitch edges)
+S3 dbg: white 32487 us  (+0 glitch edges)
+S3 dbg: BLACK 3663 us  (+18 glitch edges)
+S3 dbg: white 13769 us  (+0 glitch edges)
+S3 dbg: BLACK 3593 us  (+18 glitch edges)
+S3 dbg: white 13966 us  (+0 glitch edges)
+S3 dbg: BLACK 3359 us  (+16 glitch edges)
+S3 dbg: white 32871 us  (+0 glitch edges)
+S3 dbg: BLACK 3312 us  (+18 glitch edges)
+S3 dbg: white 14902 us  (+0 glitch edges)
+S3 dbg: BLACK 23107 us  (+16 glitch edges)
+S3 dbg: white 14396 us  (+0 glitch edges)
+S3 dbg: BLACK 56372 us  (+12 glitch edges)
+{"t_ms":195000,"mission":1,"speed":0.350,"line":0.000,"distance":35.854,"hump_m":0.000,"obstacle_cm":100.0,"barcode":65,"fault":0}
+{"heartbeat_ms":195000}
+S3 dbg: GP28 IRQs 1000, level changes 266, received 251, merged 222, now WHITE
+S3 dbg: 29 elements, NOT decoded
+B4062 s10821 B8227 s39646 B4602 s17324 B26062 s15419 B24135 s15299
+B3904 s15296 B3207 s14405 B20937 s14015 B21587 s32940 B3663 s14225
+B3593 s14413 B3359 s33408 B3312 s15303 B23107 s14728 B56372 
+{"t_ms":196000,"mission":2,"speed":0.350,"line":-1.000,"distance":35.996,"hump_m":0.000,"obstacle_cm":100.0,"barcode":65,"fault":0}
+{"heartbeat_ms":196000}
+S3 dbg: white 2054218 us  (+0 glitch edges)
+{"t_ms":197000,"mission":1,"speed":0.350,"line":0.000,"distance":36.162,"hump_m":0.000,"obstacle_cm":100.0,"barcode":65,"fault":0}
+S3 db{g":h eaBrLtAbCeKa t_m3s2"8:91 9u7s0 0 0(}+
+34 glitch edges)
+S3 dbg: white 12306 us  (+0 glitch edges)
+S3 dbg: BLACK 10411 us  (+26 glitch edges)
+S3 dbg: white 46472 us  (+0 glitch edges)
+S3 dbg: BLACK 5262 us  (+22 glitch edges)
+S3 dbg: white 18780 us  (+0 glitch edges)
+S3 dbg: BLACK 29696 us  (+16 glitch edges)
+S3 dbg: white 17394 us  (+0 glitch edges)
+S3 dbg: BLACK 28184 us  (+20 glitch edges)
+S3 dbg: white 16765 us  (+0 glitch edges)
+S3 dbg: BLACK 4565 us  (+22 glitch edges)
+S3 dbg: white 17244 us  (+0 glitch edges)
+S3 dbg: BLACK 3887 us  (+4 glitch edges)
+S3 dbg: white 16752 us  (+0 glitch edges)
+S3 dbg: BLACK 25246 us  (+14 glitch edges)
+S3 dbg: white 15280 us  (+0 glitch edges)
+S3 dbg: BLACK 22856 us  (+16 glitch edges)
+S3 dbg: white 33342 us  (+0 glitch edges)
+S3 dbg: BLACK 3840 us  (+18 glitch edges)
+S3 dbg: white 14313 us  (+0 glitch edges)
+S3 dbg: BLACK 3737 us  (+18 glitch edges)
+S3 dbg: white 14213 us  (+0 glitch edges)
+S3 dbg: BLACK 3598 us  (+16 glitch edges)
+S3 dbg: white 34816 us  (+0 glitch edges)
+S3 dbg: BLACK 3515 us  (+20 glitch edges)
+S3 dbg: white 15350 us  (+0 glitch edges)
+S3 dbg: BLACK 23478 us  (+14 glitch edges)
+S3 dbg: white 15011 us  (+0 glitch edges)
+S3 dbg: BLACK 62958 us  (+14 glitch edges)
+S3 dbg: GP28 IRQs 1201, level changes 304, received 269, merged 240, now WHITE
+S3 dbg: 29 elements, NOT decoded
+B3289 s13078 B10411 s47057 B5262 s19219 B29696 s17875 B28184 s17419
+B4565 s17490 B3887 s17195 B25246 s15724 B22856 s33856 B3840 s14832
+B3737 s14667 B3598 s35394 B3515 s15674 B23478 s15408 B62958 
+{"t_ms":198000,"mission":2,"speed":0.350,"line":1.000,"distance":36.450,"hump_m":0.000,"obstacle_cm":24.0,"barcode":65,"fault":0}
+{"heartbeat_ms":198000}
+{"t_ms":199000,"mission":2,"speed":0.350,"line":0.000,"distance":36.607,"hump_m":0.000,"obstacle_cm":100.0,"barcode":65,"fault":0}
+{"heartbeat_ms":199000}
+S3 dbg: white 2233460 us  (+0 glitch edges)
+S3 dbg: BLACK 6659 us  (+10 glitch edges)
+S3 dbg: white 9147 us  (+0 glitch edges)
+S3 dbg: BLACK 9930 us  (+28 glitch edges)
+S3 dbg: white 45086 us  (+0 glitch edges)
+S3 dbg: BLACK 5100 us  (+18 glitch edges)
+S3 dbg: white 19300 us  (+0 glitch edges)
+S3 dbg: BLACK 30588 us  (+18 glitch edges)
+S3 dbg: white 18379 us  (+0 glitch edges)
+S3 dbg: BLACK 30934 us  (+22 glitch edges)
+S3 dbg: white 18570 us  (+0 glitch edges)
+S3 dbg: BLACK 4899 us  (+22 glitch edges)
+S3 dbg: white 18517 us  (+0 glitch edges)
+S3 dbg: BLACK 4266 us  (+24 glitch edges)
+{"t_ms":200000,"mission":1,"speed":0.350,"line":-1.000,"distance":36.821,"hump_m":0.000,"obstacle_cm":100.0,"barcode":65,"fault":0}
+{"heartbeat_ms":200000}
+S3 dbg: white 17707 us  (+0 glitch edges)
+S3 dbg: BLACK 27259 us  (+18 glitch edges)
+S3 dbg: white 17376 us  (+0 glitch edges)
+S3 dbg: BLACK 27807 us  (+16 glitch edges)
+S3 dbg: white 42600 us  (+0 glitch edges)
+S3 dbg: BLACK 4901 us  (+24 glitch edges)
+S3 dbg: white 18210 us  (+0 glitch edges)
+S3 dbg: BLACK 4712 us  (+20 glitch edges)
+S3 dbg: white 18451 us  (+0 glitch edges)
+S3 dbg: BLACK 4709 us  (+28 glitch edges)
+S3 dbg: white 42991 us  (+0 glitch edges)
+S3 dbg: BLACK 4190 us  (+26 glitch edges)
+S3 dbg: white 17944 us  (+0 glitch edges)
+S3 dbg: BLACK 28271 us  (+22 glitch edges)
+S3 dbg: white 18690 us  (+0 glitch edges)
+S3 dbg: BLACK 77459 us  (+20 glitch edges)
+S3 dbg: GP28 IRQs 1299, level changes 346, received 335, merged 306, now WHITE
+S3 dbg: 29 elements, NOT decoded
+B6659 s9883 B9930 s45625 B5100 s19924 B30588 s18935 B30934 s19201
+B4899 s19252 B4266 s18241 B27259 s17795 B27807 s43266 B4901 s18725
+B4712 s19098 B4709 s43702 B4190 s18532 B28271 s19168 B77459 
+{"t_ms":201000,"mission":2,"speed":0.350,"line":0.000,"distance":37.026,"hump_m":0.000,"obstacle_cm":100.0,"barcode":65,"fault":0}
+{"heartbeat_ms":201000}
+{"t_ms":202000,"mission":2,"speed":0.350,"line":1.000,"distance":37.177,"hump_m":0.000,"obstacle_cm":100.0,"barcode":65,"fault":0}
+{"heartbeat_ms":202000}
+{"t_ms":203000,"mission":1,"speed":0.350,"line":0.000,"distance":37.393,"hump_m":0.000,"obstacle_cm":100.0,"barcode":65,"fault":0}
+{"heartbeat_ms":203000}
+{"t_ms":204000,"mission":2,"speed":0.350,"line":-1.000,"distance":37.551,"hump_m":0.000,"obstacle_cm":100.0,"barcode":65,"fault":0}
+{"heartbeat_ms":204000}
+{"t_ms":205000,"mission":1,"speed":0.350,"line":0.000,"distance":37.702,"hump_m":0.000,"obstacle_cm":100.0,"barcode":65,"fault":0}
+{"heartbeat_ms":205000}
+{"t_ms":206000,"mission":2,"speed":0.350,"line":1.000,"distance":38.024,"hump_m":0.000,"obstacle_cm":24.0,"barcode":65,"fault":0}
+{"heartbeat_ms":206000}
+{"t_ms":207000,"mission":2,"speed":0.350,"line":0.000,"distance":38.163,"hump_m":0.000,"obstacle_cm":100.0,"barcode":65,"fault":0}
+{"heartbeat_ms":207000}
+{"t_ms":208000,"mission":2,"speed":0.350,"line":-1.000,"distance":38.256,"hump_m":0.000,"obstacle_cm":100.0,"barcode":65,"fault":0}
+{"heartbeat_ms":208000}
+{"t_ms":209000,"mission":2,"speed":0.350,"line":0.000,"distance":38.359,"hump_m":0.000,"obstacle_cm":100.0,"barcode":65,"fault":0}
+{"heartbeat_ms":209000}
+{"t_ms":210000,"mission":2,"speed":0.350,"line":1.000,"distance":38.528,"hump_m":0.000,"obstacle_cm":100.0,"barcode":65,"fault":0}
+{"heartbeat_ms":210000}
+{"t_ms":211000,"mission":1,"speed":0.350,"line":0.000,"distance":38.733,"hump_m":0.000,"obstacle_cm":100.0,"barcode":65,"fault":0}
+{"heartbeat_ms":211000}
+{"t_ms":212000,"mission":2,"speed":0.350,"line":-1.000,"distance":38.906,"hump_m":0.000,"obstacle_cm":100.0,"barcode":65,"fault":0}
+{"heartbeat_ms":212000}
+{"t_ms":213000,"mission":1,"speed":0.350,"line":0.000,"distance":39.041,"hump_m":0.000,"obstacle_cm":100.0,"barcode":65,"fault":0}
+{"heartbeat_ms":213000}
+{"t_ms":214000,"mission":1,"speed":0.350,"line":1.000,"distance":39.391,"hump_m":0.000,"obstacle_cm":100.0,"barcode":65,"fault":0}
+{"heartbeat_ms":214000}
+{"t_ms":215000,"mission":2,"speed":0.350,"line":0.000,"distance":39.518,"hump_m":0.000,"obstacle_cm":100.0,"barcode":65,"fault":0}
+{"heartbeat_ms":215000}
+{"t_ms":216000,"mission":2,"speed":0.350,"line":-1.000,"distance":39.618,"hump_m":0.000,"obstacle_cm":100.0,"barcode":65,"fault":0}
+{"heartbeat_ms":216000}
+S3 dbg: white 16369101 us  (+0 glitch edges)
+S3 dbg: BLACK 21481 us  (+40 glitch edges)
+S3 dbg: white 24543 us  (+0 glitch edges)
+S3 dbg: BLACK 20654 us  (+12 glitch edges)
+S3 dbg: white 45406 us  (+0 glitch edges)
+S3 dbg: BLACK 20485 us  (+34 glitch edges)
+S3 dbg: white 98124 us  (+0 glitch edges)
+S3 dbg: BLACK 15658 us  (+30 glitch edges)
+{"t_ms":217000,"mission":2,"speed":0.350,"line":0.000,"distance":39.752,"hump_m":0.000,"obstacle_cm":100.0,"barcode":65,"fault":0}
+{"heartbeat_ms":217000}
+S3 dbg: white 64896 us  (+0 glitch edges)
+S3 dbg: BLACK 15008 us  (+28 glitch edges)
+S3 dbg: white 14823 us  (+0 glitch edges)
+S3 dbg: BLACK 14298 us  (+22 glitch edges)
+S3 dbg: GP28 IRQs 735, level changes 178, received 137, merged 126, now WHITE
+S3 dbg: 11 elements, NOT decoded
+B21481 s25654 B20654 s46328 B20485 s98930 B15658 s65654 B15008 s15562
+B14298 
+{"t_ms":218000,"mission":2,"speed":0.350,"line":1.000,"distance":39.925,"hump_m":0.000,"obstacle_cm":100.0,"barcode":65,"fault":0}
+{"heartbeat_ms":218000}
+{"t_ms":219000,"mission":1,"speed":0.350,"line":0.000,"distance":40.118,"hump_m":0.000,"obstacle_cm":100.0,"barcode":65,"fault":0}
+{"heartbeat_ms":219000}
+{"t_ms":220000,"mission":2,"speed":0.350,"line":-1.000,"distance":40.307,"hump_m":0.000,"obstacle_cm":100.0,"barcode":65,"fault":0}
+{"heartbeat_ms":220000}
+{"t_ms":221000,"mission":2,"speed":0.350,"line":0.000,"distance":40.438,"hump_m":0.000,"obstacle_cm":100.0,"barcode":65,"fault":0}
+{"heartbeat_ms":221000}
+S3 dbg: white 4159401 us  (+0 glitch edges)
+S3 dbg: BLACK 124094 us  (+236 glitch edges)
+S3 dbg: white 142748 us  (+0 glitch edges)
+S3 dbg: BLACK 132161 us  (+250 glitch edges)
+S3 dbg: white 294135 us  (+0 glitch edges)
+{"t_ms":222000,"mission":1,"speed":0.350,"line":1.000,"distance":40.776,"hump_m":0.000,"obstacle_cm":100.0,"barcode":65,"fault":0}
+{"heartbeat_ms":222000}
+S3 dbg: BLACK 122236 us  (+246 glitch edges)
+S3 dbg: white 833899 us  (+0 glitch edges)
+{"t_ms":223000,"mission":2,"speed":0.350,"line":0.000,"distance":40.918,"hump_m":0.000,"obstacle_cm":100.0,"barcode":65,"fault":0}
+{"heartbeat_ms":223000}
+S3 dbg: BLACK 427535 us  (+32 glitch edges)
+S3 dbg: white 489240 us  (+0 glitch edges)
+S3 dbg: BLACK 63050 us  (+126 glitch edges)
+S3 dbg: white 63505 us  (+0 glitch edges)
+{"t_ms":224000,"mission":2,"speed":0.350,"line":-1.000,"distance":41.026,"hump_m":0.000,"obstacle_cm":100.0,"barcode":65,"fault":0}
+{"heartbeat_ms":224000}
+S3 dbg: BLACK 54610 us  (+90 glitch edges)
+{"t_ms":225000,"mission":2,"speed":0.350,"line":0.000,"distance":41.195,"hump_m":0.000,"obstacle_cm":24.0,"barcode":65,"fault":0}
+{"heartbeat_ms":225000}
+S3 dbg: GP28 IRQs 4008, level changes 992, received 755, merged 744, now WHITE
+S3 dbg: 11 elements, NOT decoded
+B124094 s149583 B132161 s301216 B122236 s834873 B427535 s492826 B63050 s66118
+B54610 
+{"t_ms":226000,"mission":2,"speed":0.350,"line":1.000,"distance":41.352,"hump_m":0.000,"obstacle_cm":100.0,"barcode":65,"fault":0}
+{"heartbeat_ms":226000}
+S3 dbg: white 2289424 us  (+0 glitch edges)
+S3 dbg: BLACK 1462 us  (+22 glitch edges)
+S3 dbg: GP28 IRQs 95, level changes 24, received 1, merged 0, now WHITE
+S3 dbg: 1 elements, NOT decoded
+B1462 
+S3 dbg: white 524370 us  (+0 glitch edges)
+S3 dbg: BLACK 13182 us  (+30 glitch edges)
+S3 dbg: white 16685 us  (+0 glitch edges)
+S3 dbg: BLACK 17091 us  (+32 glitch edges)
+S3 dbg: white 26078 us  (+0 glitch edges)
+S3 dbg: BLACK 11712 us  (+16 glitch edges)
+S3 dbg: white 55561 us  (+0 glitch edges)
+S3 dbg: BLACK 9876 us  (+20 glitch edges)
+{"t_ms":227000,"mission":1,"speed":0.350,"line":0.000,"distance":41.548,"hump_m":0.000,"obstacle_cm":100.0,"barcode":65,"fault":0}
+{"heartbeat_ms":227000}
+S3 dbg: white 39129 us  (+0 glitch edges)
+S3 dbg: BLACK 10380 us  (+12 glitch edges)
+S3 dbg: white 8970 us  (+0 glitch edges)
+S3 dbg: BLACK 10360 us  (+16 glitch edges)
+S3 dbg: GP28 IRQs 527, level changes 138, received 107, merged 96, now WHITE
+S3 dbg: 11 elements, NOT decoded
+B13182 s17656 B17091 s26573 B11712 s56089 B9876 s39549 B10380 s9367
+B10360 
+{"t_ms":228000,"mission":2,"speed":0.350,"line":-1.000,"distance":41.753,"hump_m":0.000,"obstacle_cm":100.0,"barcode":65,"fault":0}
+{"heartbeat_ms":228000}
+S3 dbg: white 1351074 us  (+0 glitch edges)
+S3 dbg: BLACK 3410 us  (+8 glitch edges)
+S3 dbg: GP28 IRQs 33, level changes 10, received 1, merged 0, now WHITE
+S3 dbg: 1 elements, NOT decoded
+B3410 
+{"t_ms":229000,"mission":2,"speed":0.350,"line":0.000,"distance":41.903,"hump_m":0.000,"obstacle_cm":100.0,"barcode":65,"fault":0}
+{"heartbeat_ms":229000}
+S3 dbg: white 661431 us  (+0 glitch edges)
+S3 dbg: BLACK 12301 us  (+26 glitch edges)
+S3 dbg: white 12959 us  (+0 glitch edges)
+S3 dbg: BLACK 10683 us  (+20 glitch edges)
+S3 dbg: white 22336 us  (+0 glitch edges)
+S3 dbg: BLACK 9631 us  (+20 glitch edges)
+S3 dbg: white 48221 us  (+0 glitch edges)
+S3 dbg: BLACK 8367 us  (+14 glitch edges)
+S3 dbg: white 34517 us  (+0 glitch edges)
+S3 dbg: BLACK 8073 us  (+14 glitch edges)
+S3 dbg: white 8702 us  (+0 glitch edges)
+S3 dbg: BLACK 8073 us  (+12 glitch edges)
+S3 dbg: GP28 IRQs 450, level changes 118, received 91, merged 80, now WHITE
+S3 dbg: 11 elements, NOT decoded
+B12301 s13605 B10683 s22812 B9631 s48592 B8367 s34866 B8073 s8990
+B8073 
+{"t_ms":230000,"mission":1,"speed":0.350,"line":1.000,"distance":42.207,"hump_m":0.000,"obstacle_cm":100.0,"barcode":65,"fault":0}
+{"heartbeat_ms":230000}
+{"t_ms":231000,"mission":2,"speed":0.350,"line":0.000,"distance":42.365,"hump_m":0.000,"obstacle_cm":100.0,"barcode":65,"fault":0}
+{"heartbeat_ms":231000}
+S3 dbg: white 2373306 us  (+0 glitch edges)
+S3 dbg: BLACK 4301 us  (+24 glitch edges)
+S3 dbg: GP28 IRQs 79, level changes 26, received 1, merged 0, now WHITE
+S3 dbg: 1 elements, NOT decoded
+B4301 
+{"t_ms":232000,"mission":2,"speed":0.350,"line":-1.000,"distance":42.479,"hump_m":0.000,"obstacle_cm":100.0,"barcode":65,"fault":0}
+{"heartbeat_ms":232000}
+S3 dbg: white 1002452 us  (+0 glitch edges)
+S3 dbg: BLACK 13817 us  (+10 glitch edges)
+S3 dbg: white 15339 us  (+0 glitch edges)
+S3 dbg: BLACK 14057 us  (+28 glitch edges)
+S3 dbg: white 31841 us  (+0 glitch edges)
+S3 dbg: BLACK 15207 us  (+28 glitch edges)
+S3 dbg: white 79394 us  (+0 glitch edges)
+S3 dbg: BLACK 13429 us  (+26 glitch edges)
+S3 dbg: white 52203 us  (+0 glitch edges)
+S3 dbg: BLACK 12394 us  (+22 glitch edges)
+S3 dbg: white 12590 us  (+0 glitch edges)
+S3 dbg: BLACK 11351 us  (+18 glitch edges)
+{"t_ms":233000,"mission":2,"speed":0.350,"line":0.000,"distance":42.683,"hump_m":0.000,"obstacle_cm":24.0,"barcode":65,"fault":0}
+{"heartbeat_ms":233000}
+S3 dbg: GP28 IRQs 537, level changes 144, received 133, merged 122, now WHITE
+S3 dbg: 11 elements, NOT decoded
+B13817 s16094 B14057 s32577 B15207 s80084 B13429 s52725 B12394 s13166
+B11351 
+S3 dbg: white 1041080 us  (+0 glitch edges)
+S3 dbg: BLACK 5822 us  (+18 glitch edges)
+{"t_ms":234000,"mission":2,"speed":0.350,"line":1.000,"distance":42.821,"hump_m":0.000,"obstacle_cm":100.0,"barcode":65,"fault":0}
+{"heartbeat_ms":234000}
+S3 dbg: GP28 IRQs 53, level changes 20, received 1, merged 0, now WHITE
+S3 dbg: 1 elements, NOT decoded
+B5822 
+S3 dbg: white 596888 us  (+0 glitch edges)
+S3 dbg: BLACK 10099 us  (+16 glitch edges)
+S3 dbg: white 11041 us  (+0 glitch edges)
+S3 dbg: BLACK 9524 us  (+16 glitch edges)
+S3 dbg: white 20162 us  (+0 glitch edges)
+S3 dbg: BLACK 9012 us  (+14 glitch edges)
+S3 dbg: white 46489 us  (+0 glitch edges)
+S3 dbg: BLACK 8655 us  (+14 glitch edges)
+S3 dbg: white 36566 us  (+0 glitch edges)
+S3 dbg: BLACK 8754 us  (+16 glitch edges)
+S3 dbg: white 8517 us  (+0 glitch edges)
+S3 dbg: BLACK 8832 us  (+12 glitch edges)
+S3 dbg: GP28 IRQs 397, level changes 100, received 83, merged 72, now WHITE
+S3 dbg: 11 elements, NOT decoded
+B10099 s11494 B9524 s20610 B9012 s46937 B8655 s37026 B8754 s8840
+B8832 
+{"t_ms":235000,"mission":1,"speed":0.350,"line":0.000,"distance":43.019,"hump_m":0.000,"obstacle_cm":100.0,"barcode":65,"fault":0}
+{"heartbeat_ms":235000}
+{"t_ms":236000,"mission":2,"speed":0.350,"line":-1.000,"distance":43.240,"hump_m":0.000,"obstacle_cm":100.0,"barcode":65,"fault":0}
+{"heartbeat_ms":236000}
+{"t_ms":237000,"mission":2,"speed":0.350,"line":0.000,"distance":43.410,"hump_m":0.000,"obstacle_cm":100.0,"barcode":65,"fault":0}
+{"heartbeat_ms":237000}
+{"t_ms":238000,"mission":1,"speed":0.350,"line":1.000,"distance":43.678,"hump_m":0.000,"obstacle_cm":100.0,"barcode":65,"fault":0}
+{"heartbeat_ms":238000}
+S3 dbg: white 3436886 us  (+0 glitch edges)
+S3 dbg: BLACK 103182 us  (+180 glitch edges)
+S3 dbg: white 119781 us  (+0 glitch edges)
+S3 dbg: BLACK 106317 us  (+204 glitch edges)
+S3 dbg: white 248360 us  (+0 glitch edges)
+S3 dbg: BLACK 112441 us  (+220 glitch edges)
+{"t_ms":239000,"mission":2,"speed":0.350,"line":0.000,"distance":43.852,"hump_m":0.000,"obstacle_cm":100.0,"barcode":65,"fault":0}
+{"heartbeat_ms":239000}
+S3 dbg: white 935705 us  (+0 glitch edges)
+S3 dbg: BLACK 153593 us  (+350 glitch edges)
+{"t_ms":240000,"mission":2,"speed":0.350,"line":-1.000,"distance":43.973,"hump_m":0.000,"obstacle_cm":100.0,"barcode":65,"fault":0}
+{"heartbeat_ms":240000}
+S3 dbg: white 764257 us  (+0 glitch edges)
+S3 dbg: BLACK 196377 us  (+512 glitch edges)
+{"t_ms":241000,"mission":1,"speed":0.350,"line":0.000,"distance":44.205,"hump_m":0.000,"obstacle_cm":100.0,"barcode":65,"fault":0}
+{"heartbeat_ms":241000}
+S3 dbg: white 235248 us  (+0 glitch edges)
+S3 dbg: BLACK 181079 us  (+336 glitch edges)
+{"t_ms":242000,"mission":2,"speed":0.350,"line":1.000,"distance":44.331,"hump_m":0.000,"obstacle_cm":100.0,"barcode":65,"fault":0}
+{"heartbeat_ms":242000}
+S3 dbg: GP28 IRQs 9449, level changes 2370, received 1633, merged 1622, now WHITE
+S3 dbg: 11 elements, NOT decoded (overflow)
+B103182 s125720 B106317 s254417 B112441 s945944 B153593 s779075 B196377 s245064
+B181079 
+{"t_ms":243000,"mission":1,"speed":0.350,"line":0.000,"distance":44.513,"hump_m":0.000,"obstacle_cm":100.0,"barcode":65,"fault":0}
+{"heartbeat_ms":243000}
+{"t_ms":244000,"mission":2,"speed":0.350,"line":-1.000,"distance":44.765,"hump_m":0.000,"obstacle_cm":100.0,"barcode":65,"fault":0}
+{"heartbeat_ms":244000}
+{"t_ms":245000,"mission":2,"speed":0.350,"line":0.000,"distance":44.939,"hump_m":0.000,"obstacle_cm":100.0,"barcode":65,"fault":0}
+{"heartbeat_ms":245000}
+{"t_ms":246000,"mission":1,"speed":0.350,"line":1.000,"distance":45.172,"hump_m":0.000,"obstacle_cm":100.0,"barcode":65,"fault":0}
+{"heartbeat_ms":246000}
+S3 dbg: white 5162677 us  (+0 glitch edges)
+S3 dbg: BLACK 242269 us  (+76 glitch edges)
+{"t_ms":247000,"mission":2,"speed":0.350,"line":0.000,"distance":45.361,"hump_m":0.000,"obstacle_cm":100.0,"barcode":65,"fault":0}
+{"heartbeat_ms":247000}
+S3 dbg: white 528855 us  (+0 glitch edges)
+S3 dbg: BLACK 151043 us  (+512 glitch edges)
+{"t_ms":248000,"mission":2,"speed":0.350,"line":-1.000,"distance":45.492,"hump_m":0.000,"obstacle_cm":100.0,"barcode":65,"fault":0}
+{"heartbeat_ms":248000}
+S3 dbg: white 730678 us  (+0 glitch edges)
+S3 dbg: BLACK 136659 us  (+136 glitch edges)
+S3 dbg: white 79095 us  (+0 glitch edges)
+S3 dbg: BLACK 101632 us  (+160 glitch edges)
+S3 dbg: white 303412 us  (+0 glitch edges)
+S3 dbg: BLACK 89169 us  (+118 glitch edges)
+{"t_ms":249000,"mission":1,"speed":0.350,"line":0.000,"distance":45.722,"hump_m":0.000,"obstacle_cm":100.0,"barcode":65,"fault":0}
+{"heartbeat_ms":249000}
+S3 dbg: white 456116 us  (+0 glitch edges)
+S3 dbg: BLACK 141867 us  (+188 glitch edges)
+S3 dbg: white 207322 us  (+0 glitch edges)
+S3 dbg: BLACK 130130 us  (+202 glitch edges)
+S3 dbg: white 116314 us  (+0 glitch edges)
+{"t_ms":250000,"mission":2,"speed":0.350,"line":1.000,"distance":45.864,"hump_m":0.000,"obstacle_cm":100.0,"barcode":65,"fault":0}
+{"heartbeat_ms":250000}
+S3 dbg: BLACK 223824 us  (+284 glitch edges)
+S3 dbg: white 583560 us  (+0 glitch edges)
+S3 dbg: BLACK 128562 us  (+464 glitch edges)
+{"t_ms":251000,"mission":1,"speed":0.350,"line":0.000,"distance":46.030,"hump_m":0.000,"obstacle_cm":100.0,"barcode":65,"fault":0}
+{"heartbeat_ms":251000}
+S3 dbg: GP28 IRQs 9154, level changes 2288, received 2081, merged 2064, now WHITE
+S3 dbg: 17 elements, NOT decoded (overflow)
+B242269 s543332 B151043 s734641 B136659 s83755 B101632 s306739 B89169 s461185
+B141867 s213292 B130130 s124158 B223824 s596632 B128562 
+{"t_ms":252000,"mission":2,"speed":0.350,"line":-1.000,"distance":46.317,"hump_m":0.000,"obstacle_cm":24.0,"barcode":65,"fault":0}
+{"heartbeat_ms":252000}
+{"t_ms":253000,"mission":2,"speed":0.350,"line":0.000,"distance":46.475,"hump_m":0.000,"obstacle_cm":100.0,"barcode":65,"fault":0}
+{"heartbeat_ms":253000}
+S3 dbg: white 2669946 us  (+0 glitch edges)
+S3 dbg: white 322144 us  (+385 glitch edges)
+{"t_ms":254000,"mission":1,"speed":0.350,"line":1.000,"distance":46.689,"hump_m":0.000,"obstacle_cm":100.0,"barcode":65,"fault":0}
+{"heartbeat_ms":254000}
+S3 dbg: BLACK 152230 us  (+264 glitch edges)
+S3 dbg: white 346148 us  (+0 glitch edges)
+S3 dbg: BLACK 44516 us  (+130 glitch edges)
+S3 dbg: white 102443 us  (+0 glitch edges)
+S3 dbg: BLACK 6201 us  (+18 glitch edges)
+{"t_ms":255000,"mission":2,"speed":0.350,"line":0.000,"distance":46.894,"hump_m":0.000,"obstacle_cm":100.0,"barcode":65,"fault":0}
+{"heartbeat_ms":255000}
+S3 dbg: GP28 IRQs 3359, level changes 804, received 153, merged 148, now WHITE
+S3 dbg: 5 elements, NOT decoded
+B152230 s349645 B44516 s102920 B6201 
+{"t_ms":256000,"mission":2,"speed":0.350,"line":-1.000,"distance":47.044,"hump_m":0.000,"obstacle_cm":100.0,"barcode":65,"fault":0}
+{"heartbeat_ms":256000}
+{"t_ms":257000,"mission":1,"speed":0.350,"line":0.000,"distance":47.261,"hump_m":0.000,"obstacle_cm":100.0,"barcode":65,"fault":0}
+{"heartbeat_ms":257000}
+S3 dbg: white 3170801 us  (+0 glitch edges)
+S3 dbg: BLACK 176095 us  (+384 glitch edges)
+{"t_ms":258000,"mission":2,"speed":0.350,"line":1.000,"distance":47.419,"hump_m":0.000,"obstacle_cm":100.0,"barcode":65,"fault":0}
+{"heartbeat_ms":258000}
+S3 dbg: white 180099 us  (+0 glitch edges)
+S3 dbg: BLACK 166525 us  (+332 glitch edges)
+S3 dbg: white 569273 us  (+0 glitch edges)
+{"t_ms":259000,"mission":1,"speed":0.350,"line":0.000,"distance":47.570,"hump_m":0.000,"obstacle_cm":100.0,"barcode":65,"fault":0}
+{"heartbeat_ms":259000}
+S3 dbg: BLACK 424035 us  (+512 glitch edges)
+{"t_ms":260000,"mission":2,"speed":0.350,"line":-1.000,"distance":47.892,"hump_m":0.000,"obstacle_cm":24.0,"barcode":65,"fault":0}
+{"heartbeat_ms":260000}
+S3 dbg: GP28 IRQs 6310, level changes 1578, received 849, merged 844, now WHITE
+S3 dbg: 5 elements, NOT decoded (overflow)
+B176095 s189432 B166525 s584335 B424035 
+{"t_ms":261000,"mission":2,"speed":0.350,"line":0.000,"distance":48.030,"hump_m":0.000,"obstacle_cm":100.0,"barcode":65,"fault":0}
+{"heartbeat_ms":261000}
+S3 dbg: white 2146003 us  (+0 glitch edges)
+{"t_ms":262000,"mission":2,"speed":0.350,"line":1.000,"distance":48.124,"hump_m":0.000,"obstacle_cm":100.0,"barcode":65,"fault":0}
+{"heartbeat_ms":262000}
+{"t_ms":263000,"mission":2,"speed":0.350,"line":0.000,"distance":48.226,"hump_m":0.000,"obstacle_cm":100.0,"barcode":65,"fault":0}
+{"heartbeat_ms":263000}
+S3 dbg: BLACK 2265975 us  (+434 glitch edges)
+S3 dbg: white 239431 us  (+0 glitch edges)
+{"t_ms":264000,"mission":2,"speed":0.350,"line":-1.000,"distance":48.396,"hump_m":0.000,"obstacle_cm":100.0,"barcode":65,"fault":0}
+{"heartbeat_ms":264000}
+S3 dbg: BLACK 94270 us  (+82 glitch edges)
+S3 dbg: white 47168 us  (+0 glitch edges)
+S3 dbg: BLACK 68035 us  (+96 glitch edges)
+{"t_ms":265000,"mission":1,"speed":0.350,"line":0.000,"distance":48.600,"hump_m":0.000,"obstacle_cm":100.0,"barcode":65,"fault":0}
+{"heartbeat_ms":265000}
+S3 dbg: GP28 IRQs 2428, level changes 618, received 183, merged 178, now WHITE
+S3 dbg: 5 elements, NOT decoded
+B2265975 s241860 B94270 s49774 B68035 
+S3 dbg: white 1186102 us  (+0 glitch edges)
+S3 dbg: BLACK 60441 us  (+82 glitch edges)
+S3 dbg: white 35504 us  (+0 glitch edges)
+S3 dbg: BLACK 59344 us  (+68 glitch edges)
+S3 dbg: white 173028 us  (+0 glitch edges)
+S3 dbg: BLACK 55827 us  (+80 glitch edges)
+{"t_ms":266000,"mission":2,"speed":0.350,"line":1.000,"distance":48.774,"hump_m":0.000,"obstacle_cm":100.0,"barcode":65,"fault":0}
+{"heartbeat_ms":266000}
+S3 dbg: white 229394 us  (+0 glitch edges)
+S3 dbg: BLACK 60175 us  (+88 glitch edges)
+S3 dbg: white 96974 us  (+0 glitch edges)
+S3 dbg: BLACK 63736 us  (+92 glitch edges)
+S3 dbg: white 51504 us  (+0 glitch edges)
+S3 dbg: BLACK 65504 us  (+92 glitch edges)
+S3 dbg: white 186364 us  (+0 glitch edges)
+S3 dbg: BLACK 46193 us  (+220 glitch edges)
+{"t_ms":267000,"mission":1,"speed":0.350,"line":0.000,"distance":48.909,"hump_m":0.000,"obstacle_cm":100.0,"barcode":65,"fault":0}
+{"heartbeat_ms":267000}
+S3 dbg: GP28 IRQs 2982, level changes 736, received 653, merged 640, now WHITE
+S3 dbg: 13 elements, NOT decoded
+B60441 s37516 B59344 s175335 B55827 s231905 B60175 s99656 B63736 s53987
+B65504 s192559 B46193 
+{"t_ms":268000,"mission":1,"speed":0.350,"line":-1.000,"distance":49.259,"hump_m":0.000,"obstacle_cm":100.0,"barcode":65,"fault":0}
+{"heartbeat_ms":268000}
+{"t_ms":269000,"mission":2,"speed":0.350,"line":0.000,"distance":49.385,"hump_m":0.000,"obstacle_cm":100.0,"barcode":65,"fault":0}
+{"heartbeat_ms":269000}
+{"t_ms":270000,"mission":2,"speed":0.350,"line":1.000,"distance":49.486,"hump_m":0.000,"obstacle_cm":100.0,"barcode":65,"fault":0}
+{"heartbeat_ms":270000}
+{"t_ms":271000,"mission":2,"speed":0.350,"line":0.000,"distance":49.620,"hump_m":0.000,"obstacle_cm":100.0,"barcode":65,"fault":0}
+{"heartbeat_ms":271000}
+{"t_ms":272000,"mission":2,"speed":0.350,"line":-1.000,"distance":49.793,"hump_m":0.000,"obstacle_cm":100.0,"barcode":65,"fault":0}
+{"heartbeat_ms":272000}
+{"t_ms":273000,"mission":1,"speed":0.350,"line":0.000,"distance":49.985,"hump_m":0.000,"obstacle_cm":100.0,"barcode":65,"fault":0}
+{"heartbeat_ms":273000}
+S3 dbg: white 6490299 us  (+0 glitch edges)
+S3 dbg: BLACK 108122 us  (+404 glitch edges)
+S3 dbg: white 263890 us  (+0 glitch edges)
+S3 dbg: BLACK 40379 us  (+134 glitch edges)
+S3 dbg: white 68604 us  (+0 glitch edges)
+S3 dbg: BLACK 120517 us  (+68 glitch edges)
+S3 dbg: white 82486 us  (+0 glitch edges)
+S3 dbg: BLACK 131882 us  (+78 glitch edges)
+S3 dbg: white 60897 us  (+0 glitch edges)
+{"t_ms":274000,"mission":2,"speed":0.350,"line":1.000,"distance":50.175,"hump_m":0.000,"obstacle_cm":100.0,"barcode":65,"fault":0}
+{"heartbeat_ms":274000}
+S3 dbg: BLACK 26226 us  (+86 glitch edges)
+S3 dbg: white 60403 us  (+0 glitch edges)
+S3 dbg: BLACK 100595 us  (+80 glitch edges)
+S3 dbg: white 58289 us  (+0 glitch edges)
+S3 dbg: BLACK 21732 us  (+84 glitch edges)
+S3 dbg: white 55656 us  (+0 glitch edges)
+S3 dbg: BLACK 18739 us  (+62 glitch edges)
+S3 dbg: white 157163 us  (+0 glitch edges)
+S3 dbg: BLACK 31449 us  (+104 glitch edges)
+S3 dbg: white 82983 us  (+0 glitch edges)
+S3 dbg: BLACK 108368 us  (+84 glitch edges)
+S3 dbg: white 55427 us  (+0 glitch edges)
+S3 dbg: BLACK 18368 us  (+66 glitch edges)
+S3 dbg: white 127976 us  (+0 glitch edges)
+S3 dbg: BLACK 17409 us  (+54 glitch edges)
+S3 dbg: white 47040 us  (+0 glitch edges)
+{"t_ms":275000,"mission":2,"speed":0.350,"line":0.000,"distance":50.306,"hump_m":0.000,"obstacle_cm":100.0,"barcode":65,"fault":0}
+{"heartbeat_ms":275000}
+S3 dbg: BLACK 92721 us  (+46 glitch edges)
+S3 dbg: white 54360 us  (+0 glitch edges)
+S3 dbg: BLACK 101461 us  (+68 glitch edges)
+S3 dbg: white 60330 us  (+0 glitch edges)
+S3 dbg: BLACK 53593 us  (+112 glitch edges)
+S3 dbg: white 113509 us  (+0 glitch edges)
+S3 dbg: BLACK 34005 us  (+196 glitch edges)
+{"t_ms":276000,"mission":1,"speed":0.350,"line":-1.000,"distance":50.644,"hump_m":0.000,"obstacle_cm":100.0,"barcode":65,"fault":0}
+{"heartbeat_ms":276000}
+S3 dbg: GP28 IRQs 6845, level changes 1758, received 1353, merged 1322, now WHITE
+S3 dbg: 31 elements, NOT decoded
+B108122 s267642 B40379 s70497 B120517 s84719 B131882 s63149 B26226 s62510
+B100595 s60337 B21732 s57264 B18739 s159955 B31449 s85493 B108368 s57363
+B18368 s129736 B17409 s48392 B92721 s56286 B101461 s63373 B53593 s119168
+B34005 
+{"t_ms":277000,"mission":2,"speed":0.350,"line":0.000,"distance":50.786,"hump_m":0.000,"obstacle_cm":100.0,"barcode":65,"fault":0}
+{"heartbeat_ms":277000}
+{"t_ms":278000,"mission":2,"speed":0.350,"line":1.000,"distance":50.893,"hump_m":0.000,"obstacle_cm":100.0,"barcode":65,"fault":0}
+{"heartbeat_ms":278000}
+{"t_ms":279000,"mission":2,"speed":0.350,"line":0.000,"distance":51.062,"hump_m":0.000,"obstacle_cm":24.0,"barcode":65,"fault":0}
+{"heartbeat_ms":279000}
+S3 dbg: white 3967050 us  (+0 glitch edges)
+S3 dbg: BLACK 45552 us  (+8 glitch edges)
+S3 dbg: white 74099 us  (+0 glitch edges)
+S3 dbg: BLACK 12006 us  (+6 glitch edges)
+S3 dbg: white 28207 us  (+0 glitch edges)
+S3 dbg: BLACK 45036 us  (+24 glitch edges)
+S3 dbg: white 16346 us  (+0 glitch edges)
+S3 dbg: BLACK 29840 us  (+14 glitch edges)
+S3 dbg: white 15351 us  (+0 glitch edges)
+S3 dbg: BLACK 6187 us  (+16 glitch edges)
+S3 dbg: white 14768 us  (+0 glitch edges)
+S3 dbg: BLACK 25612 us  (+12 glitch edges)
+S3 dbg: white 15054 us  (+0 glitch edges)
+S3 dbg: BLACK 4873 us  (+16 glitch edges)
+S3 dbg: white 15539 us  (+0 glitch edges)
+S3 dbg: BLACK 4880 us  (+20 glitch edges)
+S3 dbg: white 35696 us  (+0 glitch edges)
+S3 dbg: BLACK 4998 us  (+18 glitch edges)
+S3 dbg: white 15803 us  (+0 glitch edges)
+S3 dbg: BLACK 27678 us  (+18 glitch edges)
+S3 dbg: white 15076 us  (+0 glitch edges)
+S3 dbg: BLACK 5106 us  (+18 glitch edges)
+S3 dbg: white 35478 us  (+0 glitch edges)
+S3 dbg: BLACK 5148 us  (+20 glitch edges)
+S3 dbg: white 15107 us  (+0 glitch edges)
+{"t_ms":280000,"mission":2,"speed":0.350,"line":-1.000,"distance":51.220,"hump_m":0.000,"obstacle_cm":100.0,"barcode":65,"fault":0}
+{"heartbeat_ms":280000}
+S3 dbg: BLACK 24562 us  (+18 glitch edges)
+S3 dbg: white 13464 us  (+0 glitch edges)
+S3 dbg: BLACK 23923 us  (+16 glitch edges)
+S3 dbg: white 11751 us  (+0 glitch edges)
+S3 dbg: BLACK 8055 us  (+12 glitch edges)
+S3 dbg: white 9993 us  (+0 glitch edges)
+S3 dbg: BLACK 2069 us  (+10 glitch edges)
+S3 dbg: GP28 IRQs 1044, level changes 278, received 269, merged 238, now WHITE
+S3 dbg: 31 elements, NOT decoded
+B45552 s74846 B12006 s28955 B45036 s16755 B29840 s15845 B6187 s15138
+B25612 s15509 B4873 s16095 B4880 s36174 B4998 s16214 B27678 s15568
+B5106 s35926 B5148 s15560 B24562 s13852 B23923 s12066 B8055 s10277
+B2069 
+{"t_ms":281000,"mission":1,"speed":0.350,"line":0.000,"distance":51.416,"hump_m":0.000,"obstacle_cm":100.0,"barcode":65,"fault":0}
+{"heartbeat_ms":281000}
+{"t_ms":282000,"mission":2,"speed":0.350,"line":1.000,"distance":51.621,"hump_m":0.000,"obstacle_cm":100.0,"barcode":65,"fault":0}
+{"heartbeat_ms":282000}
+S3 dbg: white 2407805 us  (+0 glitch edges)
+S3 dbg: BLACK 25256 us  (+62 glitch edges)
+S3 dbg: GP28 IRQs 219, level changes 64, received 1, merged 0, now WHITE
+S3 dbg: 1 elements, NOT decoded
+B25256 
+{"t_ms":283000,"mission":2,"speed":0.350,"line":0.000,"distance":51.771,"hump_m":0.000,"obstacle_cm":100.0,"barcode":65,"fault":0}
+{"heartbeat_ms":283000}
+S3 dbg: white 1122873 us  (+0 glitch edges)
+S3 dbg: BLACK 10502 us  (+16 glitch edges)
+S3 dbg: white 47867 us  (+0 glitch edges)
+S3 dbg: BLACK 10004 us  (+18 glitch edges)
+S3 dbg: white 17462 us  (+0 glitch edges)
+S3 dbg: BLACK 34725 us  (+20 glitch edges)
+S3 dbg: white 19593 us  (+0 glitch edges)
+S3 dbg: BLACK 33295 us  (+22 glitch edges)
+S3 dbg: white 16084 us  (+0 glitch edges)
+S3 dbg: BLACK 5601 us  (+16 glitch edges)
+S3 dbg: white 15640 us  (+0 glitch edges)
+S3 dbg: BLACK 25161 us  (+2 glitch edges)
+S3 dbg: white 13906 us  (+0 glitch edges)
+S3 dbg: BLACK 4776 us  (+14 glitch edges)
+S3 dbg: white 13644 us  (+0 glitch edges)
+S3 dbg: BLACK 4476 us  (+16 glitch edges)
+S3 dbg: white 36898 us  (+0 glitch edges)
+S3 dbg: BLACK 4899 us  (+12 glitch edges)
+S3 dbg: white 14147 us  (+0 glitch edges)
+S3 dbg: BLACK 23585 us  (+16 glitch edges)
+{"t_ms":284000,"mission":1,"speed":0.350,"line":-1.000,"distance":52.074,"hump_m":0.000,"obstacle_cm":100.0,"barcode":65,"fault":0}
+{"heartbeat_ms":284000}
+S3 dbg: white 12528 us  (+0 glitch edges)
+S3 dbg: BLACK 4378 us  (+8 glitch edges)
+S3 dbg: white 29111 us  (+0 glitch edges)
+S3 dbg: BLACK 4551 us  (+12 glitch edges)
+S3 dbg: white 13075 us  (+0 glitch edges)
+S3 dbg: BLACK 27631 us  (+18 glitch edges)
+S3 dbg: white 14880 us  (+0 glitch edges)
+S3 dbg: BLACK 27385 us  (+18 glitch edges)
+S3 dbg: white 12286 us  (+0 glitch edges)
+S3 dbg: BLACK 23435 us  (+12 glitch edges)
+S3 dbg: GP28 IRQs 957, level changes 250, received 233, merged 204, now WHITE
+S3 dbg: 29 elements, NOT decoded
+B10502 s48390 B10004 s17939 B34725 s20207 B33295 s16446 B5601 s15734
+B25161 s14324 B4776 s14046 B4476 s37232 B4899 s14528 B23585 s12929
+B4378 s29445 B4551 s13546 B27631 s15414 B27385 s12594 B23435 
+{"t_ms":285000,"mission":2,"speed":0.350,"line":0.000,"distance":52.232,"hump_m":0.000,"obstacle_cm":100.0,"barcode":65,"fault":0}
+{"heartbeat_ms":285000}
+{"t_ms":286000,"mission":2,"speed":0.350,"line":1.000,"distance":52.347,"hump_m":0.000,"obstacle_cm":100.0,"barcode":65,"fault":0}
+{"heartbeat_ms":286000}
+{"t_ms":287000,"mission":2,"speed":0.350,"line":0.000,"distance":52.551,"hump_m":0.000,"obstacle_cm":24.0,"barcode":65,"fault":0}
+{"heartbeat_ms":287000}
+{"t_ms":288000,"mission":2,"speed":0.350,"line":-1.000,"distance":52.689,"hump_m":0.000,"obstacle_cm":100.0,"barcode":65,"fault":0}
+{"heartbeat_ms":288000}
+{"t_ms":289000,"mission":1,"speed":0.350,"line":0.000,"distance":52.887,"hump_m":0.000,"obstacle_cm":100.0,"barcode":65,"fault":0}
+{"heartbeat_ms":289000}
+{"t_ms":290000,"mission":2,"speed":0.350,"line":1.000,"distance":53.108,"hump_m":0.000,"obstacle_cm":100.0,"barcode":65,"fault":0}
+{"heartbeat_ms":290000}
+S3 dbg: white 6370318 us  (+0 glitch edges)
+S3 dbg: BLACK 22911 us  (+32 glitch edges)
+S3 dbg: white 93541 us  (+0 glitch edges)
+S3 dbg: BLACK 17963 us  (+54 glitch edges)
+S3 dbg: white 41970 us  (+0 glitch edges)
+S3 dbg: BLACK 77972 us  (+50 glitch edges)
+S3 dbg: white 25414 us  (+0 glitch edges)
+S3 dbg: BLACK 40222 us  (+22 glitch edges)
+S3 dbg: white 22513 us  (+0 glitch edges)
+S3 dbg: BLACK 9370 us  (+24 glitch edges)
+S3 dbg: white 22527 us  (+0 glitch edges)
+S3 dbg: BLACK 38054 us  (+6 glitch edges)
+S3 dbg: white 21897 us  (+0 glitch edges)
+S3 dbg: BLACK 8051 us  (+20 glitch edges)
+{"t_ms":291000,"mission":2,"speed":0.350,"line":0.000,"distance":53.277,"hump_m":0.000,"obstacle_cm":100.0,"barcode":65,"fault":0}
+{"heartbeat_ms":291000}
+S3 dbg: white 22714 us  (+0 glitch edges)
+S3 dbg: BLACK 7818 us  (+34 glitch edges)
+S3 dbg: white 52263 us  (+0 glitch edges)
+S3 dbg: BLACK 7159 us  (+22 glitch edges)
+S3 dbg: white 19826 us  (+0 glitch edges)
+S3 dbg: BLACK 34099 us  (+18 glitch edges)
+S3 dbg: white 19833 us  (+0 glitch edges)
+S3 dbg: BLACK 6909 us  (+22 glitch edges)
+S3 dbg: white 44728 us  (+0 glitch edges)
+S3 dbg: BLACK 5440 us  (+24 glitch edges)
+S3 dbg: white 16834 us  (+0 glitch edges)
+S3 dbg: BLACK 27861 us  (+6 glitch edges)
+S3 dbg: white 15266 us  (+0 glitch edges)
+S3 dbg: BLACK 25137 us  (+14 glitch edges)
+S3 dbg: white 11467 us  (+0 glitch edges)
+S3 dbg: BLACK 7663 us  (+4 glitch edges)
+S3 dbg: white 8361 us  (+0 glitch edges)
+S3 dbg: BLACK 3092 us  (+6 glitch edges)
+S3 dbg: GP28 IRQs 1507, level changes 390, received 357, merged 326, now WHITE
+S3 dbg: 31 elements, NOT decoded
+B22911 s95014 B17963 s43364 B77972 s26088 B40222 s23167 B9370 s23102
+B38054 s22537 B8051 s23560 B7818 s52982 B7159 s20353 B34099 s20480
+B6909 s45316 B5440 s17181 B27861 s15654 B25137 s11671 B7663 s8656
+B3092 
+{"t_ms":292000,"mission":1,"speed":0.350,"line":-1.000,"distance":53.546,"hump_m":0.000,"obstacle_cm":100.0,"barcode":65,"fault":0}
+{"heartbeat_ms":292000}
+{"t_ms":293000,"mission":2,"speed":0.350,"line":0.000,"distance":53.719,"hump_m":0.000,"obstacle_cm":100.0,"barcode":65,"fault":0}
+{"heartbeat_ms":293000}
+{"t_ms":294000,"mission":2,"speed":0.350,"line":1.000,"distance":53.841,"hump_m":0.000,"obstacle_cm":100.0,"barcode":65,"fault":0}
+{"heartbeat_ms":294000}
+{"t_ms":295000,"mission":1,"speed":0.350,"line":0.000,"distance":54.072,"hump_m":0.000,"obstacle_cm":100.0,"barcode":65,"fault":0}
+{"heartbeat_ms":295000}
+S3 dbg: white 4510844 us  (+0 glitch edges)
+S3 dbg: BLACK 33882 us  (+46 glitch edges)
+S3 dbg: white 7499 us  (+0 glitch edges)
+S3 dbg: white 501 us  (+37 glitch edges)
+S3 dbg: white 547 us  (+55 glitch edges)
+S3 dbg: BLACK 50048 us  (+184 glitch edges)
+{"t_ms":296000,"mission":2,"speed":0.350,"line":-1.000,"distance":54.199,"hump_m":0.000,"obstacle_cm":100.0,"barcode":65,"fault":0}
+{"heartbeat_ms":296000}
+S3 dbg: white 116302 us  (+0 glitch edges)
+S3 dbg: BLACK 17238 us  (+48 glitch edges)
+S3 dbg: white 42132 us  (+0 glitch edges)
+S3 dbg: BLACK 70321 us  (+40 glitch edges)
+S3 dbg: white 33607 us  (+0 glitch edges)
+S3 dbg: BLACK 58052 us  (+34 glitch edges)
+S3 dbg: white 28685 us  (+0 glitch edges)
+S3 dbg: BLACK 11703 us  (+30 glitch edges)
+S3 dbg: white 26428 us  (+0 glitch edges)
+S3 dbg: BLACK 43167 us  (+24 glitch edges)
+S3 dbg: white 23212 us  (+0 glitch edges)
+S3 dbg: BLACK 7374 us  (+28 glitch edges)
+S3 dbg: white 23174 us  (+0 glitch edges)
+S3 dbg: BLACK 7185 us  (+8 glitch edges)
+S3 dbg: white 52154 us  (+0 glitch edges)
+S3 dbg: BLACK 7496 us  (+12 glitch edges)
+S3 dbg: white 22967 us  (+0 glitch edges)
+S3 dbg: BLACK 38309 us  (+26 glitch edges)
+S3 dbg: white 21627 us  (+0 glitch edges)
+S3 dbg: BLACK 7366 us  (+24 glitch edges)
+S3 dbg: white 49979 us  (+0 glitch edges)
+S3 dbg: BLACK 6800 us  (+6 glitch edges)
+S3 dbg: white 19805 us  (+0 glitch edges)
+S3 dbg: BLACK 36333 us  (+16 glitch edges)
+S3 dbg: white 22508 us  (+0 glitch edges)
+S3 dbg: BLACK 42004 us  (+24 glitch edges)
+S3 dbg: white 19611 us  (+0 glitch edges)
+S3 dbg: BLACK 13220 us  (+24 glitch edges)
+S3 dbg: white 12750 us  (+0 glitch edges)
+S3 dbg: BLACK 12390 us  (+18 glitch edges)
+{"t_ms":297000,"mission":1,"speed":0.350,"line":0.000,"distance":54.381,"hump_m":0.000,"obstacle_cm":100.0,"barcode":65,"fault":0}
+{"heartbeat_ms":297000}
+S3 dbg: GP28 IRQs 3136, level changes 720, received 673, merged 640, now WHITE
+S3 dbg: 33 elements, NOT decoded
+B33882 s16932 B50048 s117657 B17238 s43205 B70321 s34523 B58052 s29420
+B11703 s27193 B43167 s23947 B7374 s23781 B7185 s52953 B7496 s23749
+B38309 s22232 B7366 s50483 B6800 s20354 B36333 s23094 B42004 s20258
+B13220 s13246 B12390 
+{"t_ms":298000,"mission":2,"speed":0.350,"line":1.000,"distance":54.633,"hump_m":0.000,"obstacle_cm":100.0,"barcode":65,"fault":0}
+{"heartbeat_ms":298000}
+{"t_ms":299000,"mission":2,"speed":0.350,"line":0.000,"distance":54.807,"hump_m":0.000,"obstacle_cm":100.0,"barcode":65,"fault":0}
+{"heartbeat_ms":299000}
+S3 dbg: white 2808356 us  (+0 glitch edges)
+S3 dbg: BLACK 16690 us  (+26 glitch edges)
+S3 dbg: white 76656 us  (+0 glitch edges)
+S3 dbg: BLACK 14377 us  (+14 glitch edges)
+S3 dbg: white 32005 us  (+0 glitch edges)
+S3 dbg: BLACK 47674 us  (+30 glitch edges)
+S3 dbg: white 21523 us  (+0 glitch edges)
+S3 dbg: BLACK 34314 us  (+20 glitch edges)
+S3 dbg: white 15897 us  (+0 glitch edges)
+S3 dbg: BLACK 5979 us  (+18 glitch edges)
+S3 dbg: white 14532 us  (+0 glitch edges)
+S3 dbg: BLACK 25205 us  (+14 glitch edges)
+S3 dbg: white 14329 us  (+0 glitch edges)
+S3 dbg: BLACK 4856 us  (+16 glitch edges)
+S3 dbg: white 14262 us  (+0 glitch edges)
+{"t_ms":300000,"mission":1,"speed":0.350,"line":-1.000,"distance":55.040,"hump_m":0.000,"obstacle_cm":100.0,"barcode":65,"fault":0}
+{"heartbeat_ms":300000}
+S3 dbg: BLACK 4502 us  (+10 glitch edges)
+S3 dbg: white 30873 us  (+0 glitch edges)
+S3 dbg: BLACK 3937 us  (+14 glitch edges)
+S3 dbg: white 12114 us  (+0 glitch edges)
+S3 dbg: BLACK 20719 us  (+12 glitch edges)
+S3 dbg: white 12075 us  (+0 glitch edges)
+S3 dbg: BLACK 4541 us  (+10 glitch edges)
+S3 dbg: white 29772 us  (+0 glitch edges)
+S3 dbg: BLACK 4437 us  (+14 glitch edges)
+S3 dbg: white 12241 us  (+0 glitch edges)
+S3 dbg: BLACK 21262 us  (+12 glitch edges)
+S3 dbg: white 11719 us  (+0 glitch edges)
+S3 dbg: BLACK 21774 us  (+14 glitch edges)
+S3 dbg: white 8511 us  (+0 glitch edges)
+S3 dbg: BLACK 7075 us  (+6 glitch edges)
+S3 dbg: GP28 IRQs 1007, level changes 260, received 233, merged 204, now WHITE
+S3 dbg: 29 elements, NOT decoded
+B16690 s77445 B14377 s32802 B47674 s22137 B34314 s16338 B5979 s14951
+B25205 s14763 B4856 s14607 B4502 s31180 B3937 s12435 B20719 s12487
+B4541 s30132 B4437 s12550 B21262 s12045 B21774 s8863 B7075 
+{"t_ms":301000,"mission":2,"speed":0.350,"line":0.000,"distance":55.229,"hump_m":0.000,"obstacle_cm":100.0,"barcode":65,"fault":0}
+{"heartbeat_ms":301000}
+{"t_ms":302000,"mission":2,"speed":0.350,"line":1.000,"distance":55.360,"hump_m":0.000,"obstacle_cm":100.0,"barcode":65,"fault":0}
+{"heartbeat_ms":302000}
+S3 dbg: white 1868514 us  (+0 glitch edges)
+S3 dbg: BLACK 7957 us  (+16 glitch edges)
+S3 dbg: white 36553 us  (+0 glitch edges)
+S3 dbg: BLACK 6994 us  (+16 glitch edges)
+S3 dbg: white 13753 us  (+0 glitch edges)
+S3 dbg: BLACK 26334 us  (+12 glitch edges)
+S3 dbg: white 13786 us  (+0 glitch edges)
+S3 dbg: BLACK 25807 us  (+16 glitch edges)
+S3 dbg: white 14218 us  (+0 glitch edges)
+S3 dbg: BLACK 5164 us  (+12 glitch edges)
+S3 dbg: white 13948 us  (+0 glitch edges)
+S3 dbg: BLACK 24216 us  (+14 glitch edges)
+S3 dbg: white 13111 us  (+0 glitch edges)
+S3 dbg: BLACK 4520 us  (+16 glitch edges)
+S3 dbg: white 12896 us  (+0 glitch edges)
+S3 dbg: BLACK 4110 us  (+10 glitch edges)
+S3 dbg: white 30193 us  (+0 glitch edges)
+S3 dbg: BLACK 4065 us  (+8 glitch edges)
+S3 dbg: white 12658 us  (+0 glitch edges)
+S3 dbg: BLACK 21694 us  (+4 glitch edges)
+S3 dbg: white 12316 us  (+0 glitch edges)
+S3 dbg: BLACK 4967 us  (+12 glitch edges)
+S3 dbg: white 33047 us  (+0 glitch edges)
+S3 dbg: BLACK 5301 us  (+16 glitch edges)
+S3 dbg: white 14897 us  (+0 glitch edges)
+S3 dbg: BLACK 26354 us  (+16 glitch edges)
+S3 dbg: white 13042 us  (+0 glitch edges)
+S3 dbg: BLACK 23561 us  (+16 glitch edges)
+S3 dbg: white 8078 us  (+0 glitch edges)
+S3 dbg: BLACK 10281 us  (+18 glitch edges)
+S3 dbg: GP28 IRQs 921, level changes 232, received 215, merged 186, now WHITE
+S3 dbg: 29 elements, decoded "A" (left-to-right)
+B7957 s37036 B6994 s14185 B26334 s14166 B25807 s14486 B5164 s14347
+B24216 s13563 B4520 s13356 B4110 s30405 B4065 s12950 B21694 s12730
+B4967 s33472 B5301 s15383 B26354 s13446 B23561 s8495 B10281 
+S3: barcode "A" (left-to-right) stored, 'A' -> LEFT at next junction
+{"t_ms":303000,"mission":1,"speed":0.350,"line":0.000,"distance":55.589,"hump_m":0.000,"obstacle_cm":100.0,"barcode":65,"fault":0}
+{"heartbeat_ms":303000}
+{"t_ms":304000,"mission":2,"speed":0.350,"line":-1.000,"distance":55.731,"hump_m":0.000,"obstacle_cm":100.0,"barcode":65,"fault":0}
+{"heartbeat_ms":304000}
+{"t_ms":305000,"mission":1,"speed":0.350,"line":0.000,"distance":55.898,"hump_m":0.000,"obstacle_cm":100.0,"barcode":65,"fault":0}
+{"heartbeat_ms":305000}
+S3 dbg: white 2941065 us  (+0 glitch edges)
+S3 dbg: BLACK 15483 us  (+24 glitch edges)
+S3 dbg: white 139042 us  (+0 glitch edges)
+S3 dbg: BLACK 12225 us  (+24 glitch edges)
+S3 dbg: white 25510 us  (+0 glitch edges)
+S3 dbg: BLACK 40173 us  (+18 glitch edges)
+S3 dbg: white 19914 us  (+0 glitch edges)
+S3 dbg: BLACK 35147 us  (+24 glitch edges)
+S3 dbg: white 19828 us  (+0 glitch edges)
+S3 dbg: BLACK 8321 us  (+22 glitch edges)
+S3 dbg: white 20913 us  (+0 glitch edges)
+S3: junction: 'A' -> LEFT
+S3 dbg: BLACK 36277 us  (+20 glitch edges)
+S3 dbg: white 20384 us  (+0 glitch edges)
+S3 dbg: BLACK 6574 us  (+24 glitch edges)
+S3 dbg: white 19769 us  (+0 glitch edges)
+S3 dbg: BLACK 6258 us  (+24 glitch edges)
+S3 dbg: white 44942 us  (+0 glitch edges)
+S3 dbg: BLACK 6469 us  (+24 glitch edges)
+S3 dbg: white 17310 us  (+0 glitch edges)
+S3 dbg: BLACK 29188 us  (+12 glitch edges)
+{"t_ms":306000,"mission":2,"speed":0.350,"line":1.000,"distance":56.185,"hump_m":0.000,"obstacle_cm":24.0,"barcode":65,"fault":0}
+{"heartbeat_ms":306000}
+S3 dbg: white 14931 us  (+0 glitch edges)
+S3 dbg: BLACK 5898 us  (+16 glitch edges)
+S3 dbg: white 35747 us  (+0 glitch edges)
+S3 dbg: BLACK 5299 us  (+16 glitch edges)
+S3 dbg: white 14782 us  (+0 glitch edges)
+S3 dbg: BLACK 24694 us  (+18 glitch edges)
+S3 dbg: white 13689 us  (+0 glitch edges)
+S3 dbg: BLACK 27188 us  (+14 glitch edges)
+S3 dbg: white 11178 us  (+0 glitch edges)
+S3 dbg: BLACK 7715 us  (+16 glitch edges)
+S3 dbg: white 8884 us  (+0 glitch edges)
+S3 dbg: BLACK 3370 us  (+10 glitch edges)
+S3 dbg: GP28 IRQs 1372, level changes 338, received 313, merged 282, now WHITE
+S3 dbg: 31 elements, decoded "A" (left-to-right)
+B15483 s140037 B12225 s26142 B40173 s20561 B35147 s20418 B8321 s21515
+B36277 s20963 B6574 s20483 B6258 s45608 B6469 s17865 B29188 s15473
+B5898 s36206 B5299 s15246 B24694 s14106 B27188 s11575 B7715 s9195
+B3370 
+S3: barcode "A" (left-to-right) stored, 'A' -> LEFT at next junction
+{"t_ms":307000,"mission":2,"speed":0.350,"line":0.000,"distance":56.343,"hump_m":0.000,"obstacle_cm":100.0,"barcode":65,"fault":0}
+{"heartbeat_ms":307000}
+{"t_ms":308000,"mission":1,"speed":0.350,"line":-1.000,"distance":56.557,"hump_m":0.000,"obstacle_cm":100.0,"barcode":65,"fault":0}
+{"heartbeat_ms":308000}
+S3 dbg: white 2518939 us  (+0 glitch edges)
+S3 dbg: BLACK 1617 us  (+10 glitch edges)
+S3 dbg: GP28 IRQs 37, level changes 12, received 1, merged 0, now WHITE
+S3 dbg: 1 elements, NOT decoded
+B1617 
+{"t_ms":309000,"mission":2,"speed":0.350,"line":0.000,"distance":56.762,"hump_m":0.000,"obstacle_cm":100.0,"barcode":65,"fault":0}
+{"heartbeat_ms":309000}
+S3: junction: 'A' -> LEFT
+S3 dbg: white 1290036 us  (+0 glitch edges)
+{"t_ms":310000,"mission":2,"speed":0.350,"line":0.000,"distance":56.912,"hump_m":0.000,"obstacle_cm":100.0,"barcode":65,"fault":0}
+{"heartbeat_ms":310000}
+S3 dbg: BLACK 65132 us  (+20 glitch edges)
+S3 dbg: GP28 IRQs 84, level changes 22, received 1, merged 0, now WHITE
+S3 dbg: 1 elements, NOT decoded
+B65132 
+S3 dbg: white 937842 us  (+0 glitch edges)
+{"t_ms":311000,"mission":1,"speed":0.350,"line":0.000,"distance":57.129,"hump_m":0.000,"obstacle_cm":100.0,"barcode":65,"fault":0}
+{"heartbeat_ms":311000}
+S3 dbg: BLACK 30087 us  (+102 glitch edges)
+S3 dbg: white 116730 us  (+0 glitch edges)
+S3 dbg: BLACK 13634 us  (+42 glitch edges)
+S3 dbg: white 39112 us  (+0 glitch edges)
+S3 dbg: BLACK 64728 us  (+34 glitch edges)
+S3 dbg: white 34573 us  (+0 glitch edges)
+S3 dbg: BLACK 54542 us  (+32 glitch edges)
+S3 dbg: white 149547 us  (+0 glitch edges)
+S3 dbg: BLACK 10902 us  (+32 glitch edges)
+S3 dbg: white 28547 us  (+0 glitch edges)
+S3 dbg: BLACK 13221 us  (+28 glitch edges)
+S3 dbg: white 66010 us  (+0 glitch edges)
+S3 dbg: BLACK 15742 us  (+30 glitch edges)
+S3 dbg: white 24718 us  (+0 glitch edges)
+S3 dbg: BLACK 58086 us  (+26 glitch edges)
+S3 dbg: white 27420 us  (+0 glitch edges)
+S3 dbg: BLACK 15141 us  (+32 glitch edges)
+S3 dbg: white 72171 us  (+0 glitch edges)
+S3 dbg: BLACK 12269 us  (+28 glitch edges)
+S3 dbg: white 29488 us  (+0 glitch edges)
+S3 dbg: BLACK 51955 us  (+38 glitch edges)
+S3 dbg: white 29314 us  (+0 glitch edges)
+{"t_ms":312000,"mission":2,"speed":0.350,"line":-1.000,"distance":57.287,"hump_m":0.000,"obstacle_cm":100.0,"barcode":65,"fault":0}
+{"heartbeat_ms":312000}
+S3 dbg: BLACK 115479 us  (+24 glitch edges)
+S3 dbg: GP28 IRQs 1802, level changes 472, received 369, merged 346, now WHITE
+S3 dbg: 23 elements, NOT decoded
+B30087 s117857 B13634 s40107 B64728 s35468 B54542 s150398 B10902 s29293
+B13221 s66764 B15742 s25485 B58086 s28242 B15141 s73092 B12269 s30400
+B51955 s30057 B115479 
+{"t_ms":313000,"mission":1,"speed":0.350,"line":0.000,"distance":57.438,"hump_m":0.000,"obstacle_cm":100.0,"barcode":65,"fault":0}
+{"heartbeat_ms":313000}
+{"t_ms":314000,"mission":2,"speed":0.350,"line":1.000,"distance":57.760,"hump_m":0.000,"obstacle_cm":24.0,"barcode":65,"fault":0}
+{"heartbeat_ms":314000}
+S3 dbg: white 1948621 us  (+0 glitch edges)
+S3 dbg: BLACK 182125 us  (+14 glitch edges)
+S3 dbg: GP28 IRQs 52, level changes 16, received 1, merged 0, now WHITE
+S3 dbg: 1 elements, NOT decoded
+B182125 
+{"t_ms":315000,"mission":2,"speed":0.350,"line":0.000,"distance":57.898,"hump_m":0.000,"obstacle_cm":100.0,"barcode":65,"fault":0}
+{"heartbeat_ms":315000}
+S3 dbg: white 1393890 us  (+0 glitch edges)
+S3 dbg: BLACK 30192 us  (+98 glitch edges)
+S3 dbg: GP28 IRQs 400, level changes 100, received 1, merged 0, now WHITE
+S3 dbg: 1 elements, NOT decoded
+B30192 
+S3 dbg: white 176444 us  (+0 glitch edges)
+S3 dbg: BLACK 23205 us  (+94 glitch edges)
+S3 dbg: white 69041 us  (+0 glitch edges)
+{"t_ms":316000,"mission":2,"speed":0.350,"line":-1.000,"distance":57.991,"hump_m":0.000,"obstacle_cm":100.0,"barcode":65,"fault":0}
+{"heartbeat_ms":316000}
+S3 dbg: BLACK 113727 us  (+64 glitch edges)
+S3 dbg: white 60456 us  (+0 glitch edges)
+S3 dbg: BLACK 92358 us  (+56 glitch edges)
+S3 dbg: white 53365 us  (+0 glitch edges)
+S3 dbg: BLACK 15479 us  (+54 glitch edges)
+S3 dbg: white 51895 us  (+0 glitch edges)
+S3 dbg: BLACK 79411 us  (+52 glitch edges)
+S3 dbg: white 50559 us  (+0 glitch edges)
+S3 dbg: BLACK 12511 us  (+54 glitch edges)
+S3 dbg: white 50971 us  (+0 glitch edges)
+S3 dbg: BLACK 13665 us  (+64 glitch edges)
+S3 dbg: white 133253 us  (+0 glitch edges)
+S3 dbg: BLACK 16051 us  (+30 glitch edges)
+S3 dbg: white 64793 us  (+0 glitch edges)
+S3 dbg: BLACK 101400 us  (+78 glitch edges)
+S3 dbg: white 64426 us  (+0 glitch edges)
+S3 dbg: BLACK 17690 us  (+64 glitch edges)
+{"t_ms":317000,"mission":2,"speed":0.350,"line":0.000,"distance":58.094,"hump_m":0.000,"obstacle_cm":100.0,"barcode":65,"fault":0}
+{"heartbeat_ms":317000}
+S3 dbg: white 146101 us  (+0 glitch edges)
+S3 dbg: BLACK 17932 us  (+62 glitch edges)
+S3 dbg: white 62693 us  (+0 glitch edges)
+S3 dbg: BLACK 85256 us  (+78 glitch edges)
+S3 dbg: white 44695 us  (+0 glitch edges)
+S3 dbg: BLACK 70533 us  (+48 glitch edges)
+S3 dbg: white 17784 us  (+0 glitch edges)
+S3 dbg: BLACK 71588 us  (+32 glitch edges)
+{"t_ms":318000,"mission":2,"speed":0.350,"line":1.000,"distance":58.264,"hump_m":0.000,"obstacle_cm":100.0,"barcode":65,"fault":0}
+{"heartbeat_ms":318000}
+S3 dbg: GP28 IRQs 3334, level changes 858, received 763, merged 736, now WHITE
+S3 dbg: 27 elements, NOT decoded
+B23205 s70844 B113727 s61968 B92358 s54889 B15479 s53249 B79411 s52121
+B12511 s52761 B13665 s135510 B16051 s66882 B101400 s66225 B17690 s147958
+B17932 s64796 B85256 s46047 B70533 s18698 B71588 
+{"t_ms":319000,"mission":1,"speed":0.350,"line":0.000,"distance":58.468,"hump_m":0.000,"obstacle_cm":100.0,"barcode":65,"fault":0}
+{"heartbeat_ms":319000}
+{"t_ms":320000,"mission":2,"speed":0.350,"line":-1.000,"distance":58.642,"hump_m":0.000,"obstacle_cm":100.0,"barcode":65,"fault":0}
+{"heartbeat_ms":320000}
+S3 dbg: white 3121837 us  (+0 glitch edges)
+S3 dbg: BLACK 23654 us  (+92 glitch edges)
+S3 dbg: GP28 IRQs 378, level changes 94, received 1, merged 0, now WHITE
+S3 dbg: 1 elements, NOT decoded
+B23654 
+S3 dbg: white 175382 us  (+0 glitch edges)
+S3 dbg: BLACK 16536 us  (+82 glitch edges)
+S3 dbg: white 63661 us  (+0 glitch edges)
+S3 dbg: BLACK 94435 us  (+64 glitch edges)
+S3 dbg: white 47949 us  (+0 glitch edges)
+{"t_ms":321000,"mission":1,"speed":0.350,"line":0.000,"distance":58.777,"hump_m":0.000,"obstacle_cm":100.0,"barcode":65,"fault":0}
+{"heartbeat_ms":321000}
+S3 dbg: BLACK 76322 us  (+48 glitch edges)
+S3 dbg: white 45119 us  (+0 glitch edges)
+S3 dbg: BLACK 15086 us  (+48 glitch edges)
+S3 dbg: white 46369 us  (+0 glitch edges)
+S3 dbg: BLACK 77459 us  (+52 glitch edges)
+S3 dbg: white 48091 us  (+0 glitch edges)
+S3 dbg: BLACK 12668 us  (+68 glitch edges)
+S3 dbg: white 50497 us  (+0 glitch edges)
+S3 dbg: BLACK 11290 us  (+66 glitch edges)
+S3 dbg: white 122518 us  (+0 glitch edges)
+S3 dbg: BLACK 12747 us  (+58 glitch edges)
+S3 dbg: white 53028 us  (+0 glitch edges)
+S3 dbg: BLACK 82463 us  (+64 glitch edges)
+S3 dbg: white 61972 us  (+0 glitch edges)
+S3 dbg: BLACK 18139 us  (+30 glitch edges)
+S3 dbg: white 140065 us  (+0 glitch edges)
+S3 dbg: BLACK 13026 us  (+60 glitch edges)
+S3 dbg: white 52888 us  (+0 glitch edges)
+{"t_ms":322000,"mission":1,"speed":0.350,"line":1.000,"distance":59.127,"hump_m":0.000,"obstacle_cm":100.0,"barcode":65,"fault":0}
+{"heartbeat_ms":322000}
+S3 dbg: BLACK 81033 us  (+48 glitch edges)
+S3 dbg: white 57988 us  (+0 glitch edges)
+S3 dbg: BLACK 103401 us  (+72 glitch edges)
+S3 dbg: white 58428 us  (+0 glitch edges)
+S3 dbg: BLACK 71908 us  (+42 glitch edges)
+S3 dbg: GP28 IRQs 3427, level changes 830, received 747, merged 720, now WHITE
+S3 dbg: 27 elements, NOT decoded
+B16536 s65547 B94435 s49392 B76322 s46509 B15086 s47882 B77459 s49957
+B12668 s52344 B11290 s124193 B12747 s54733 B82463 s63953 B18139 s141882
+B13026 s54379 B81033 s59968 B103401 s59721 B71908 
+{"t_ms":323000,"mission":2,"speed":0.350,"line":0.000,"distance":59.253,"hump_m":0.000,"obstacle_cm":100.0,"barcode":65,"fault":0}
+{"heartbeat_ms":323000}
+{"t_ms":324000,"mission":2,"speed":0.350,"line":-1.000,"distance":59.354,"hump_m":0.000,"obstacle_cm":100.0,"barcode":65,"fault":0}
+{"heartbeat_ms":324000}
+{"t_ms":325000,"mission":2,"speed":0.350,"line":0.000,"distance":59.487,"hump_m":0.000,"obstacle_cm":100.0,"barcode":65,"fault":0}
+{"heartbeat_ms":325000}
+{"t_ms":326000,"mission":2,"speed":0.350,"line":1.000,"distance":59.661,"hump_m":0.000,"obstacle_cm":100.0,"barcode":65,"fault":0}
+{"heartbeat_ms":326000}
+S3 dbg: white 4157344 us  (+0 glitch edges)
+S3 dbg: BLACK 9696 us  (+12 glitch edges)
+S3 dbg: white 2354 us  (+0 glitch edges)
+S3 dbg: BLACK 13318 us  (+72 glitch edges)
+S3 dbg: white 43331 us  (+0 glitch edges)
+S3 dbg: BLACK 5754 us  (+22 glitch edges)
+S3 dbg: white 17015 us  (+0 glitch edges)
+S3 dbg: BLACK 28072 us  (+18 glitch edges)
+S3 dbg: white 15189 us  (+0 glitch edges)
+S3 dbg: BLACK 23611 us  (+14 glitch edges)
+S3 dbg: white 13718 us  (+0 glitch edges)
+S3 dbg: BLACK 3957 us  (+16 glitch edges)
+S3 dbg: white 13847 us  (+0 glitch edges)
+S3 dbg: BLACK 21558 us  (+12 glitch edges)
+S3 dbg: white 13025 us  (+0 glitch edges)
+S3 dbg: BLACK 3195 us  (+16 glitch edges)
+S3 dbg: white 12442 us  (+0 glitch edges)
+S3 dbg: BLACK 2938 us  (+18 glitch edges)
+S3 dbg: white 28143 us  (+0 glitch edges)
+S3 dbg: BLACK 2953 us  (+4 glitch edges)
+S3 dbg: white 12072 us  (+0 glitch edges)
+S3 dbg: BLACK 18450 us  (+14 glitch edges)
+S3 dbg: white 11093 us  (+0 glitch edges)
+S3 dbg: BLACK 3019 us  (+8 glitch edges)
+S3 dbg: white 26725 us  (+0 glitch edges)
+S3 dbg: BLACK 3269 us  (+16 glitch edges)
+S3 dbg: white 12482 us  (+0 glitch edges)
+S3 dbg: BLACK 20250 us  (+10 glitch edges)
+S3 dbg: white 12995 us  (+0 glitch edges)
+S3 dbg: BLACK 20952 us  (+14 glitch edges)
+S3 dbg: white 11738 us  (+0 glitch edges)
+S3 dbg: BLACK 4622 us  (+18 glitch edges)
+{"t_ms":327000,"mission":1,"speed":0.350,"line":0.000,"distance":59.853,"hump_m":0.000,"obstacle_cm":100.0,"barcode":65,"fault":0}
+{"heartbeat_ms":327000}
+S3 dbg: GP28 IRQs 1197, level changes 316, received 303, merged 272, now WHITE
+S3 dbg: 31 elements, decoded "A" (left-to-right)
+B9696 s4573 B13318 s43897 B5754 s17492 B28072 s15518 B23611 s14130
+B3957 s14146 B21558 s13449 B3195 s12902 B2938 s28369 B2953 s12464
+B18450 s11379 B3019 s27161 B3269 s12736 B20250 s13358 B20952 s12190
+B4622 
+S3: barcode "A" (left-to-right) stored, 'A' -> LEFT at next junction
+{"t_ms":328000,"mission":2,"speed":0.350,"line":-1.000,"distance":60.043,"hump_m":0.000,"obstacle_cm":100.0,"barcode":65,"fault":0}
+{"heartbeat_ms":328000}
+{"t_ms":329000,"mission":2,"speed":0.350,"line":0.000,"distance":60.173,"hump_m":0.000,"obstacle_cm":100.0,"barcode":65,"fault":0}
+{"heartbeat_ms":329000}
+{"t_ms":330000,"mission":1,"speed":0.350,"line":1.000,"distance":60.512,"hump_m":0.000,"obstacle_cm":100.0,"barcode":65,"fault":0}
+{"heartbeat_ms":330000}
+S3: junction: 'A' -> LEFT
+{"t_ms":331000,"mission":2,"speed":0.350,"line":0.000,"distance":60.654,"hump_m":0.000,"obstacle_cm":100.0,"barcode":65,"fault":0}
+{"heartbeat_ms":331000}
+{"t_ms":332000,"mission":2,"speed":0.350,"line":-1.000,"distance":60.761,"hump_m":0.000,"obstacle_cm":100.0,"barcode":65,"fault":0}
+{"heartbeat_ms":332000}
+{"t_ms":333000,"mission":2,"speed":0.350,"line":0.000,"distance":60.930,"hump_m":0.000,"obstacle_cm":24.0,"barcode":65,"fault":0}
+{"heartbeat_ms":333000}
+{"t_ms":334000,"mission":2,"speed":0.350,"line":1.000,"distance":61.088,"hump_m":0.000,"obstacle_cm":100.0,"barcode":65,"fault":0}
+{"heartbeat_ms":334000}
+S3 dbg: white 7263623 us  (+0 glitch edges)
+S3 dbg: BLACK 35567 us  (+512 glitch edges)
+S3 dbg: white 32944 us  (+0 glitch edges)
+S3 dbg: BLACK 136753 us  (+98 glitch edges)
+S3 dbg: white 43530 us  (+0 glitch edges)
+S3 dbg: BLACK 48569 us  (+40 glitch edges)
+S3 dbg: white 30103 us  (+0 glitch edges)
+S3 dbg: BLACK 6028 us  (+54 glitch edges)
+S3 dbg: white 74178 us  (+0 glitch edges)
+S3 dbg: BLACK 7966 us  (+46 glitch edges)
+S3 dbg: white 38676 us  (+0 glitch edges)
+S3 dbg: BLACK 58950 us  (+48 glitch edges)
+S3 dbg: white 34044 us  (+0 glitch edges)
+S3 dbg: BLACK 7785 us  (+36 glitch edges)
+S3 dbg: white 65251 us  (+0 glitch edges)
+S3 dbg: BLACK 6891 us  (+32 glitch edges)
+S3 dbg: white 27514 us  (+0 glitch edges)
+S3 dbg: BLACK 6319 us  (+36 glitch edges)
+S3 dbg: white 27536 us  (+0 glitch edges)
+S3 dbg: BLACK 44667 us  (+36 glitch edges)
+S3 dbg: white 27469 us  (+0 glitch edges)
+S3 dbg: BLACK 7258 us  (+38 glitch edges)
+S3 dbg: white 26928 us  (+0 glitch edges)
+{"t_ms":335000,"mission":1,"speed":0.350,"line":0.000,"distance":61.283,"hump_m":0.000,"obstacle_cm":100.0,"barcode":65,"fault":0}
+{"heartbeat_ms":335000}
+S3 dbg: BLACK 41975 us  (+32 glitch edges)
+S3 dbg: white 24887 us  (+0 glitch edges)
+S3 dbg: BLACK 40076 us  (+26 glitch edges)
+S3 dbg: white 25980 us  (+0 glitch edges)
+S3 dbg: BLACK 4069 us  (+58 glitch edges)
+S3 dbg: white 63229 us  (+0 glitch edges)
+S3 dbg: BLACK 6593 us  (+40 glitch edges)
+S3 dbg: GP28 IRQs 5427, level changes 1350, received 649, merged 620, now WHITE
+S3 dbg: 29 elements, NOT decoded (overflow)
+B35567 s35633 B136753 s44605 B48569 s31670 B6028 s75582 B7966 s40067
+B58950 s35163 B7785 s66250 B6891 s28473 B6319 s28495 B44667 s28522
+B7258 s27831 B41975 s25749 B40076 s27610 B4069 s64341 B6593 
+{"t_ms":336000,"mission":2,"speed":0.350,"line":-1.000,"distance":61.488,"hump_m":0.000,"obstacle_cm":100.0,"barcode":65,"fault":0}
+{"heartbeat_ms":336000}
+{"t_ms":337000,"mission":2,"speed":0.350,"line":0.000,"distance":61.639,"hump_m":0.000,"obstacle_cm":100.0,"barcode":65,"fault":0}
+{"heartbeat_ms":337000}
+{"t_ms":338000,"mission":1,"speed":0.350,"line":1.000,"distance":61.942,"hump_m":0.000,"obstacle_cm":100.0,"barcode":65,"fault":0}
+{"heartbeat_ms":338000}
+{"t_ms":339000,"mission":2,"speed":0.350,"line":0.000,"distance":62.100,"hump_m":0.000,"obstacle_cm":100.0,"barcode":65,"fault":0}
+{"heartbeat_ms":339000}
+{"t_ms":340000,"mission":2,"speed":0.350,"line":-1.000,"distance":62.214,"hump_m":0.000,"obstacle_cm":100.0,"barcode":65,"fault":0}
+{"heartbeat_ms":340000}
+{"t_ms":341000,"mission":2,"speed":0.350,"line":0.000,"distance":62.418,"hump_m":0.000,"obstacle_cm":24.0,"barcode":65,"fault":0}
+{"heartbeat_ms":341000}
+{"t_ms":342000,"mission":2,"speed":0.350,"line":1.000,"distance":62.557,"hump_m":0.000,"obstacle_cm":100.0,"barcode":65,"fault":0}
+{"heartbeat_ms":342000}
+{"t_ms":343000,"mission":1,"speed":0.350,"line":0.000,"distance":62.755,"hump_m":0.000,"obstacle_cm":100.0,"barcode":65,"fault":0}
+{"heartbeat_ms":343000}
+S3 dbg: white 8449168 us  (+0 glitch edges)
+S3 dbg: BLACK 24253 us  (+122 glitch edges)
+S3 dbg: white 100051 us  (+0 glitch edges)
+S3 dbg: BLACK 134957 us  (+170 glitch edges)
+S3 dbg: white 62373 us  (+0 glitch edges)
+{"t_ms":344000,"mission":2,"speed":0.350,"line":-1.000,"distance":62.976,"hump_m":0.000,"obstacle_cm":100.0,"barcode":65,"fault":0}
+{"heartbeat_ms":344000}
+S3 dbg: BLACK 98347 us  (+80 glitch edges)
+S3 dbg: white 59608 us  (+0 glitch edges)
+S3 dbg: BLACK 12858 us  (+84 glitch edges)
+S3 dbg: white 138989 us  (+0 glitch edges)
+S3 dbg: BLACK 41036 us  (+142 glitch edges)
+S3 dbg: white 249408 us  (+0 glitch edges)
+S3 dbg: BLACK 137463 us  (+150 glitch edges)
+S3 dbg: white 84470 us  (+0 glitch edges)
+S3 dbg: BLACK 36357 us  (+206 glitch edges)
+{"t_ms":345000,"mission":2,"speed":0.350,"line":0.000,"distance":63.145,"hump_m":0.000,"obstacle_cm":100.0,"barcode":65,"fault":0}
+{"heartbeat_ms":345000}
+S3 dbg: white 153318 us  (+0 glitch edges)
+S3 dbg: BLACK 10128 us  (+64 glitch edges)
+S3 dbg: white 49279 us  (+0 glitch edges)
+S3 dbg: BLACK 11160 us  (+92 glitch edges)
+S3 dbg: white 43609 us  (+0 glitch edges)
+S3 dbg: BLACK 63936 us  (+46 glitch edges)
+S3 dbg: white 42205 us  (+0 glitch edges)
+S3 dbg: BLACK 11492 us  (+56 glitch edges)
+S3 dbg: white 42433 us  (+0 glitch edges)
+S3 dbg: BLACK 76206 us  (+46 glitch edges)
+S3 dbg: white 47385 us  (+0 glitch edges)
+S3 dbg: BLACK 75967 us  (+48 glitch edges)
+S3 dbg: white 42152 us  (+0 glitch edges)
+S3 dbg: BLACK 6734 us  (+56 glitch edges)
+S3 dbg: white 85089 us  (+0 glitch edges)
+S3 dbg: BLACK 8888 us  (+50 glitch edges)
+{"t_ms":346000,"mission":1,"speed":0.350,"line":1.000,"distance":63.414,"hump_m":0.000,"obstacle_cm":100.0,"barcode":65,"fault":0}
+{"heartbeat_ms":346000}
+S3 dbg: GP28 IRQs 5803, level changes 1442, received 1319, merged 1290, now WHITE
+S3 dbg: 29 elements, NOT decoded
+B24253 s104757 B134957 s64527 B98347 s62080 B12858 s143034 B41036 s253644
+B137463 s90509 B36357 s155053 B10128 s51792 B11160 s44963 B63936 s43871
+B11492 s43773 B76206 s48694 B75967 s43739 B6734 s86533 B8888 
+{"t_ms":347000,"mission":2,"speed":0.350,"line":0.000,"distance":63.587,"hump_m":0.000,"obstacle_cm":100.0,"barcode":65,"fault":0}
+{"heartbeat_ms":347000}
+{"t_ms":348000,"mission":2,"speed":0.350,"line":-1.000,"distance":63.709,"hump_m":0.000,"obstacle_cm":100.0,"barcode":65,"fault":0}
+{"heartbeat_ms":348000}
+{"t_ms":349000,"mission":1,"speed":0.350,"line":0.000,"distance":63.940,"hump_m":0.000,"obstacle_cm":100.0,"barcode":65,"fault":0}
+{"heartbeat_ms":349000}
+{"t_ms":350000,"mission":2,"speed":0.350,"line":1.000,"distance":64.066,"hump_m":0.000,"obstacle_cm":100.0,"barcode":65,"fault":0}
+{"heartbeat_ms":350000}
+{"t_ms":351000,"mission":1,"speed":0.350,"line":0.000,"distance":64.249,"hump_m":0.000,"obstacle_cm":100.0,"barcode":65,"fault":0}
+{"heartbeat_ms":351000}
+{"t_ms":352000,"mission":2,"speed":0.350,"line":-1.000,"distance":64.501,"hump_m":0.000,"obstacle_cm":100.0,"barcode":65,"fault":0}
+{"heartbeat_ms":352000}
+{"t_ms":353000,"mission":2,"speed":0.350,"line":0.000,"distance":64.674,"hump_m":0.000,"obstacle_cm":100.0,"barcode":65,"fault":0}
+{"heartbeat_ms":353000}
+{"t_ms":354000,"mission":1,"speed":0.350,"line":1.000,"distance":64.907,"hump_m":0.000,"obstacle_cm":100.0,"barcode":65,"fault":0}
+{"heartbeat_ms":354000}
+{"t_ms":355000,"mission":2,"speed":0.350,"line":0.000,"distance":65.097,"hump_m":0.000,"obstacle_cm":100.0,"barcode":65,"fault":0}
+{"heartbeat_ms":355000}
+{"t_ms":356000,"mission":2,"speed":0.350,"line":-1.000,"distance":65.228,"hump_m":0.000,"obstacle_cm":100.0,"barcode":65,"fault":0}
+{"heartbeat_ms":356000}
+S3 dbg: white 10588118 us  (+0 glitch edges)
+S3 dbg: BLACK 48855 us  (+98 glitch edges)
+S3 dbg: white 75305 us  (+0 glitch edges)
+S3 dbg: BLACK 159268 us  (+30 glitch edges)
+S3 dbg: white 29642 us  (+0 glitch edges)
+S3 dbg: BLACK 175792 us  (+50 glitch edges)
+S3 dbg: white 98000 us  (+0 glitch edges)
+S3 dbg: BLACK 23790 us  (+52 glitch edges)
+S3 dbg: white 43509 us  (+0 glitch edges)
+S3 dbg: BLACK 83508 us  (+48 glitch edges)
+{"t_ms":357000,"mission":1,"speed":0.350,"line":0.000,"distance":65.457,"hump_m":0.000,"obstacle_cm":100.0,"barcode":65,"fault":0}
+{"heartbeat_ms":357000}
+S3 dbg: white 48778 us  (+0 glitch edges)
+S3 dbg: BLACK 17779 us  (+62 glitch edges)
+S3 dbg: white 99885 us  (+0 glitch edges)
+S3 dbg: BLACK 14585 us  (+42 glitch edges)
+S3 dbg: white 32451 us  (+0 glitch edges)
+S3 dbg: BLACK 13490 us  (+38 glitch edges)
+S3 dbg: white 29828 us  (+0 glitch edges)
+S3 dbg: BLACK 53043 us  (+30 glitch edges)
+S3 dbg: white 23974 us  (+0 glitch edges)
+S3 dbg: BLACK 13707 us  (+22 glitch edges)
+S3 dbg: white 25216 us  (+0 glitch edges)
+S3 dbg: BLACK 53039 us  (+30 glitch edges)
+S3 dbg: white 21611 us  (+0 glitch edges)
+S3 dbg: BLACK 40824 us  (+22 glitch edges)
+S3 dbg: white 9013 us  (+0 glitch edges)
+S3 dbg: BLACK 93874 us  (+22 glitch edges)
+{"t_ms":358000,"mission":2,"speed":0.350,"line":1.000,"distance":65.599,"hump_m":0.000,"obstacle_cm":100.0,"barcode":65,"fault":0}
+{"heartbeat_ms":358000}
+S3 dbg: GP28 IRQs 2293, level changes 572, received 473, merged 448, now WHITE
+S3 dbg: 25 elements, NOT decoded
+B48855 s77551 B159268 s31109 B175792 s99379 B23790 s44861 B83508 s50465
+B17779 s101045 B14585 s33511 B13490 s30631 B53043 s24574 B13707 s26049
+B53039 s22202 B40824 s9581 B93874 
+{"t_ms":359000,"mission":1,"speed":0.350,"line":0.000,"distance":65.766,"hump_m":0.000,"obstacle_cm":100.0,"barcode":65,"fault":0}
+{"heartbeat_ms":359000}
+{"t_ms":360000,"mission":2,"speed":0.350,"line":-1.000,"distance":66.053,"hump_m":0.000,"obstacle_cm":24.0,"barcode":65,"fault":0}
+{"heartbeat_ms":360000}
+{"t_ms":361000,"mission":2,"speed":0.350,"line":0.000,"distance":66.210,"hump_m":0.000,"obstacle_cm":100.0,"barcode":65,"fault":0}
+{"heartbeat_ms":361000}
+S3 dbg: white 4228011 us  (+0 glitch edges)
+{"t_ms":362000,"mission":1,"speed":0.350,"line":1.000,"distance":66.424,"hump_m":0.000,"obstacle_cm":100.0,"barcode":65,"fault":0}
+{"heartbeat_ms":362000}
+S3 dbg: BLACK 228498 us  (+192 glitch edges)
+S3 dbg: white 50684 us  (+0 glitch edges)
+S3 dbg: BLACK 62826 us  (+24 glitch edges)
+S3 dbg: white 29224 us  (+0 glitch edges)
+S3 dbg: BLACK 5470 us  (+68 glitch edges)
+S3 dbg: white 56250 us  (+0 glitch edges)
+S3 dbg: BLACK 3615 us  (+100 glitch edges)
+S3 dbg: white 23624 us  (+0 glitch edges)
+S3 dbg: BLACK 36743 us  (+32 glitch edges)
+S3 dbg: white 21010 us  (+0 glitch edges)
+S3 dbg: white 46550 us  (+187 glitch edges)
+S3 dbg: white 21255 us  (+159 glitch edges)
+S3 dbg: BLACK 2983 us  (+64 glitch edges)
+S3 dbg: white 17133 us  (+0 glitch edges)
+S3 dbg: BLACK 24531 us  (+20 glitch edges)
+S3 dbg: white 15322 us  (+0 glitch edges)
+S3 dbg: BLACK 4363 us  (+24 glitch edges)
+S3 dbg: white 15473 us  (+0 glitch edges)
+S3 dbg: BLACK 26914 us  (+20 glitch edges)
+S3 dbg: white 16633 us  (+0 glitch edges)
+S3 dbg: BLACK 28863 us  (+24 glitch edges)
+S3 dbg: white 17242 us  (+0 glitch edges)
+S3 dbg: BLACK 4465 us  (+26 glitch edges)
+S3 dbg: white 41128 us  (+0 glitch edges)
+S3 dbg: BLACK 9075 us  (+20 glitch edges)
+{"t_ms":363000,"mission":2,"speed":0.350,"line":0.000,"distance":66.629,"hump_m":0.000,"obstacle_cm":100.0,"barcode":65,"fault":0}
+{"heartbeat_ms":363000}
+S3 dbg: GP28 IRQs 3851, level changes 986, received 793, merged 770, now WHITE
+S3 dbg: 23 elements, NOT decoded
+B228498 s51945 B62826 s31143 B5470 s58987 B3615 s24427 B36743 s100524
+B2983 s17663 B24531 s16013 B4363 s15989 B26914 s17300 B28863 s17933
+B4465 s41679 B9075 
+{"t_ms":364000,"mission":2,"speed":0.350,"line":-1.000,"distance":66.780,"hump_m":0.000,"obstacle_cm":100.0,"barcode":65,"fault":0}
+{"heartbeat_ms":364000}
+{"t_ms":365000,"mission":1,"speed":0.350,"line":0.000,"distance":66.997,"hump_m":0.000,"obstacle_cm":100.0,"barcode":65,"fault":0}
+{"heartbeat_ms":365000}
+{"t_ms":366000,"mission":2,"speed":0.350,"line":1.000,"distance":67.154,"hump_m":0.000,"obstacle_cm":100.0,"barcode":65,"fault":0}
+{"heartbeat_ms":366000}
+{"t_ms":367000,"mission":1,"speed":0.350,"line":0.000,"distance":67.305,"hump_m":0.000,"obstacle_cm":100.0,"barcode":65,"fault":0}
+{"heartbeat_ms":367000}
+{"t_ms":368000,"mission":2,"speed":0.350,"line":-1.000,"distance":67.627,"hump_m":0.000,"obstacle_cm":24.0,"barcode":65,"fault":0}
+{"heartbeat_ms":368000}
+{"t_ms":369000,"mission":2,"speed":0.350,"line":0.000,"distance":67.766,"hump_m":0.000,"obstacle_cm":100.0,"barcode":65,"fault":0}
+{"heartbeat_ms":369000}
+S3 dbg: white 7102498 us  (+0 glitch edges)
+S3 dbg: white 105080 us  (+512 glitch edges)
+{"t_ms":370000,"mission":2,"speed":0.350,"line":1.000,"distance":67.859,"hump_m":0.000,"obstacle_cm":100.0,"barcode":65,"fault":0}
+{"heartbeat_ms":370000}
+S3 dbg: BLACK 158598 us  (+134 glitch edges)
+S3 dbg: white 85860 us  (+0 glitch edges)
+S3 dbg: BLACK 69906 us  (+84 glitch edges)
+S3 dbg: white 39022 us  (+0 glitch edges)
+S3 dbg: BLACK 7742 us  (+88 glitch edges)
+S3 dbg: white 96138 us  (+0 glitch edges)
+S3 dbg: BLACK 6739 us  (+140 glitch edges)
+S3 dbg: white 38253 us  (+0 glitch edges)
+S3 dbg: BLACK 65091 us  (+48 glitch edges)
+S3 dbg: white 45181 us  (+0 glitch edges)
+S3 dbg: white 110622 us  (+383 glitch edges)
+S3 dbg: white 34977 us  (+317 glitch edges)
+S3 dbg: white 30406 us  (+119 glitch edges)
+S3 dbg: BLACK 41719 us  (+32 glitch edges)
+S3 dbg: white 25273 us  (+0 glitch edges)
+S3 dbg: BLACK 7789 us  (+26 glitch edges)
+S3 dbg: white 22290 us  (+0 glitch edges)
+S3 dbg: BLACK 37746 us  (+20 glitch edges)
+S3 dbg: white 18753 us  (+0 glitch edges)
+S3 dbg: BLACK 43552 us  (+18 glitch edges)
+S3 dbg: white 10917 us  (+0 glitch edges)
+S3 dbg: BLACK 88358 us  (+34 glitch edges)
+{"t_ms":371000,"mission":2,"speed":0.350,"line":0.000,"distance":67.962,"hump_m":0.000,"obstacle_cm":100.0,"barcode":65,"fault":0}
+{"heartbeat_ms":371000}
+S3 dbg: GP28 IRQs 8431, level changes 2122, received 1331, merged 1312, now WHITE
+S3 dbg: 19 elements, NOT decoded (overflow)
+B158598 s88177 B69906 s41519 B7742 s100189 B6739 s39538 B65091 s249132
+B41719 s26051 B7789 s22866 B37746 s19292 B43552 s11931 B88358 
+{"t_ms":372000,"mission":2,"speed":0.350,"line":-1.000,"distance":68.132,"hump_m":0.000,"obstacle_cm":100.0,"barcode":65,"fault":0}
+{"heartbeat_ms":372000}
+{"t_ms":373000,"mission":1,"speed":0.350,"line":0.000,"distance":68.336,"hump_m":0.000,"obstacle_cm":100.0,"barcode":65,"fault":0}
+{"heartbeat_ms":373000}
+{"t_ms":374000,"mission":2,"speed":0.350,"line":1.000,"distance":68.510,"hump_m":0.000,"obstacle_cm":100.0,"barcode":65,"fault":0}
+{"heartbeat_ms":374000}
+S3 dbg: white 3708772 us  (+0 glitch edges)
+S3 dbg: BLACK 14205 us  (+134 glitch edges)
+S3 dbg: white 62851 us  (+0 glitch edges)
+S3 dbg: BLACK 78881 us  (+76 glitch edges)
+S3 dbg: white 40865 us  (+0 glitch edges)
+S3 dbg: BLACK 62102 us  (+16 glitch edges)
+{"t_ms":375000,"mission":1,"speed":0.350,"line":0.000,"distance":68.645,"hump_m":0.000,"obstacle_cm":100.0,"barcode":65,"fault":0}
+{"heartbeat_ms":375000}
+S3 dbg: white 41090 us  (+0 glitch edges)
+S3 dbg: BLACK 9040 us  (+66 glitch edges)
+S3 dbg: white 85895 us  (+0 glitch edges)
+S3 dbg: BLACK 6901 us  (+88 glitch edges)
+S3 dbg: white 34935 us  (+0 glitch edges)
+S3 dbg: BLACK 54520 us  (+44 glitch edges)
+S3 dbg: white 33416 us  (+0 glitch edges)
+S3 dbg: white 73895 us  (+259 glitch edges)
+S3 dbg: BLACK 6288 us  (+76 glitch edges)
+S3 dbg: white 32659 us  (+0 glitch edges)
+S3 dbg: BLACK 7948 us  (+62 glitch edges)
+S3 dbg: white 33776 us  (+0 glitch edges)
+S3 dbg: BLACK 51801 us  (+34 glitch edges)
+S3 dbg: white 29395 us  (+0 glitch edges)
+S3 dbg: BLACK 12131 us  (+32 glitch edges)
+S3 dbg: white 25397 us  (+0 glitch edges)
+S3 dbg: BLACK 47016 us  (+20 glitch edges)
+S3 dbg: white 15732 us  (+0 glitch edges)
+S3 dbg: BLACK 162125 us  (+18 glitch edges)
+{"t_ms":376000,"mission":1,"speed":0.350,"line":-1.000,"distance":68.995,"hump_m":0.000,"obstacle_cm":100.0,"barcode":65,"fault":0}
+{"heartbeat_ms":376000}
+S3 dbg: GP28 IRQs 3859, level changes 950, received 815, merged 792, now WHITE
+S3 dbg: 23 elements, NOT decoded
+B14205 s65052 B78881 s42279 B62102 s42934 B9040 s88463 B6901 s36185
+B54520 s116832 B6288 s34300 B7948 s34703 B51801 s30294 B12131 s26011
+B47016 s16265 B162125 
+{"t_ms":377000,"mission":2,"speed":0.350,"line":0.000,"distance":69.121,"hump_m":0.000,"obstacle_cm":100.0,"barcode":65,"fault":0}
+{"heartbeat_ms":377000}
+{"t_ms":378000,"mission":2,"speed":0.350,"line":1.000,"distance":69.222,"hump_m":0.000,"obstacle_cm":100.0,"barcode":65,"fault":0}
+{"heartbeat_ms":378000}
+S3 dbg: white 2368600 us  (+0 glitch edges)
+S3 dbg: BLACK 3975 us  (+6 glitch edges)
+S3 dbg: white 24072 us  (+0 glitch edges)
+S3 dbg: BLACK 8597 us  (+64 glitch edges)
+S3 dbg: white 35602 us  (+0 glitch edges)
+S3 dbg: BLACK 54258 us  (+14 glitch edges)
+S3 dbg: white 36620 us  (+0 glitch edges)
+S3 dbg: BLACK 50378 us  (+38 glitch edges)
+S3 dbg: white 29234 us  (+0 glitch edges)
+S3 dbg: BLACK 6883 us  (+48 glitch edges)
+S3 dbg: white 63857 us  (+0 glitch edges)
+S3 dbg: BLACK 5160 us  (+64 glitch edges)
+S3 dbg: white 24949 us  (+0 glitch edges)
+S3 dbg: BLACK 36209 us  (+30 glitch edges)
+S3 dbg: white 22102 us  (+0 glitch edges)
+S3 dbg: white 50103 us  (+169 glitch edges)
+S3 dbg: BLACK 4413 us  (+54 glitch edges)
+S3 dbg: white 23058 us  (+0 glitch edges)
+S3 dbg: BLACK 5475 us  (+40 glitch edges)
+S3 dbg: white 21559 us  (+0 glitch edges)
+S3 dbg: BLACK 33999 us  (+24 glitch edges)
+S3 dbg: white 19527 us  (+0 glitch edges)
+S3 dbg: BLACK 8365 us  (+20 glitch edges)
+S3 dbg: white 18287 us  (+0 glitch edges)
+S3 dbg: BLACK 40289 us  (+18 glitch edges)
+S3 dbg: white 11908 us  (+0 glitch edges)
+S3 dbg: BLACK 143278 us  (+22 glitch edges)
+{"t_ms":379000,"mission":2,"speed":0.350,"line":0.000,"distance":69.356,"hump_m":0.000,"obstacle_cm":100.0,"barcode":65,"fault":0}
+{"heartbeat_ms":379000}
+S3 dbg: GP28 IRQs 2493, level changes 638, received 631, merged 606, now WHITE
+S3 dbg: 25 elements, NOT decoded
+B3975 s25824 B8597 s36693 B54258 s37696 B50378 s30498 B6883 s65522
+B5160 s25793 B36209 s78645 B4413 s24133 B5475 s22193 B33999 s20044
+B8365 s18761 B40289 s12649 B143278 
+{"t_ms":380000,"mission":2,"speed":0.350,"line":-1.000,"distance":69.529,"hump_m":0.000,"obstacle_cm":100.0,"barcode":65,"fault":0}
+{"heartbeat_ms":380000}
+{"t_ms":381000,"mission":1,"speed":0.350,"line":0.000,"distance":69.721,"hump_m":0.000,"obstacle_cm":100.0,"barcode":65,"fault":0}
+{"heartbeat_ms":381000}
+{"t_ms":382000,"mission":2,"speed":0.350,"line":1.000,"distance":69.911,"hump_m":0.000,"obstacle_cm":100.0,"barcode":65,"fault":0}
+{"heartbeat_ms":382000}
+{"t_ms":383000,"mission":2,"speed":0.350,"line":0.000,"distance":70.042,"hump_m":0.000,"obstacle_cm":100.0,"barcode":65,"fault":0}
+{"heartbeat_ms":383000}
+---- Closed the serial port /dev/tty.usbmodemMTK3PICO1 ----

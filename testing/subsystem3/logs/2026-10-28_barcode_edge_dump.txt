@@ -1,0 +1,24 @@
+S3 dbg: edge, white lasted 209993 us
+S3 dbg: edge, BLACK lasted 1 us
+S3 dbg: edge, white lasted 0 us
+S3 dbg: edge, BLACK lasted 0 us
+S3 dbg: edge, white lasted 1 us
+S3 dbg: edge, BLACK lasted 1 us
+S3 dbg: edge, white lasted 1 us
+S3 dbg: edge, BLACK lasted 0 us
+S3 dbg: edge, white lasted 1 us
+S3 dbg: edge, BLACK lasted 0 us
+S3 dbg: edge, white lasted 0 us
+S3 dbg: edge, BLACK lasted 1 us
+S3 dbg: edge, white lasted 0 us
+S3 dbg: edge, BLACK lasted 9879 us
+S3 dbg: edge, white lasted 54 us
+S3 dbg: edge, BLACK lasted 335 us
+S3 dbg: edge, white lasted 56 us
+S3 dbg: edge, BLACK lasted 336 us
+S3 dbg: edge, white lasted 54 us
+S3 dbg: edge, BLACK lasted 343 us
+S3 dbg: edge, white lasted 47 us
+S3 dbg: GP28 IRQs 44, level changes 21, received 8, merged 7, now BLACK
+S3 dbg: 1 elements, NOT decoded
+B11104
