@@ -323,8 +323,12 @@ obstacle_profile_build (obstacle_scan_t const * p_scan,
  * REVERSE_RETRY   in the path, and closer than OBSTACLE_TOO_CLOSE_CM, or
  *                 something measured on both sides leaves no room for the
  *                 required offset plus a margin: back up and scan again.
- * TURN_LEFT/RIGHT in the path: go round the side with room (both: the
- *                 side that needs the smaller sideways move).  The offset
+ * TURN_LEFT/RIGHT in the path: go round the side with room. If the
+ *                 detected obstacle continues past only one scan edge,
+ *                 prefer going around that end. If both sides are
+ *                 measured and usable, prefer a side with clearly more
+ *                 clearance; if similar, choose the smaller sideways
+ *                 move. The offset
  *                 puts the car's side 4 cm clear of that edge (the
  *                 clearance is in OBSTACLE_PATH_HALF_CM).
  *
@@ -380,8 +384,35 @@ obstacle_plan_build (obstacle_profile_t const * p_profile,
         return;
     }
 
-    b_go_left = b_left_room &&
-                ((!b_right_room) || (left_offset <= right_offset));
+    if (p_profile->b_left_edge_out != p_profile->b_right_edge_out)
+    {
+        /* The scan cannot see around the end that runs past its limit.
+           Prefer that end; the blocked-ahead check protects the car if
+           the unseen area is occupied. */
+        b_go_left = p_profile->b_left_edge_out;
+    }
+    else
+    {
+        if (b_left_room && b_right_room &&
+            (p_profile->left_clearance_cm >
+             (p_profile->right_clearance_cm +
+              OBSTACLE_CLEARANCE_MARGIN_CM)))
+        {
+            b_go_left = true;
+        }
+        else if (b_left_room && b_right_room &&
+                 (p_profile->right_clearance_cm >
+                  (p_profile->left_clearance_cm +
+                   OBSTACLE_CLEARANCE_MARGIN_CM)))
+        {
+            b_go_left = false;
+        }
+        else
+        {
+            b_go_left = b_left_room &&
+                        ((!b_right_room) || (left_offset <= right_offset));
+        }
+    }
 
     p_plan->action           = b_go_left ? OBSTACLE_ACTION_TURN_LEFT
                                          : OBSTACLE_ACTION_TURN_RIGHT;

@@ -1,0 +1,121 @@
+---- Opened the serial port COM5 ----
+wifi: joining "PIHOTSPOT" (WPA2) ...
+wifi: link status -> joined AP, waiting for IP (1)
+[   2.0 s] IDLE   spd=0.150 line=1.000 dist=0.000m pitch=0.0 roll=0.0 obst=23.0cm bc=- fault=0 IMU-CAL
+S4: calibration complete (200 stable samples)
+wifi: link status -> FAILED: SSID not found (out of range, wrong name, or 5GHz-only network -- this chip is 2.4GHz only) (-2)
+CTRL: START received, waiting 3 seconds
+[NFR10] S2: motors off t_us=3004828
+CTRL: Countdown complete, mission STARTED
+[S4] height: rise=0.000 m peak=0.000 m valid=1 active=0 complete=0 gap=0
+[   3.0 s] FOLLOW spd=0.150 line=1.000 dist=0.000m pitch=0.1 roll=0.0 obst=23.0cm bc=- fault=0
+[NFR10] S2: motors off t_us=3013547
+S3: line sensor left learned while driving: white 2502, black 3036 counts
+S3: line sensor left learned while driving: white 1226, black 3036 counts
+S3: line sensor left learned while driving: white 222, black 3036 counts
+S3: line sensor middle learned while driving: white 171, black 2105 counts
+S4: bounded tilt gap bridged count=1
+S3: line sensor middle learned while driving: white 171, black 2989 counts
+S3: line sensor middle learned while driving: white 171, black 3274 counts
+S5: STOP obstacle in path at 17 cm, 0 deg
+S5: Requesting full scan for width measurement
+S5: avoid WAIT_SCAN heading 0 along 0 out 0 cm
+[NFR10] S2: motors off t_us=3609144
+[NFR10] S2: motors off t_us=3613534
+S4: bounded tilt gap bridged count=2
+S5: Starting full scan for width measurement
+[S4] height: rise=0.000 m peak=0.000 m valid=1 active=0 complete=0 gap=2
+[   4.0 s] AVOID  spd=0.150 line=-0.976 dist=0.045m pitch=-0.1 roll=0.4 obst=17.0cm bc=- fault=0
+S4: LSM303 init=1 read=1 valid=1 cal=200/200 dt_ms=10 accel_mg=-8,-22,972
+[S4] height: rise=0.000 m peak=0.000 m valid=1 active=0 complete=0 gap=2
+[   5.0 s] AVOID  spd=0.150 line=-0.979 dist=0.045m pitch=-0.1 roll=-0.3 obst=17.0cm bc=- fault=0
+[S4] height: rise=0.000 m peak=0.000 m valid=1 active=0 complete=0 gap=2
+[   6.0 s] AVOID  spd=0.150 line=-0.982 dist=0.045m pitch=-0.3 roll=-0.3 obst=17.0cm bc=- fault=0
+[S4] height: rise=0.000 m peak=0.000 m valid=1 active=0 complete=0 gap=2
+[   7.0 s] AVOID  spd=0.150 line=-0.979 dist=0.045m pitch=0.3 roll=-0.4 obst=17.0cm bc=- fault=0
+wifi: joining "PIHOTSPOT" (WPA2) ...
+wifi: link status -> joined AP, waiting for IP (1)
+[S4] height: rise=0.000 m peak=0.000 m valid=1 active=0 complete=0 gap=2
+[   8.0 s] AVOID  spd=0.150 line=-0.987 dist=0.045m pitch=0.1 roll=-0.3 obst=17.0cm bc=- fault=0
+wifi: link status -> FAILED: SSID not found (out of range, wrong name, or 5GHz-only network -- this chip is 2.4GHz only) (-2)
+S5: Obstacle detected - width=7.03 cm
+S5: obstacle -10..15 deg, centre 3 deg / 1 cm, closest 16 cm at -10 deg, width 7 cm, clear L 20 R 29 cm, action TURN_RIGHT, offset 16 cm
+S5: points 60:29 65:20 70:21 75:18 80:16 85:18 90:17 95:18 100:19 105:19 110:19 115:30 120:29
+S5: Starting full scan for width measurement
+S5: avoid REVERSE heading 0 along 0 out 0 cm
+S4: bounded tilt gap bridged count=3
+S5: avoid TURN_OUT heading 0 along -2 out 0 cm
+S4: encoder height rejected reason=wheel_speed_difference active=0 imu_ms=8825 motion_ms=8833 interval_ms=40 sensor=1 cal=1 tilt=0 saturated=0 shock=0
+S4: rejected wheel data left_m_s=0.099 right_m_s=-0.107 left_ticks=75 right_ticks=49
+S4: [diagnostic] rise=0.000 m peak=0.000 m
+[   9.0 s] AVOID  spd=0.150 line=-1.000 dist=0.020m pitch=-0.1 roll=-0.9 obst=18.0cm bc=- fault=0
+[S3 bar] white 9443118 us (+0 glitch)
+S5: avoid LEG_OUT heading -57 along -2 out 0 cm
+[S3 bar] BLACK 223779 us (+0 glitch)
+S4: bounded tilt gap bridged count=4
+S4: LSM303 init=1 read=1 valid=1 cal=200/200 dt_ms=10 accel_mg=16,-70,974
+[S4] height: rise=0.000 m peak=0.000 m valid=1 active=0 complete=0 gap=4
+[  10.0 s] AVOID  spd=0.150 line=-1.000 dist=0.047m pitch=-0.4 roll=-1.0 obst=18.0cm bc=- fault=0
+[S3 barcode] GP28 irq=4 edges=2 rx=1 merged=0 restored=0 now=WHITE
+[S3 barcode] 1 elements, not decoded
+B223779 
+[S4] height: rise=0.000 m peak=0.000 m valid=1 active=0 complete=0 gap=4
+[  11.0 s] AVOID  spd=0.150 line=-1.000 dist=0.114m pitch=0.0 roll=0.5 obst=18.0cm bc=- fault=0
+S4: bounded tilt gap bridged count=5
+S4: bounded tilt gap bridged count=6
+S4: encoder height rejected reason=tilt_gap_timeout active=0 imu_ms=11785 motion_ms=11753 interval_ms=32 sensor=1 cal=1 tilt=0 saturated=0 shock=0
+[  12.0 s] AVOID  spd=0.150 line=-1.000 dist=0.185m pitch=-1.4 roll=-1.8 obst=18.0cm bc=- fault=0
+S5: avoid TURN_PARALLEL heading -68 along 6 out 16 cm
+S5: Obstacle detected - width=6.44 cm
+S5: obstacle -15..-5 deg, centre -10 deg / -6 cm, closest 33 cm at -10 deg, width 6 cm, clear L 37 R 37 cm, action TURN_RIGHT, offset 10 cm
+S5: points 60:37 65:38 70:35 75:36 80:33 85:33 90:34 95:37 100:153 105:150 110:127 115:124 120:123
+S5: Starting full scan for width measurement
+[  13.0 s] AVOID  spd=0.150 line=1.000 dist=0.203m pitch=-0.5 roll=-0.7 obst=39.0cm bc=- fault=0
+S5: avoid LEG_PAST heading -3 along 6 out 16 cm
+wifi: joining "PIHOTSPOT" (WPA2) ...
+S4: bounded tilt gap bridged count=7
+wifi: link status -> joined AP, waiting for IP (1)
+[S4] height: rise=0.000 m peak=0.000 m valid=1 active=0 complete=0 gap=7
+[  14.0 s] AVOID  spd=0.150 line=1.000 dist=0.243m pitch=1.1 roll=0.5 obst=39.0cm bc=- fault=0
+S4: encoder height rejected reason=downhill_start active=0 imu_ms=14285 motion_ms=14293 interval_ms=40 sensor=1 cal=1 tilt=1 saturated=0 shock=0
+S4: rejected wheel data left_m_s=0.049 right_m_s=0.066 left_ticks=788 right_ticks=803
+S4: [diagnostic] rise=0.000 m peak=0.000 m
+wifi: link status -> FAILED: SSID not found (out of range, wrong name, or 5GHz-only network -- this chip is 2.4GHz only) (-2)
+S5: scan clear, CONTINUE
+S4: LSM303 init=1 read=1 valid=1 cal=200/200 dt_ms=9 accel_mg=-40,4,1004
+[  15.0 s] AVOID  spd=0.150 line=1.000 dist=0.312m pitch=0.5 roll=1.0 obst=59.0cm bc=- fault=0
+[S3 route] junction: no barcode -> STRAIGHT
+[S4] height: rise=0.000 m peak=0.000 m valid=1 active=0 complete=0 gap=7
+[  16.0 s] AVOID  spd=0.150 line=-1.000 dist=0.386m pitch=0.1 roll=0.2 obst=47.0cm bc=- fault=0
+[S4] height: rise=0.000 m peak=0.000 m valid=1 active=0 complete=0 gap=7
+[  17.0 s] AVOID  spd=0.150 line=-1.000 dist=0.460m pitch=-0.2 roll=-0.1 obst=77.0cm bc=- fault=0
+S5: obstacle thickness not measured (side not seen)
+S5: avoid TURN_IN heading -1 along 34 out 16 cm
+S4: bounded tilt gap bridged count=8
+[S4] height: rise=0.000 m peak=0.000 m valid=1 active=0 complete=0 gap=8
+[  18.0 s] AVOID  spd=0.150 line=-1.000 dist=0.490m pitch=-0.2 roll=0.3 obst=150.0cm bc=- fault=0
+S5: avoid SEARCH heading 56 along 34 out 16 cm
+S4: bounded tilt gap bridged count=9
+[S4] height: rise=0.000 m peak=0.000 m valid=1 active=0 complete=0 gap=9
+[  19.0 s] AVOID  spd=0.150 line=-1.000 dist=0.530m pitch=-0.1 roll=-0.8 obst=207.0cm bc=- fault=0
+wifi: joining "PIHOTSPOT" (WPA2) ...
+wifi: link status -> joined AP, waiting for IP (1)
+S5: avoid ALIGN heading 60 along 39 out 8 cm
+S4: bounded tilt gap bridged count=10
+S4: LSM303 init=1 read=1 valid=1 cal=200/200 dt_ms=9 accel_mg=-2,-10,954
+[S4] height: rise=0.000 m peak=0.000 m valid=1 active=0 complete=0 gap=10
+[  20.0 s] AVOID  spd=0.150 line=-1.000 dist=0.586m pitch=-0.4 roll=0.5 obst=148.0cm bc=- fault=0
+wifi: link status -> FAILED: SSID not found (out of range, wrong name, or 5GHz-only network -- this chip is 2.4GHz only) (-2)
+S5: avoid VERIFY heading 2 along 39 out 7 cm
+S4: bounded tilt gap bridged count=11
+[S4] height: rise=0.000 m peak=0.000 m valid=1 active=0 complete=0 gap=11
+[  21.0 s] AVOID  spd=0.150 line=-1.000 dist=0.604m pitch=-0.7 roll=-1.4 obst=116.0cm bc=- fault=0
+S5: avoid SWEEP heading 11 along 43 out 7 cm
+S4: encoder height rejected reason=wheel_speed_difference active=1 imu_ms=21345 motion_ms=21353 interval_ms=20 sensor=1 cal=1 tilt=1 saturated=0 shock=0
+S4: rejected wheel data left_m_s=0.130 right_m_s=-0.098 left_ticks=1872 right_ticks=1932
+S4: [diagnostic] rise=0.000 m peak=0.000 m
+[S4] height: rise=0.000 m peak=0.000 m valid=1 active=0 complete=0 gap=11
+[  22.0 s] AVOID  spd=0.150 line=-1.000 dist=0.629m pitch=-0.9 roll=-0.1 obst=99.0cm bc=- fault=0
+{"height_interrupted":1,"t_ms":22026,"interrupted_height_valid":0,"interrupted_rise_m":0.000,"interrupted_peak_m":0.000,"interrupted_reason":"wheel_speed_difference"}
+S4: bounded tilt gap bridged count=12
+---- Closed the serial port COM5 ----

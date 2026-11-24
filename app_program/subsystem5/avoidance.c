@@ -40,7 +40,7 @@
                                         /* front distance needed = the
                                            forward part of the way out
                                            + this                      */
-#define AVOID_DEPTH_CM          (20.0f) /* assumed obstacle depth      */
+#define AVOID_DEPTH_CM          (1.0f)  /* assumed obstacle depth      */
 #define AVOID_PAST_CM           ((AVOID_CAR_LENGTH_CM - AVOID_NOSE_CM) + \
                                  AVOID_CLEARANCE_CM)
                                         /* sensor past the obstacle's
