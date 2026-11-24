@@ -23,7 +23,11 @@ Add a new row for every run. Never edit or delete old rows.
 
 | Date | Test ID | Commit | Tester | Result | Log / evidence | Notes |
 |---|---|---|---|---|---|---|
-| YYYY-MM-DD | S2-U01 | `abc1234` | | PASS / FAIL | `logs/YYYY-MM-DD_….txt` | |
-| 2026-10-28 | S2-M01 | (this commit) | Pieter | PASS | serial monitor | left +1405, right +1225, both together +4511/+4668 |
-| 2026-10-28 | S2-M02 | (this commit) | Pieter | PARTIAL | serial monitor | encoders: 875/880 mm; ruler distance not recorded |
-| 2026-10-28 | S2-M03 | (this commit) | Pieter | PARTIAL | serial monitor | encoder angle about 91 deg and 160 deg; measure real angles |
+| 2026-10-28 | S2-M01 | `4d7805f` | Pieter | PASS | Serial monitor; not saved to a file | Left +1405 ticks, right +1225 ticks; both together +4511/+4668 ticks |
+| 2026-10-28 | S2-M02 | `4d7805f` | Pieter | PARTIAL | Serial monitor; not saved to a file | Encoder distances were 875/880 mm; ruler reference distance was not recorded |
+| 2026-10-28 | S2-M03 | `4d7805f` | Pieter | PARTIAL | Serial monitor; not saved to a file | Encoder estimates were about 91 deg and 160 deg; physical angles were not measured |
+| 2026-11-24 | S2-U01 | `4d7805f` | Team | PASS | Console/test build; full console capture pending | PID output equals target at zero error |
+| 2026-11-24 | S2-U02 | `4d7805f` | Team | PASS | Console/test build; full console capture pending | PID increases output when the wheel is slow |
+| 2026-11-24 | S2-U03 | `4d7805f` | Team | PASS | Console/test build; full console capture pending | Encoder counts advance during simulated driving |
+| 2026-11-24 | S2-U04 | `4d7805f` | Team | PASS | Hardware; full console capture pending | Both wheels move forward and have similar commanded speed |
+| 2026-11-24 | S2-U05 | `4d7805f` | Team | PASS | Console/test build; full console capture pending | PID output clamps and integral windup is prevented |

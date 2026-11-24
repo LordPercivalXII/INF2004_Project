@@ -6,15 +6,15 @@
 #include "../common/rmath.h"
 
 #define HEIGHT_MAX_MOTION_MS     (100U)
-#define HEIGHT_MAX_GAP_MS        (500U)
-#define HEIGHT_MAX_GAP_PATH_M    (0.100f)
-#define HEIGHT_MAX_BRIDGED_M     (0.200f)
+#define HEIGHT_MAX_GAP_MS        (250U)
+#define HEIGHT_MAX_GAP_PATH_M    (0.020f)
+#define HEIGHT_MAX_BRIDGED_M     (0.060f)
 #define HEIGHT_MAX_GAP_PITCH_DEG (6.0f)
 #define HEIGHT_GAP_MIN_G         (0.65f)
 #define HEIGHT_GAP_MAX_G         (1.35f)
-#define HEIGHT_START_MAX_MS      (1000U)
-#define HEIGHT_START_MAX_PATH_M  (0.300f)
-#define HEIGHT_START_MAX_FALL_M  (0.050f)
+#define HEIGHT_START_MAX_MS      (250U)
+#define HEIGHT_START_MAX_PATH_M  (0.020f)
+#define HEIGHT_START_MAX_FALL_M  (0.0005f)
 #define HEIGHT_FLAT_SAMPLES      (10U)
 #define HEIGHT_LEVEL_DEG         (1.0f)
 #define HEIGHT_MIN_PEAK_M        (0.005f)
@@ -122,6 +122,12 @@ imu_height_begin_gap (imu_height_t * p_height)
     p_height->gap_path_m = 0.0f;
 }
 
+static uint32_t
+imu_elapsed_ms (uint32_t now_ms, uint32_t then_ms)
+{
+    return (now_ms - then_ms);
+}
+
 void
 imu_height_observe_imu (imu_height_t * p_height,
                         imu_event_t const * p_imu, uint32_t imu_ms)
@@ -158,8 +164,7 @@ imu_height_observe_imu (imu_height_t * p_height,
     {
         p_height->b_valid = false;
         p_height->b_complete = false;
-        if (((imu_ms - p_height->gap_anchor_ms) > HEIGHT_MAX_GAP_MS) &&
-            ((p_height->gap_anchor_ms - imu_ms) > 60U))
+        if (imu_elapsed_ms(imu_ms, p_height->gap_anchor_ms) > HEIGHT_MAX_GAP_MS)
         {
             imu_height_invalidate(p_height, HEIGHT_REJECT_GAP_TIMEOUT);
         }
@@ -170,7 +175,7 @@ static void
 imu_height_integrate (imu_height_t * p_height, float ds, float slope,
                        bool b_level, bool b_measured, uint32_t sample_ms)
 {
-    float const dz = ds * (slope + p_height->last_slope) * 0.5f;
+    float const dz = -ds * (slope + p_height->last_slope) * 0.5f;
     p_height->last_dz = dz;
     p_height->last_slope = slope;
     if (!p_height->b_active)
@@ -192,9 +197,10 @@ imu_height_integrate (imu_height_t * p_height, float ds, float slope,
                 imu_height_invalidate(p_height, HEIGHT_REJECT_DOWNHILL_START);
                 return;
             }
-            if (p_height->path_m > 10.0f)
+            if (rmath_absf(p_height->path_m - p_height->start_path_m) >
+                HEIGHT_START_MAX_PATH_M)
             {
-                imu_height_invalidate(p_height, HEIGHT_REJECT_PATH);
+                imu_height_invalidate(p_height, HEIGHT_REJECT_DOWNHILL_START);
                 return;
             }
             if (b_level && b_measured)
@@ -204,9 +210,8 @@ imu_height_integrate (imu_height_t * p_height, float ds, float slope,
                 p_height->start_ms = sample_ms;
                 p_height->start_path_m = p_height->path_m;
             }
-            else if (((p_height->path_m - p_height->start_path_m) >
-                      HEIGHT_START_MAX_PATH_M * 2.0f) ||
-                     ((sample_ms - p_height->start_ms) > HEIGHT_START_MAX_MS * 2.0f))
+            else if (imu_elapsed_ms(sample_ms, p_height->start_ms) >
+                     HEIGHT_START_MAX_MS)
             {
                 imu_height_invalidate(p_height, HEIGHT_REJECT_DOWNHILL_START);
                 return;
@@ -247,7 +252,8 @@ imu_height_update (imu_height_t * p_height, motion_event_t const * p_motion,
                     uint32_t motion_ms)
 {
     uint32_t const interval = motion_ms - p_height->last_ms;
-    uint32_t const age = motion_ms - imu_ms;
+    uint32_t const newer_delta = imu_ms - motion_ms;
+    uint32_t const older_delta = motion_ms - imu_ms;
     float const pitch = p_imu->tilt_pitch_deg;
     float const distance = p_motion->distance_m;
     float const left = p_motion->left_speed_m_s;
@@ -262,8 +268,8 @@ imu_height_update (imu_height_t * p_height, motion_event_t const * p_motion,
     p_height->b_complete = false;
     p_height->b_rejected = false;
     if (((HEIGHT_REJECT_NONE == reason) || (HEIGHT_REJECT_TILT == reason)) &&
-        (age > IMU_RECOVERABLE_INTERVAL_MS) &&
-        ((imu_ms - motion_ms) > 60U))
+        (newer_delta > 60U) &&
+        (older_delta > IMU_RECOVERABLE_INTERVAL_MS))
     {
         imu_height_invalidate(p_height, HEIGHT_REJECT_IMU_AGE);
         return;
@@ -279,10 +285,11 @@ imu_height_update (imu_height_t * p_height, motion_event_t const * p_motion,
        both event producers run independently, so enqueue order may differ. */
     if (HEIGHT_REJECT_NONE == reason)
     {
-        if ((age > 60U) && ((imu_ms - motion_ms) > 60U))
+        if ((newer_delta > 60U) &&
+            (older_delta > 60U) &&
+            (older_delta <= IMU_RECOVERABLE_INTERVAL_MS))
         {
-            if ((age <= IMU_RECOVERABLE_INTERVAL_MS) &&
-                p_height->b_ready && p_height->b_have_distance)
+            if (p_height->b_ready && p_height->b_have_distance)
             {
                 if (!p_height->b_gap) imu_height_begin_gap(p_height);
                 b_endpoint_valid = false;
