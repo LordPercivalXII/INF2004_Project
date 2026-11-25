@@ -33,16 +33,56 @@ typedef struct
     uint32_t          burst_other_us; /* ...of the other colour      */
     bool              b_tried;      /* decode failed at a short gap  */
     bool              b_isr_overflow;
+    uint32_t          last_bar_end_us;  /* end of the last real bar   */
 } barcode_session_t;
 
-static barcode_result_t g_result;
-static bool             gb_result_ready = false;
-static volatile bool    gb_scan_active = false;
+static barcode_result_t   g_result;
+static bool               gb_result_ready = false;
+static volatile bool      gb_scan_active = false;
+static volatile uint32_t  g_scan_elements = 0U;
+static volatile uint32_t  g_last_bar_end_us = 0U;
 
 bool
 barcode_scan_active (void)
 {
     return (gb_scan_active);
+}
+
+/*!
+ * @brief Elements (bars and spaces, glitches excluded) in the open scan;
+ *        0 when no scan is open.  A lone dark patch (junction tape under
+ *        GP28) is 1; a barcode being read is several.
+ */
+uint32_t
+barcode_scan_elements (void)
+{
+    return (gb_scan_active ? g_scan_elements : 0U);
+}
+
+/*!
+ * @brief board_micros() at the end of the last real (non-glitch) bar seen
+ *        by the open or most recent scan.
+ */
+uint32_t
+barcode_last_bar_end_us (void)
+{
+    return (g_last_bar_end_us);
+}
+
+/*!
+ * @brief Ask barcode_task to try a decode of the open scan now (line_task
+ *        calls this when the car reaches a junction mid-scan).  Harmless if
+ *        the scan is incomplete: a failed attempt leaves it open.
+ */
+void
+barcode_request_decode (void)
+{
+    barcode_element_t request = {0};
+
+    request.is_black = BARCODE_ELEMENT_DECODE_NOW;
+    request.end_us   = board_micros();
+    (void) tk_snd_mbf(gh_barcode_edge_mbf, &request, (INT) sizeof(request),
+                      TMO_POL);
 }
 
 /* ------------------------------------------------------------------ */
@@ -107,7 +147,8 @@ barcode_session_reset (barcode_session_t * p_session)
     p_session->burst_other_us = 0U;
     p_session->b_tried    = false;
     p_session->b_isr_overflow = false;
-    gb_scan_active = false;
+    gb_scan_active  = false;
+    g_scan_elements = 0U;
 }
 
 static void
@@ -254,6 +295,7 @@ barcode_session_finish (barcode_session_t * p_session, bool b_final)
                           result.text, sizeof(result.text),
                           &result.b_reversed))
     {
+        result.last_bar_end_us = p_session->last_bar_end_us;
         /* FR8: either crossing direction; mapping to an action happens
            later, at the junction (route.c), not here. */
         b_decoded = true;
@@ -347,6 +389,9 @@ barcode_session_start (barcode_session_t * p_session,
         p_session->last_edge_us = p_element->end_us;
         p_session->widest_us    = p_element->width_us;
         p_session->received     = 1U;
+        p_session->last_bar_end_us = p_element->end_us;
+        g_last_bar_end_us       = p_element->end_us;
+        g_scan_elements         = 1U;
     }
 }
 
@@ -387,6 +432,7 @@ barcode_session_try_early (barcode_session_t * p_session, uint32_t quiet_us)
 
     if (b_decoded)
     {
+        result.last_bar_end_us = p_session->last_bar_end_us;
         barcode_result_put(&result);
 #if S3_BARCODE_DEBUG
         barcode_debug_dump(p_session, true, false, &result);
@@ -413,6 +459,19 @@ barcode_session_add (barcode_session_t * p_session,
         p_session->last_edge_us = p_element->end_us;
         p_session->received++;
         p_session->b_tried = false;     /* more data: try again later */
+
+        if ((0U != p_element->is_black) &&
+            (p_element->width_us >= BARCODE_GLITCH_US))
+        {
+            /* Chatter is not a bar: it must not make a junction that
+               came after the barcode look like part of it. */
+            p_session->last_bar_end_us = p_element->end_us;
+            g_last_bar_end_us          = p_element->end_us;
+        }
+        if (p_element->width_us >= BARCODE_GLITCH_US)
+        {
+            g_scan_elements++;
+        }
 
         if (p_element->width_us < BARCODE_GLITCH_US)
         {
@@ -506,7 +565,17 @@ barcode_task (INT stacd, void * p_exinf)
         result = tk_rcv_mbf(gh_barcode_edge_mbf, &element,
                             barcode_session_wait(&session));
 
-        if (result > 0)
+        if ((result > 0) &&
+            (BARCODE_ELEMENT_DECODE_NOW == element.is_black))
+        {
+            /* Junction reached mid-scan: decode what has been read now.
+               If it is not a whole symbol yet, the scan stays open. */
+            if (session.b_active)
+            {
+                (void) barcode_session_finish(&session, false);
+            }
+        }
+        else if (result > 0)
         {
 #if S3_BARCODE_DEBUG
             /* Live view: one line per real bar or space.  Comparator

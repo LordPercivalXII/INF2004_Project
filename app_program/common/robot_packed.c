@@ -241,7 +241,9 @@ pack_line (line_event_t const * p_line, line_packed_t * p_wire)
     p_wire->cmd.command    = (unsigned int) command;
     p_wire->cmd.b_char     = b_char ? 1U : 0U;
     p_wire->cmd.b_reversed = p_line->b_barcode_reversed ? 1U : 0U;
-    p_wire->cmd.reserved   = 0U;
+    p_wire->cmd.age_50ms   = (p_line->junction_age_ms >= (7U * 50U))
+                             ? 7U
+                             : ((p_line->junction_age_ms + 25U) / 50U);
 
     if (p_line->b_barcode_valid)
     {
@@ -275,6 +277,7 @@ unpack_line (line_packed_t const * p_wire, line_event_t * p_line)
     line.b_barcode_valid    = (0U != p_wire->nav.b_barcode);
     line.b_barcode_reversed = (0U != p_wire->cmd.b_reversed);
     line.junction_action    = (uint16_t) p_wire->cmd.command;
+    line.junction_age_ms    = (uint16_t) (p_wire->cmd.age_50ms * 50U);
 
     if (line.b_barcode_valid)
     {

@@ -118,7 +118,7 @@ typedef struct ROBOT_PACKED
     unsigned int    command     : 3;    /* barcode_command_t at junction */
     unsigned int    b_char      : 1;    /* junction used a stored char   */
     unsigned int    b_reversed  : 1;    /* barcode read right-to-left    */
-    unsigned int    reserved    : 3;
+    unsigned int    age_50ms    : 3;    /* junction age, 50 ms units     */
 } barcode_cmd_packed_t;                 /* 1 byte */
 
 typedef struct ROBOT_PACKED

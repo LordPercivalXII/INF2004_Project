@@ -1,0 +1,31 @@
+# 7119ddd + working tree, 2026-11-24 (host gcc)
+## test_junction_defer_host
+far barcode: junction turns at once: ok
+barcode decoded just before junction: used, not dropped: ok
+[S3 route] junction during barcode scan: decoding now
+junction during scan: waits 30 ms, turns LEFT with this barcode: ok
+[S3 route] junction during barcode scan: decoding now
+[S3 route] dark patch was barcode "L" itself, not a junction: waypoint kept
+barcode's own wide bar: no junction, barcode kept for real one: ok
+[S3 route] junction during barcode scan: decoding now
+failed read: junction uses stored waypoint: ok
+[S3 route] junction during barcode scan: decoding now
+[S3 route] barcode not decoded in 300 ms: junction uses stored waypoint
+scan stuck: acts after LINE_JUNCTION_DEFER_MAX_MS with age: ok
+junction tape on barcode sensor: no wait: ok
+all junction deferral tests passed
+## test_barcode_session_host
+1 early decode on quiet zone: ok
+2 junk before barcode: ok
+3 overflow by junk then barcode: ok
+4 bar/space bias 5 ms: ok
+5 partial: no decode (ok)
+6 last bar end reported with the decode: ok
+7 decode-now: partial kept open, whole symbol decoded at once: ok
+all barcode session tests passed
+## test_line_learn_host
+S3: line sensor t learned while driving: white 300, black 1500 counts
+tape 1500 counts: normalised 0.64 with defaults -> 1.00 learned (junction level 0.70)
+2-cycle spike ignored: ok
+lifted front (both dark 0.5 s): black stays 1500; tape still 1.00 >= 0.70
+tape at 1400 counts = 0.92 -> junction confirmed in 2 cycles

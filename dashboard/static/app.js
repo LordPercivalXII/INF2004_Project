@@ -45,7 +45,9 @@ const number = (v, digits = 2) => (hasNumber(v) ? v.toFixed(digits) : "--");
 
 const isTrue = (v) => v === true || v === 1;
 
-const formatCm = (v) => (hasNumber(v) ? `${(v * 100).toFixed(2)} cm` : "--");
+// The car measures and sends whole millimetres: show exactly that (0.1 cm),
+// the same figure as the serial console's metres with three decimals.
+const formatCm = (v) => (hasNumber(v) ? `${(v * 100).toFixed(1)} cm` : "--");
 
 const setText = (id, value) => {
   const el = $(id);
@@ -966,7 +968,7 @@ function missionEventRow(event) {
   }
 
   if (hasNumber(extra.height_m)) {
-    details.push(`${(extra.height_m * 100).toFixed(2)} cm`);
+    details.push(`${(extra.height_m * 100).toFixed(1)} cm`);
   }
 
   if (extra.action) {
@@ -1113,7 +1115,7 @@ async function refreshMissionHistory() {
     setText(
       "mh-peak",
       hasNumber(m.peak_hump_m)
-        ? `${(m.peak_hump_m * 100).toFixed(2)} cm`
+        ? `${(m.peak_hump_m * 100).toFixed(1)} cm`
         : "--",
     );
 
@@ -1200,7 +1202,8 @@ clearLiveTelemetry();
 updateSidebarConnection(false, false);
 
 poll();
-setInterval(poll, 1000);
+// 4 Hz: the car sends ramp height every 200 ms while on a slope.
+setInterval(poll, 250);
 
 // Network and mission history update only when relevant.
 setInterval(() => {

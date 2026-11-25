@@ -79,6 +79,9 @@ typedef struct
     char barcode_text[BARCODE_TEXT_MAX + 1U];
     uint16_t junction_action; /* barcode_command_t when b_junction */
     char junction_char;       /* character used, '\0' if none     */
+    uint16_t junction_age_ms; /* how long ago the line sensors were
+                                 on the junction (decision waited for
+                                 a barcode still being read), 0 = now */
 } line_event_t;
 
 typedef struct
@@ -233,6 +236,8 @@ typedef struct
     uint8_t last_junction_action; /* barcode_command_t chosen      */
     uint8_t junction_count;       /* junctions acted on, wraps     */
     imu_event_t imu;
+    bool b_height_only;           /* fast ramp update: MQTT height and
+                                     IMU records only, no console line */
     bool b_height_trace;
     uint32_t trace_sequence;
     uint32_t trace_dropped;

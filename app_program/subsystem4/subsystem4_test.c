@@ -450,7 +450,7 @@ subsystem4_test (void)
     s4_height_baseline();
     s4_height_feed(-10.0f, 0.005f, 20U);
     g_height_imu.b_tilt_valid = false;
-    s4_height_feed(-10.0f, 0.0f, 13U);
+    s4_height_feed(-10.0f, 0.0f, ((IMU_HEIGHT_MAX_GAP_MS / 20U) + 1U));
     TEST_CHECK("S4-H12", (!g_height.b_valid && !g_height.b_active &&
                           g_height.rejected_count == 1U &&
                           g_height.last_rejection == HEIGHT_REJECT_GAP_TIMEOUT),
@@ -463,7 +463,7 @@ subsystem4_test (void)
     TEST_CHECK("S4-H14", g_height.b_valid,
                "level-ground baseline can be re-established after rejection");
     s4_height_feed(-10.0f, 0.005f, 20U);
-    g_height_ms += 101U;
+    g_height_ms += IMU_HEIGHT_MAX_MOTION_MS - 19U;   /* gap = max + 1 */
     s4_height_feed(-10.0f, 0.005f, 1U);
     TEST_CHECK("S4-H15", (!g_height.b_valid && g_height.rejected_count == 2U &&
                           g_height.last_rejection == HEIGHT_REJECT_INTERVAL),
@@ -479,9 +479,11 @@ subsystem4_test (void)
     g_height_motion.right_speed_m_s = 0.3f;
     imu_height_update(&g_height, &g_height_motion, &g_height_imu,
                       g_height_ms + 20U, g_height_ms + 20U);
-    TEST_CHECK("S4-H17", (!g_height.b_valid &&
-                          g_height.last_rejection == HEIGHT_REJECT_TURN),
-               "turn-in-place rejected");
+    TEST_CHECK("S4-H17", (g_height.b_valid && g_height.b_ready &&
+                          g_height.rise_m == 0.0f &&
+                          g_height.last_rejection == HEIGHT_REJECT_NONE),
+               "turn-in-place keeps the baseline and adds no height (no "
+               "wheel-speed-difference gate: line following steers)");
     s4_height_baseline();
     s4_height_feed(-10.0f, 0.005f, 20U);
     s4_height_feed(-10.0f, 0.5f, 1U);
@@ -633,13 +635,13 @@ subsystem4_test (void)
     TEST_CHECK("S4-H37", (!g_height.b_active && g_height.count == 0U),
                "sub-degree level noise does not create terrain events");
     s4_height_baseline();
-    s4_height_feed(-2.94f, 0.00195f, 100U);
-    s4_height_feed(2.94f, 0.00195f, 55U);
+    s4_height_feed(-2.94f, 0.00195f, 200U);
+    s4_height_feed(2.94f, 0.00195f, 70U);
     s4_height_feed(0.0f, 0.00195f, 30U);
     TEST_CHECK("S4-H38", (g_height.count == 0U &&
                           g_height.rejected_count == 1U &&
                           g_height.last_rejection == HEIGHT_REJECT_ENDPOINT),
-               "1 cm hump cannot pass endpoint check after only partial descent");
+               "2 cm hump cannot pass endpoint check after only 7 mm descent");
     s4_height_baseline();
     s4_calibrate();
     g_processor.b_odometry_height = true;
@@ -672,7 +674,7 @@ subsystem4_test (void)
                           g_height.last_rejection == HEIGHT_REJECT_DISTANCE_JUMP),
                "distance jump identified independently of wheel speed gate");
     s4_height_baseline();
-    s4_height_feed(10.0f, 0.005f, 2U);
+    s4_height_feed(10.0f, 0.005f, 3U);
     TEST_CHECK("S4-H42",
                g_height.last_rejection == HEIGHT_REJECT_DOWNHILL_START,
                "downhill-start datum loss has a distinct reason");
@@ -755,39 +757,41 @@ subsystem4_test (void)
     TEST_CHECK("S4-G04", (g_height.b_valid && g_height.gap_count == 1U),
                "250 ms bracket is accepted at duration limit");
     g_height_imu.b_tilt_valid = false;
-    imu_height_observe_imu(&g_height, &g_height_imu, g_height_ms + 251U);
+    imu_height_observe_imu(&g_height, &g_height_imu,
+                           g_height_ms + IMU_HEIGHT_MAX_GAP_MS + 1U);
     TEST_CHECK("S4-G05", (!g_height.b_valid && !g_height.b_gap &&
                           g_height.rejected_count == 1U &&
                           g_height.last_rejection == HEIGHT_REJECT_GAP_TIMEOUT),
-               "251 ms gap rejects immediately on IMU path even without new wheel event");
+               "gap over the limit rejects immediately on IMU path even without new wheel event");
     s4_height_baseline();
     s4_height_feed(-3.0f, 0.001f, 1U);
     g_height_imu.b_tilt_valid = false;
-    s4_height_feed(-3.0f, 0.011f, 2U);
+    s4_height_feed(-3.0f, 0.018f, 3U);       /* 54 mm > 50 mm */
     TEST_CHECK("S4-G06", (!g_height.b_valid &&
                           g_height.last_rejection == HEIGHT_REJECT_GAP_DISTANCE),
-               "gap with more than 20 mm wheel travel is rejected");
+               "gap with more wheel travel than the gap limit is rejected");
     s4_height_baseline();
     s4_height_feed(-3.0f, 0.001f, 1U);
     g_height_imu.b_tilt_valid = false;
     s4_height_feed(-3.0f, 0.001f, 1U);
     g_height_imu.b_tilt_valid = true;
-    s4_height_feed(-9.01f, 0.001f, 1U);
+    s4_height_feed(-3.01f - IMU_HEIGHT_MAX_GAP_PITCH_DEG, 0.001f, 1U);
     TEST_CHECK("S4-G07", (!g_height.b_valid &&
                           g_height.last_rejection == HEIGHT_REJECT_GAP_PITCH),
-               "endpoint pitch change over 6 degrees cannot be bridged");
+               "endpoint pitch change over the gap limit cannot be bridged");
     s4_height_baseline();
     s4_height_feed(-3.0f, 0.001f, 1U);
-    for (idx = 0U; idx < 8U; idx++)
+    for (idx = 0U; idx < 9U; idx++)
     {
         g_height_imu.b_tilt_valid = false;
-        s4_height_feed(-3.0f, 0.004f, 1U);
+        s4_height_feed(-3.0f, 0.018f, 1U);
         g_height_imu.b_tilt_valid = true;
-        s4_height_feed(-3.0f, 0.004f, 1U);
+        s4_height_feed(-3.0f, 0.018f, 1U);
     }
-    TEST_CHECK("S4-G08", (!g_height.b_valid && g_height.gap_count == 7U &&
+    /* each gap bridges 36 mm (gap sample + endpoint): 8 fit in 300 mm */
+    TEST_CHECK("S4-G08", (!g_height.b_valid && g_height.gap_count == 8U &&
                           g_height.last_rejection == HEIGHT_REJECT_GAP_BUDGET),
-               "repeated small gaps cannot exceed 60 mm interpolated-travel budget");
+               "repeated small gaps cannot exceed the interpolated-travel budget");
     s4_height_baseline();
     s4_height_feed(-3.0f, 0.001f, 1U);
     g_height_imu.b_tilt_valid = false;
@@ -816,12 +820,14 @@ subsystem4_test (void)
     s4_height_baseline();
     g_height_imu.b_tilt_valid = false;
     s4_height_feed(0.0f, 0.0f, 1U);
-    g_height_motion.left_speed_m_s = 0.3f;
+    g_height_motion.left_speed_m_s = 0.3f;      /* steering: mean 0.15 */
+    g_height_motion.right_speed_m_s = 0.0f;
+    g_height_motion.distance_m += 0.003f;       /* 0.15 m/s x 20 ms   */
     imu_height_update(&g_height, &g_height_motion, &g_height_imu,
                       g_height_ms + 20U, g_height_ms + 20U);
-    TEST_CHECK("S4-G12", (!g_height.b_gap &&
-                          g_height.last_rejection == HEIGHT_REJECT_TURN),
-               "wheel turning gate remains enforced during tilt gap");
+    TEST_CHECK("S4-G12", (g_height.b_gap &&
+                          g_height.last_rejection == HEIGHT_REJECT_NONE),
+               "steering wheel-speed difference does not end a tilt gap");
     imu_height_init(&g_height);
     g_height_imu = (imu_event_t) {
         .b_sensor_valid = true, .b_calibrated = true, .b_tilt_valid = false,
@@ -986,8 +992,9 @@ subsystem4_test (void)
                "unexpectedly fast motion events cannot overflow gap storage");
     s4_height_baseline();
     g_height_imu.b_tilt_valid = false;
-    s4_height_feed(0.0f, 0.011f, 1U);
-    s4_height_feed(0.0f, -0.011f, 1U);
+    s4_height_feed(0.0f, 0.020f, 1U);
+    s4_height_feed(0.0f, -0.020f, 1U);
+    s4_height_feed(0.0f, 0.020f, 1U);
     TEST_CHECK("S4-G28", (!g_height.b_gap &&
                           g_height.last_rejection == HEIGHT_REJECT_GAP_DISTANCE),
                "gap travel limit counts absolute distance even when reversing");
@@ -1095,12 +1102,12 @@ subsystem4_test (void)
     s4_height_baseline();
     s4_height_feed(-3.0f, 0.001f, 1U);
     g_height_imu.b_tilt_valid = false;
-    s4_height_feed(-3.0f, 0.0f, 12U);
+    s4_height_feed(-3.0f, 0.0f, IMU_HEIGHT_MAX_GAP_MS / 20U);
     g_height_imu.b_tilt_valid = true;
     s4_height_feed(-3.0f, 0.0f, 1U);
     TEST_CHECK("S4-N07", (!g_height.b_valid && !g_height.b_active &&
                           g_height.last_rejection == HEIGHT_REJECT_GAP_TIMEOUT),
-               "260 ms gap rejected even if its final tilt is valid");
+               "gap over the limit rejected even if its final tilt is valid");
     s4_height_baseline();
     s4_height_feed(2.0f, 0.001f, 1U);
     {
@@ -1120,21 +1127,21 @@ subsystem4_test (void)
     }
     s4_height_baseline();
     s4_height_feed(2.0f, 0.001f, 1U);
-    s4_height_feed(2.0f, 0.0f, 13U);
+    s4_height_feed(2.0f, 0.0f, (IMU_HEIGHT_START_MAX_MS / 20U) + 1U);
     TEST_CHECK("S4-N10", (!g_height.b_ready &&
                           g_height.last_rejection == HEIGHT_REJECT_DOWNHILL_START),
-               "unconfirmed start expires after 250 ms even when wheels stop");
+               "unconfirmed start expires after its window even when wheels stop");
     s4_height_baseline();
-    s4_height_feed(10.0f, 0.005f, 2U);
-    s4_height_feed(-10.0f, 0.005f, 2U);
+    s4_height_feed(10.0f, 0.005f, 3U);
+    s4_height_feed(-10.0f, 0.005f, 3U);
     TEST_CHECK("S4-N11", (!g_height.b_ready && !g_height.b_active &&
                           g_height.count == 0U),
-               "over 0.5 mm initial fall rejects before dip recovery can start a hump");
+               "over 2 mm initial fall rejects before dip recovery can start a hump");
     s4_height_baseline();
-    s4_height_feed(1.01f, 0.004f, 6U);
+    s4_height_feed(IMU_HEIGHT_LEVEL_DEG + 0.01f, 0.004f, 11U);
     TEST_CHECK("S4-N12", (!g_height.b_ready &&
                           g_height.last_rejection == HEIGHT_REJECT_DOWNHILL_START),
-               "initial downhill confirmation is bounded by 20 mm absolute travel");
+               "initial downhill confirmation is bounded by 40 mm absolute travel");
     s4_height_baseline();
     g_height_ms = 0xFFFFFFF0U;
     g_height.last_ms = g_height_ms;
@@ -1206,7 +1213,7 @@ subsystem4_test (void)
                           g_height.last_rejection == HEIGHT_REJECT_DOWNHILL_START),
                "slow downhill dip cannot lose negative increments and become a false hump");
     s4_height_baseline();
-    s4_height_feed(1.3f, 0.002f, 3U);
+    s4_height_feed(1.8f, 0.002f, 3U);
     s4_height_feed(0.0f, 0.002f, 30U);
     {
         float const debt = g_height.rise_m;
@@ -1233,30 +1240,30 @@ subsystem4_test (void)
                    "1 cm crossing completes after level pause with initial debt included");
     }
     s4_height_baseline();
-    s4_height_feed(1.3f, 0.002f, 3U);
+    s4_height_feed(1.8f, 0.002f, 3U);
     s4_height_feed(0.0f, 0.001f, 30U);
-    s4_height_feed(-1.3f, 0.002f, 3U);
+    s4_height_feed(-1.8f, 0.002f, 3U);
     s4_height_feed(0.0f, 0.001f, 30U);
     TEST_CHECK("S4-N24", (g_height.count == 0U &&
                           g_height.peak_m < 0.0001f),
                "dip-flat-recovery cannot invent a hump by renewing start window");
     s4_height_baseline();
-    s4_height_feed(1.3f, 0.002f, 3U);
+    s4_height_feed(1.8f, 0.002f, 3U);
     g_height_imu.b_tilt_valid = false;
     s4_height_feed(0.0f, 0.0f, 6U);
     g_height_imu.b_tilt_valid = true;
     s4_height_feed(0.0f, 0.0f, 1U);
-    s4_height_feed(1.3f, 0.0f, 6U);
+    s4_height_feed(1.8f, 0.0f, 12U);
     TEST_CHECK("S4-N25", (!g_height.b_ready &&
                           g_height.last_rejection == HEIGHT_REJECT_DOWNHILL_START),
                "interpolated level cannot renew the start confirmation deadline");
     s4_height_baseline();
-    s4_height_feed(1.3f, 0.002f, 3U);
+    s4_height_feed(1.8f, 0.002f, 3U);
     s4_height_feed(0.0f, 0.001f, 30U);
-    s4_height_feed(5.0f, 0.004f, 2U);
+    s4_height_feed(5.0f, 0.004f, 6U);
     TEST_CHECK("S4-N26", (!g_height.b_ready &&
                           g_height.last_rejection == HEIGHT_REJECT_DOWNHILL_START),
-               "renewed start window still rejects cumulative fall exceeding 0.5 mm");
+               "renewed start window still rejects cumulative fall exceeding 2 mm");
     s4_height_baseline();
     s4_height_feed(-4.6f, 0.001f, 10U);
     {
@@ -1439,10 +1446,141 @@ subsystem4_test (void)
     g_height_imu.b_timing_gap = true;
     g_height_imu.sample_interval_ms = 44U;
     g_height_imu.b_tilt_valid = false;
-    s4_height_feed(-3.0f, 0.0f, 13U);
+    s4_height_feed(-3.0f, 0.0f, ((IMU_HEIGHT_MAX_GAP_MS / 20U) + 1U));
     TEST_CHECK("S4-T18", (!g_height.b_active && g_height.count == 0U &&
                           g_height.last_rejection == HEIGHT_REJECT_GAP_TIMEOUT),
                "repeated late samples without normal endpoint cannot indefinitely preserve valid tracking");
+    /* ---- Field conditions (2026-11-24 real-car log) ---- */
+    {
+        /* F01: boot attitude 1.2 deg off level (mounting/calibration):
+           learned on level travel, then a 2 cm ramp hump is measured
+           and completes; uncorrected this offset rejected crossings
+           (downhill start) or biased the peak. */
+        float const offset = 1.2f;
+        s4_height_baseline();
+        s4_height_feed(offset, 0.002f, 400U);
+        s4_height_feed(offset - 8.0f, 0.002f, 72U);   /* ~2.0 cm up   */
+        s4_height_feed(offset, 0.002f, 25U);          /* plateau      */
+        s4_height_feed(offset + 8.0f, 0.002f, 72U);   /* back down    */
+        s4_height_feed(offset, 0.002f, 30U);
+        TEST_CHECK("S4-F01", (g_height.count == 1U &&
+                              g_height.rejected_count == 0U &&
+                              rmath_absf(g_height.last_peak_m -
+                                  0.144f * rmath_sinf(8.0f * RMATH_DEG_TO_RAD))
+                              < 0.001f),
+                   "1.2 deg level offset learned: ramp hump within 1 mm");
+    }
+    {
+        /* F02: line following on level ground: +-1.2 deg tilt noise and
+           steering wheel-speed differences for 10 s keep the baseline
+           (the log showed wheel_speed_difference / downhill_start
+           rejections every few seconds). */
+        uint32_t i;
+        uint32_t rejected = 0U;
+        s4_height_baseline();
+        for (i = 0U; i < 500U; i++)
+        {
+            float const steer = ((i / 7U) % 2U) ? 0.06f : -0.06f;
+            g_height_ms += 20U;
+            g_height_imu.tilt_pitch_deg = ((i % 3U) == 0U) ? 1.2f :
+                                          (((i % 3U) == 1U) ? -1.1f : 0.3f);
+            g_height_motion.left_speed_m_s  = 0.10f + steer;
+            g_height_motion.right_speed_m_s = 0.10f - steer;
+            g_height_motion.distance_m += 0.002f;
+            imu_height_update(&g_height, &g_height_motion, &g_height_imu,
+                              g_height_ms, g_height_ms);
+            rejected += (g_height.b_ready ? 0U : 1U);
+        }
+        TEST_CHECK("S4-F02", (rejected == 0U && g_height.b_valid &&
+                              !g_height.b_active && g_height.count == 0U),
+                   "steering and 1.2 deg tilt noise keep the level baseline");
+    }
+    {
+        /* F03: 12 deg ramp with a 300 ms tilt gap (motor vibration) at
+           its foot and another on the plateau: bridged, peak within 5%. */
+        float truth;
+        s4_height_baseline();
+        s4_height_feed(0.0f, 0.002f, 20U);
+        s4_height_feed(-12.0f, 0.002f, 3U);
+        g_height_imu.b_tilt_valid = false;
+        s4_height_feed(-12.0f, 0.002f, 15U);          /* 300 ms gap */
+        g_height_imu.b_tilt_valid = true;
+        s4_height_feed(-12.0f, 0.002f, 60U);
+        s4_height_feed(0.0f, 0.002f, 20U);
+        g_height_imu.b_tilt_valid = false;
+        s4_height_feed(0.0f, 0.002f, 15U);
+        g_height_imu.b_tilt_valid = true;
+        s4_height_feed(0.0f, 0.002f, 20U);
+        s4_height_feed(12.0f, 0.002f, 78U);
+        s4_height_feed(0.0f, 0.002f, 30U);
+        truth = 0.156f * rmath_sinf(12.0f * RMATH_DEG_TO_RAD);
+        TEST_CHECK("S4-F03", (g_height.count == 1U &&
+                              g_height.rejected_count == 0U &&
+                              g_height.gap_count == 2U &&
+                              rmath_absf(g_height.last_peak_m - truth) <
+                              truth * 0.05f),
+                   "12 deg ramp with two 300 ms tilt gaps measured within 5%");
+    }
+    {
+        /* F04/F05: the 2026-11-24 ramp log.  The board is mounted turned
+           180 deg about Z, so climbing makes the raw X acceleration go
+           NEGATIVE (pitch +2.5..+5.1 deg in the log).  Without the mount
+           correction the climb looks like a descent: "downhill_start",
+           hump 0.000 m.  With it, the same raw data measures the hump. */
+        uint32_t pass;
+        for (pass = 0U; pass < 2U; pass++)
+        {
+            bool const b_correct = (1U == pass);
+            float truth = 0.0f;
+            float truth_peak = 0.0f;
+            float previous = 0.0f;
+            uint32_t i;
+            s4_height_baseline();
+            s4_calibrate();
+            g_processor.b_odometry_height = true;
+            for (i = 0U; i < 400U; i++)
+            {
+                /* level, 8 deg up, plateau, 8 deg down, level */
+                float angle = 0.0f;
+                float slope;
+                if ((i >= 40U) && (i < 60U)) angle = (float) (i - 40U) * 0.4f;
+                else if ((i >= 60U) && (i < 130U)) angle = 8.0f;
+                else if ((i >= 130U) && (i < 150U)) angle = 8.0f - (float) (i - 130U) * 0.4f;
+                else if ((i >= 190U) && (i < 210U)) angle = -(float) (i - 190U) * 0.4f;
+                else if ((i >= 210U) && (i < 280U)) angle = -8.0f;
+                else if ((i >= 280U) && (i < 300U)) angle = -8.0f + (float) (i - 280U) * 0.4f;
+                slope = rmath_sinf(angle * RMATH_DEG_TO_RAD);
+                sample = s4_flat();
+                /* what the turned-around board reports (X, Y negated) */
+                sample.acceleration[0] = -slope;
+                sample.acceleration[2] = rmath_cosf(angle * RMATH_DEG_TO_RAD);
+                sample.magnetic_ut[0] = -sample.magnetic_ut[0];
+                imu_apply_mount(&sample, b_correct);
+                s4_feed(&sample, 2U);
+                g_height_imu = g_processor.output;
+                s4_height_feed(g_processor.output.tilt_pitch_deg, 0.002f, 1U);
+                truth += 0.002f * (previous + slope) * 0.5f;
+                truth_peak = rmath_maxf(truth_peak, truth);
+                previous = slope;
+            }
+            if (!b_correct)
+            {
+                TEST_CHECK("S4-F04", (g_height.count == 0U &&
+                                      g_height.last_peak_m == 0.0f),
+                           "log replay: 180 deg board without correction "
+                           "reads the climb as a descent, hump 0.000 m");
+            }
+            else
+            {
+                TEST_CHECK("S4-F05", (g_height.count == 1U &&
+                                      rmath_absf(g_height.last_peak_m -
+                                                 truth_peak) <
+                                      truth_peak * 0.05f),
+                           "log replay: with IMU_MOUNT_ROTATED_180 the same "
+                           "climb gives the hump height within 5%");
+            }
+        }
+    }
     s4_calibrate();
     sample = s4_flat();
     sample.acceleration[0] = nonfinite.value;

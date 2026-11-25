@@ -105,6 +105,10 @@ typedef struct
     bool             b_junction_retry;      /* last junction not sent  */
     uint16_t         retry_action;
     char             retry_char;
+    uint32_t         retry_detect_ms;       /* when it was detected    */
+    bool             b_junction_deferred;   /* waiting for a scan      */
+    uint32_t         deferred_ms;           /* junction detected at    */
+    uint32_t         deferred_us;
 } line_ctx_t;
 
 /* ------------------------------------------------------------------ */
@@ -595,12 +599,66 @@ line_junction_busy (void)
 }
 
 /*!
+ * @brief Act on a junction now: look the stored barcode up and queue the
+ *        junction for the controller (re-sent until the queue takes it).
+ *
+ * @param[in] detect_ms  When the line sensors confirmed the junction.
+ */
+static void
+line_junction_resolve (line_ctx_t * p_ctx, uint32_t detect_ms)
+{
+    /* Stored barcode -> MQTT route table -> action; nothing stored or
+       no mapping for the character -> straight. */
+    p_ctx->retry_action     = route_take_junction_action(&p_ctx->retry_char);
+    p_ctx->retry_detect_ms  = detect_ms;
+    p_ctx->b_junction_retry = true;
+}
+
+/*!
+ * @brief A barcode was decoded while a junction was waiting for it.
+ *
+ * @return true if the junction was real (it came after the barcode's
+ *         last bar) and has been resolved with this barcode; false if it
+ *         was the barcode's own wide bar covering both line sensors.
+ */
+static bool
+line_deferred_with_barcode (line_ctx_t * p_ctx,
+                            barcode_result_t const * p_result)
+{
+    bool const b_real = ((int32_t) (p_ctx->deferred_us -
+                                    p_result->last_bar_end_us) >=
+                         (int32_t) LINE_JUNCTION_BAR_MARGIN_US);
+
+    p_ctx->b_junction_deferred = false;
+
+    if (b_real)
+    {
+        line_junction_resolve(p_ctx, p_ctx->deferred_ms);
+    }
+    else
+    {
+        tm_printf((UB *) "[S3 route] dark patch was barcode \"%s\" itself, "
+                  "not a junction: waypoint kept\n", p_result->text);
+    }
+
+    return (b_real);
+}
+
+/*!
  * @brief Post this cycle's SYSTEM_EVENT_LINE.
  *
  * A newly decoded barcode is stored as the pending waypoint and reported
  * once.  On a junction, the action for the stored character is added.
  * If the event buffer is full, a junction is re-sent next cycle so the
  * controller never misses a turn.
+ *
+ * Barcode close to the junction: the junction can be reached while the
+ * barcode is still being read (its decode needs the quiet zone after the
+ * last bar).  The junction is then NOT acted on with the old waypoint
+ * (which made the car go straight and keep this barcode for the junction
+ * after) and NOT dropped: it waits, at most LINE_JUNCTION_DEFER_MAX_MS,
+ * for the scan, which is asked to decode at once.  The controller is told
+ * how late the decision is and still pivots over the junction centre.
  */
 static void
 line_publish (line_ctx_t * p_ctx, float error, bool b_detected,
@@ -609,6 +667,7 @@ line_publish (line_ctx_t * p_ctx, float error, bool b_detected,
     system_event_t   event  = {0};
     barcode_result_t result = {0};
     uint32_t         idx;
+    bool             b_have_result;
 
     event.type                      = SYSTEM_EVENT_LINE;
     event.timestamp_ms              = now_ms;
@@ -616,7 +675,9 @@ line_publish (line_ctx_t * p_ctx, float error, bool b_detected,
     event.data.line.b_line_detected = b_detected;
     event.data.line.b_barcode_scanning = barcode_scan_active();
 
-    if (barcode_result_take(&result))
+    b_have_result = barcode_result_take(&result);
+
+    if (b_have_result)
     {
         route_store_waypoint(&result, now_ms);
 
@@ -634,9 +695,18 @@ line_publish (line_ctx_t * p_ctx, float error, bool b_detected,
         {
             event.data.line.barcode_text[idx] = result.text[idx];
         }
+
+        if (p_ctx->b_junction_deferred)
+        {
+            (void) line_deferred_with_barcode(p_ctx, &result);
+        }
     }
 
-    if (b_junction && line_junction_busy())
+    if (b_junction && p_ctx->b_junction_deferred)
+    {
+        /* Already waiting on this stretch of track. */
+    }
+    else if (b_junction && line_junction_busy())
     {
         /* The controller is still acting on the previous junction (its
            turn, or the same tape seen again after the pivot), or no
@@ -645,24 +715,86 @@ line_publish (line_ctx_t * p_ctx, float error, bool b_detected,
         tm_printf((UB *) "[S3 route] junction ignored: controller busy "
                   "or not running; waypoint kept\n");
     }
+    else if (b_junction &&
+             (barcode_scan_elements() >= LINE_JUNCTION_DEFER_MIN_ELEMENTS))
+    {
+        /* A barcode is still being read: it is either just before this
+           junction (decode it now and use it here) or this "junction" is
+           one of its own wide bars.  Decide once the scan resolves. */
+        p_ctx->b_junction_deferred = true;
+        p_ctx->deferred_ms         = now_ms;
+        p_ctx->deferred_us         = board_micros();
+        barcode_request_decode();
+        tm_printf((UB *) "[S3 route] junction during barcode scan: "
+                  "decoding now\n");
+    }
     else if (b_junction)
     {
-        /* Stored barcode -> MQTT route table -> action; nothing stored or
-           no mapping for the character -> straight. */
-        p_ctx->retry_action     = route_take_junction_action(
-                                      &p_ctx->retry_char);
-        p_ctx->b_junction_retry = true;
+        line_junction_resolve(p_ctx, now_ms);
     }
     else
     {
         /* No junction this cycle. */
     }
 
+    if (p_ctx->b_junction_deferred && !barcode_scan_active())
+    {
+        /* The scan ended.  A decode is put before the scan is closed, so
+           look once more: it may have landed since the take above. */
+        if (barcode_result_take(&result))
+        {
+            route_store_waypoint(&result, now_ms);
+            event.data.line.b_barcode_valid    = true;
+            event.data.line.b_barcode_reversed = result.b_reversed;
+            event.data.line.barcode            = (uint16_t) (uint8_t)
+                                                 result.text[0];
+            for (idx = 0U; idx < sizeof(result.text); idx++)
+            {
+                event.data.line.barcode_text[idx] = result.text[idx];
+            }
+            (void) line_deferred_with_barcode(p_ctx, &result);
+        }
+        else
+        {
+            /* Not a readable barcode: act on what is stored. */
+            p_ctx->b_junction_deferred = false;
+            line_junction_resolve(p_ctx, p_ctx->deferred_ms);
+        }
+    }
+    else if (p_ctx->b_junction_deferred &&
+             ((now_ms - p_ctx->deferred_ms) >= LINE_JUNCTION_DEFER_MAX_MS))
+    {
+        p_ctx->b_junction_deferred = false;
+
+        if ((int32_t) (barcode_last_bar_end_us() - p_ctx->deferred_us) >
+            (int32_t) LINE_JUNCTION_BAR_MARGIN_US)
+        {
+            /* Bars kept coming after the "junction": it was a bar. */
+            tm_printf((UB *) "[S3 route] dark patch was inside a barcode, "
+                      "not a junction\n");
+        }
+        else
+        {
+            tm_printf((UB *) "[S3 route] barcode not decoded in %u ms: "
+                      "junction uses stored waypoint\n",
+                      (unsigned int) LINE_JUNCTION_DEFER_MAX_MS);
+            line_junction_resolve(p_ctx, p_ctx->deferred_ms);
+        }
+    }
+    else
+    {
+        /* Nothing waiting. */
+    }
+
     if (p_ctx->b_junction_retry)
     {
+        uint32_t const age_ms = now_ms - p_ctx->retry_detect_ms;
+
         event.data.line.b_junction      = true;
         event.data.line.junction_action = p_ctx->retry_action;
         event.data.line.junction_char   = p_ctx->retry_char;
+        event.data.line.junction_age_ms = (uint16_t)
+            ((age_ms > 0xFFFFU) ? 0xFFFFU : age_ms);
     }
 
     if (controller_post_event(&event))

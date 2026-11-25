@@ -99,4 +99,8 @@ void imu_processor_update(imu_processor_t * p_processor,
                            imu_sample_t const * p_sample, bool b_valid,
                            uint32_t timestamp_ms);
 
+/* Board turned 180 degrees about Z: negate X and Y (acceleration and
+   magnetic field) so the sample reads X forward, Y left, Z up. */
+void imu_apply_mount(imu_sample_t * p_sample, bool b_rotated_180);
+
 #endif /* IMU_PROCESSING_H */

@@ -60,9 +60,15 @@ imu_sample (bool b_initialized, imu_sample_t * p_sample, uint32_t sample)
     }
     return (LSM303_READ_READY);
 #else
+    lsm303_read_result_t result;
+
     (void) sample;
     *p_sample = (imu_sample_t) {0};
-    return (b_initialized ? lsm303_read(p_sample) : LSM303_READ_ERROR);
+    result = b_initialized ? lsm303_read(p_sample) : LSM303_READ_ERROR;
+    /* Board mounting (robot_config.h IMU_MOUNT_ROTATED_180): X forward,
+       Y left before anything uses the sample. */
+    imu_apply_mount(p_sample, (0 != IMU_MOUNT_ROTATED_180));
+    return (result);
 #endif
 }
 

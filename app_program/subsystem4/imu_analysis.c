@@ -727,4 +727,16 @@ imu_processor_update (imu_processor_t * p_processor,
     imu_update_motion(p_processor, horizontal_g, timestamp_ms);
 }
 
+void
+imu_apply_mount (imu_sample_t * p_sample, bool b_rotated_180)
+{
+    if (b_rotated_180)
+    {
+        p_sample->acceleration[0] = -p_sample->acceleration[0];
+        p_sample->acceleration[1] = -p_sample->acceleration[1];
+        p_sample->magnetic_ut[0]  = -p_sample->magnetic_ut[0];
+        p_sample->magnetic_ut[1]  = -p_sample->magnetic_ut[1];
+    }
+}
+
 /*** end of file ***/
