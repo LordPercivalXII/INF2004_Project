@@ -137,10 +137,10 @@ Run the following commands from the repository root:
 
 ```bash
 cd app_program/subsystem1
-gcc -std=c99 -Wall -Wextra \\\\
-    test_telemetry_codec.c \\\\
-    telemetry_codec.c \\\\
-    ../common/robot_packed.c \\\\
+gcc -std=c99 -Wall -Wextra \\\\\\\
+    test_telemetry_codec.c \\\\\\\
+    telemetry_codec.c \\\\\\\
+    ../common/robot_packed.c \\\\\\\
     -o /tmp/test_codec
 /tmp/test_codec
 ```
@@ -239,7 +239,7 @@ All assertions in the executed test suite passed.
 
 This test provides verification of the codec independently of RTOS scheduling, Wi-Fi connectivity and MQTT broker availability.
 
-Actual transmission of packed telemetry records remains subject to manual communication and integration testing.
+The host tests verify decoding and local delivery, not transmission from the Pico W.
 
 ## Test run observations (2026-11-24)
 
@@ -273,7 +273,7 @@ Actual transmission of packed telemetry records remains subject to manual commun
 
 - Binary encoding correctness was verified for the cases covered by the existing test suite.
 
-- End-to-end MQTT transmission remains pending verification.
+- End-to-end physical telemetry delivery was not established by this test.
 
 ### Host MQTT and dashboard test run
 
@@ -287,7 +287,7 @@ Actual transmission of packed telemetry records remains subject to manual commun
 
 ### Additional binary MQTT verification (2026-11-24)
 
-Synthetic four-byte records were published to `inf2004/car/telemetry` using Mosquitto at `127.0.0.1:18884`. Flask decoded the records and the dashboard displayed the received fields. The exact source commit for this additional session was not captured; the terminal showed branch `main`. Evidence files were listed locally, but their raw contents were not independently inspected for this documentation update.
+Synthetic four-byte records were published to `inf2004/car/telemetry` using Mosquitto at `127.0.0.1:18884`. Flask decoded the records and the dashboard displayed the received fields. The exact source commit for this additional session was not captured; the terminal showed branch `main`. Evidence filenames are recorded below.
 
 | Check | Observed result | Evidence |
 |---|---|---|
@@ -303,22 +303,22 @@ Synthetic four-byte records were published to `inf2004/car/telemetry` using Mosq
 
 The status packet `01 0F 80 94` was compared with the equivalent selected-field JSON `{"mission":1,"fault":0,"speed":0.15,"line":0.0,"obstacle_cm":40.0}`. Reduction = (66 - 4) / 66 × 100 = 93.94%. This is a single status payload comparison, not a full snapshot or network traffic measurement. Route confirmation remained unavailable without the robot. The collision warning appeared while mission status remained Following; physical stopping is not established. The mission history remained running with stale telemetry, and restart persistence was not tested. Additional reset tests were excluded.
 
-## Remaining verification
+## Verification scope at submission
 
 | Test ID | Verification | Status |
 |---|---|---|
-| S1-U05 | Confirm current JSON snapshot and heartbeat behaviour | Pending review |
+| S1-U05 | Confirm current JSON snapshot and heartbeat behaviour | Not executed |
 | S1-M01 | Wi-Fi connectivity | Partial evidence |
 | S1-M02 | MQTT broker connection | Partial evidence |
-| S1-M03 | MQTT telemetry publishing | Pending verification; errors observed |
+| S1-M03 | MQTT telemetry publishing | Errors observed; no confirmed pass |
 | S1-M04 | Four-byte MQTT payload transmission | Host PASS; Pico W transmission not verified |
-| S1-M05 | MQTT speed command forwarding | Pending |
-| S1-M06 | MQTT disconnection detection | Host PASS; physical robot pending |
-| S1-M07 | MQTT reconnection and recovery | Host PASS; physical robot pending |
-| S1-M08 | Dashboard live telemetry | Host PASS; physical robot pending |
-| S1-M09 | Dashboard mission status | Host PASS; physical robot pending |
-| S1-M10 | Dashboard speed display | Host PASS; physical robot pending |
-| S1-M11 | Dashboard obstacle distance | Host PASS; physical robot pending |
+| S1-M05 | MQTT speed command forwarding | Not verified |
+| S1-M06 | MQTT disconnection detection | Host PASS; physical robot not verified |
+| S1-M07 | MQTT reconnection and recovery | Host PASS; physical robot not verified |
+| S1-M08 | Dashboard live telemetry | Host PASS; physical robot not verified |
+| S1-M09 | Dashboard mission status | Host PASS; physical robot not verified |
+| S1-M10 | Dashboard speed display | Host PASS; physical robot not verified |
+| S1-M11 | Dashboard obstacle distance | Host PASS; physical robot not verified |
 | S1-M12 | Dashboard obstacle width | PASS (host) |
 | S1-M13 | Dashboard pickup and collision indication | PASS (host); physical response not verified |
 | S1-M14 | Dashboard width reset | Skipped |

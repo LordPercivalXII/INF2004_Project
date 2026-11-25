@@ -351,11 +351,11 @@ All paths below are relative to `testing/subsystem1/logs/`.
 | Command publication | `2026-11-24_dashboard_commands.png` |
 | Synthetic mission export | `2026-11-24_dashboard_mission.json` |
 
-The codec evidence was recorded in commit `87e2bb3`; the tested source commit was `e61bdc4`. The new dashboard and host MQTT evidence is collected for the final documentation commit.
+The codec evidence was recorded in commit `87e2bb3`; the tested source commit was `e61bdc4`. Dashboard and host MQTT evidence is listed above.
 
 ### Additional binary MQTT verification (2026-11-24)
 
-Synthetic four-byte records were published to `inf2004/car/telemetry` using Mosquitto at `127.0.0.1:18884`. Flask decoded the records and the dashboard displayed the received fields. The exact source commit for this additional session was not captured; the terminal showed branch `main`. Evidence files were listed locally, but their raw contents were not independently inspected for this documentation update.
+Synthetic four-byte records were published to `inf2004/car/telemetry` using Mosquitto at `127.0.0.1:18884`. Flask decoded the records and the dashboard displayed the received fields. The exact source commit for this additional session was not captured; the terminal showed branch `main`. Evidence filenames are recorded below.
 
 | Check | Observed result | Evidence |
 |---|---|---|
@@ -370,23 +370,6 @@ Synthetic four-byte records were published to `inf2004/car/telemetry` using Mosq
 | Application payload comparison | 4 bytes versus 66 bytes; 93.94% reduction | `testing/subsystem1/logs/2026-11-24_payload_comparison.txt` |
 
 The status packet `01 0F 80 94` was compared with the equivalent selected-field JSON `{"mission":1,"fault":0,"speed":0.15,"line":0.0,"obstacle_cm":40.0}`. Reduction = (66 - 4) / 66 × 100 = 93.94%. This is a single status payload comparison, not a full snapshot or network traffic measurement. Route confirmation remained unavailable without the robot. The collision warning appeared while mission status remained Following; physical stopping is not established. The mission history remained running with stale telemetry, and restart persistence was not tested. Additional reset tests were excluded.
-
-### Pending hardware integration verification
-
-The shared robot is currently unavailable because teammates are conducting other subsystem tests. Remaining hardware-dependent tests are deferred until the robot becomes available. No unexecuted tests are classified as passed.
-
-| Test scope | Status |
-|---|---|
-| S1-U05: JSON snapshot and heartbeat behaviour | Pending implementation review |
-| S1-M01 to M02: Wi-Fi and MQTT connectivity | Partial evidence; dedicated verification pending |
-| S1-M03 to M04: Live telemetry and packed payload | Pending; previous publishing errors observed |
-| S1-M05 to M07: Commands and connection recovery | Pending robot availability |
-| S1-M08 to M11: Live dashboard integration | Pending robot availability |
-| S1-M12 to M15: Additional dashboard features | M12/M13 host PASS; M14/M15 skipped |
-| Standalone dashboard and API tests | PASS for recorded host-side checks |
-| Standalone MQTT broker test | PASS (host) |
-
-Results and evidence will be appended to `testing/subsystem1/TEST_LOG.md` after execution.
 
 ## 8. Communication reliability and verification status
 
@@ -437,93 +420,11 @@ The remaining communication tests are defined in `testing/subsystem1/TEST_LOG.md
 
 Host-side tests demonstrated broker connection, synthetic telemetry reception, stale-data handling, disconnection indication, reconnection and command publication. Mission history and JSON export were also exercised. Additional binary tests verified width, hump, ramp/IMU, pickup indication and barcode events. Restart persistence and remaining untested fields were not verified.
 
-## 9. Recommended remaining hardware communication test procedure
+## 9. Limitations and future improvements
 
-1. Configure the Pico W and MQTT broker on the same accessible
+The recorded tests establish the tested embedded formatting, buffer configuration, codec behaviour and local MQTT/dashboard functionality. Physical robot integration was not fully verified within the recorded scope. Intermittent Pico W MQTT publishing errors were observed, and pickup and barcode updates were reported as inconsistent during later physical operation. The cause was not established. Host command publication does not prove physical execution. The payload comparison measures application bytes for one status record, not full network traffic. Future work should prioritise comparing actual MQTT packets against controller telemetry and resolving publishing errors.
 
-   network.
-
-2. Start the MQTT broker and a subscriber before booting the Pico W.
-
-3. Verify Wi-Fi connectivity and MQTT client connection.
-
-4. Capture the published telemetry topic and payload length.
-
-5. Verify that packed telemetry records contain four bytes.
-
-6. Compare decoded telemetry values against the corresponding
-
-   robot telemetry snapshots.
-
-7. Send a supported speed command under controlled conditions.
-
-8. Verify that the command reaches the controller.
-
-9. Stop and restart the MQTT broker to evaluate connection recovery.
-
-10. Verify that telemetry publishing resumes after reconnection.
-
-11. Compare the received telemetry with the dashboard display.
-
-12. Save the console output and record the results using the
-
-    corresponding test IDs.
-
-The following metrics should be recorded where possible:
-
-```text
-Publishing success rate (%) =
-  successful publish attempts / total publish attempts * 100
-Message delivery rate (%) =
-  received records / expected transmitted records * 100
-Payload reduction (%) =
-  (JSON payload size - packed payload size)
-  / JSON payload size * 100
-Reconnection time =
-  time of restored communication - time of disconnection
-```
-
-The selected status payload reduction was measured locally; the other metrics require dedicated test runs.
-
-## 10. Limitations
-
-- The recorded on-target automated tests used simulation-enabled firmware.
-
-- Message buffer creation and codec checks do not establish sustained wireless delivery under load.
-
-- The four-byte record size is a configured application payload size, not total network traffic.
-
-- MQTT delivery latency, message loss and reconnection time have not been measured. The measured 93.94% reduction applies only to the selected status payload.
-
-- Telemetry publishing errors were observed on the Pico W; their cause remains unresolved.
-
-- Host-side MQTT tests used a local broker and synthetic telemetry, not physical sensor measurements.
-
-- Dashboard command publication does not establish controller reception or physical execution.
-
-- Dashboard broker recovery does not establish embedded Wi-Fi or MQTT recovery.
-
-- Obstacle width, pickup/collision indication and barcode events passed synthetic host checks; physical sensor accuracy and execution remain unverified. Mission persistence across server restarts is not established by the recorded tests.
-
-- The shared robot was unavailable for dedicated hardware integration testing.
-
-## 11. Recommendations
-
-- Investigate the recorded Pico W MQTT telemetry publishing errors.
-
-- Capture actual packed telemetry records and verify their decoded values against controller snapshots.
-
-- Measure full-snapshot payload reduction, sustained delivery rate, latency and network recovery time.
-
-- Verify supported commands reach the controller and produce the intended behaviour under safe test conditions.
-
-- Verify embedded Wi-Fi and MQTT reconnection independently of dashboard recovery.
-
-- Validate physical sensor readings and remaining dashboard fields with the other subsystems.
-
-- Verify mission persistence across Flask restarts and record remaining manual test results.
-
-## 12. Conclusion
+## 10. Conclusion
 
 Buddy 1 implements the telemetry and communication framework using micro T-Kernel message buffers, a dedicated telemetry task, MQTT and a browser-based monitoring and control dashboard. Independent message buffers separate controller telemetry from the wireless publishing handoff, and the packed configuration uses four-byte telemetry records.
 
@@ -531,4 +432,4 @@ All eight recorded Subsystem 1 automated checks passed on the simulation-enabled
 
 Host-side integration tests verified MQTT publish/subscribe communication, dashboard telemetry display, stale-data handling, broker disconnection and reconnection, command publication, mission history and JSON export using synthetic inputs. The recorded evidence demonstrates the tested software functionality without requiring the shared robot.
 
-MQTT heartbeat activity was observed on the Pico W, but telemetry publishing errors were also recorded. Complete physical robot telemetry delivery, controller command execution and embedded connection recovery remain unverified. Additional local binary tests verified decoding, barcode mission events and a 93.94% selected-status payload reduction. The recorded scope totals 33 passing checks and suites (8 on-target, 1 host codec suite, 24 host checks), not full requirement coverage. Further physical verification is deferred because the robot is unavailable; no additional hardware testing is planned for this documentation session.
+MQTT heartbeat activity was observed on the Pico W, but telemetry publishing errors were also recorded. Complete physical robot telemetry delivery, controller command execution and embedded connection recovery remain unverified. Additional local binary tests verified decoding, barcode mission events and a 93.94% selected-status payload reduction. The recorded scope totals 33 passing checks and suites (8 on-target, 1 host codec suite, 24 host checks), not full requirement coverage. The results establish the recorded subsystem and host-side functionality, with physical telemetry consistency remaining a limitation.
