@@ -1,0 +1,173 @@
+[TEST] S4-U01 PASS moving average and ring wrap
+[TEST] S4-U02 PASS 45 degree roll
+[TEST] S4-U03 PASS 30 degree pitch
+[TEST] S4-U04 PASS 12-bit left-aligned little-endian 4g acceleration scale
+[TEST] S4-U05 PASS magnetometer big-endian X,Z,Y and separate Z scale
+[TEST] S4-U06 PASS magnetometer overflow sentinel rejected
+[TEST] S4-U07 PASS requires 200 stable acceleration samples
+[TEST] S4-U08 PASS level accelerometer bias calibration
+[TEST] S4-U09 PASS no fabricated gyro or magnetic calibration claims
+[TEST] S4-U10 PASS movement restarts calibration
+[TEST] S4-U11 PASS calibration recovers after movement
+[TEST] S4-U12 PASS quiet flat data does not produce humps
+[TEST] S4-U13 PASS magnetic heading derivative detects sustained positive turn
+[TEST] S4-U14 PASS negative magnetic turn rate
+[TEST] S4-U15 PASS heading wrap 0 to 359 does not create spike
+[TEST] S4-U16 PASS stale magnetometer invalidates rate rather than reporting zero turn
+[TEST] S4-U17 PASS field disturbance disables turns, not acceleration
+[TEST] S4-U18 PASS heading recovers after field returns to baseline
+[TEST] S4-U19 PASS implausible heading jump rejected
+[TEST] S4-U20 PASS magnetic transfer failure cannot masquerade as fresh heading
+[TEST] S4-U21 PASS transient horizontal acceleration; magnetic tilt rejected
+[TEST] S4-U22 PASS impact reported immediately without smoothing
+[TEST] S4-U23 PASS impact classification holds briefly
+[TEST] S4-U24 PASS static roll settles without false hump; steep magnetic tilt rejected
+[TEST] S4-U25 PASS complete hump includes climbing and descending classes
+[TEST] S4-U26 PASS ideal flat-axis 9.81 cm hump integration within 3 mm
+[TEST] S4-U27 PASS last completed peak retained, no duplicate hump events
+[TEST] S4-U28 PASS second hump measured separately
+[TEST] S4-U29 PASS actual sample intervals used in height estimate
+[TEST] S4-U30 PASS pothole is not a positive hump
+[TEST] S4-U31 PASS I2C failure aborts terrain and heading
+[TEST] S4-U32 PASS recovery does not invent a peak
+[TEST] S4-U33 PASS missed sampling deadline aborts reference integration without claiming sensor failure
+[TEST] S4-U34 PASS unbounded acceleration times out without height
+[TEST] S4-U35 PASS real LSM303 full-scale clipping flagged
+[TEST] S4-U36 PASS NaN rejected
+[TEST] S4-U37 PASS magnetic NaN cannot poison acceleration
+[TEST] S4-U38 PASS millisecond timer wrap handled
+[TEST] S4-U39 PASS sustained impact counted once
+[TEST] S4-U40 PASS second impact counted for low-rate telemetry
+[TEST] S4-U41 PASS negative full-scale clipping treated symmetrically
+[TEST] S4-H01 PASS level-ground baseline establishes encoder height tracking
+[TEST] S4-H02 PASS flat travel does not invent a hump
+[TEST] S4-H03 PASS manual tilt without wheel travel does not create height
+[TEST] S4-H04 PASS 0.5 m surface travel at 10 degrees gives about 8.64 cm rise
+[TEST] S4-H05 PASS stop or elevated plateau retains rise without false completion
+[TEST] S4-H06 PASS rolling down the opposite slope classified as descending
+[TEST] S4-H07 PASS completed up/down hump reports peak once after level runout
+[TEST] S4-H08 PASS last completed peak retained without duplicate counts
+[TEST] S4-H09 PASS consecutive humps counted separately
+[TEST] S4-H10 PASS signed odometry handles reversing uphill
+[TEST] S4-H11 PASS initial downhill-only travel is not a positive hump
+[TEST] S4-H12 PASS persistent invalid tilt rejects window and prevents restart
+[TEST] S4-H13 PASS cannot restart height partway up a slope after data loss
+[TEST] S4-H14 PASS level-ground baseline can be re-established after rejection
+[TEST] S4-H15 PASS missing odometry interval rejects rather than integrating a gap
+[TEST] S4-H16 PASS stale tilt is not fused with wheel travel
+[TEST] S4-H17 PASS turn-in-place keeps the baseline and adds no height (no wheel-speed-difference gate: line following steers)
+[TEST] S4-H18 PASS implausible encoder jump/speed rejected
+[TEST] S4-H19 PASS excessive cross-slope rejected
+[TEST] S4-H20 PASS steep pitch outside supported geometry rejected
+[TEST] S4-H21 PASS non-finite wheel distance rejected
+[TEST] S4-H22 PASS odometry height handles millisecond wrap
+[TEST] S4-H23 PASS partial descent onto a different plateau is not a complete hump
+[TEST] S4-H24 PASS repeated invalidation counts one discarded window
+[TEST] S4-H25 PASS robot mode disables competing accelerometer-only hump estimator
+[TEST] S4-H26 PASS sensor failure disables height
+[TEST] S4-H27 PASS clipped acceleration disables height
+[TEST] S4-H28 PASS impact disables height
+[TEST] S4-H29 PASS uncalibrated tilt cannot provide height
+[TEST] S4-H30 PASS NaN pitch rejected
+[TEST] S4-H31 PASS nearby newer sensor event accepted despite producer enqueue ordering
+[TEST] S4-H32 PASS down/up dip cannot invent a positive hump above the original datum
+[TEST] S4-H33 PASS real tilt-filter plus rolling-distance path completes gentle hump within 10 percent in ideal data
+[TEST] S4-H34 PASS 1 cm high 19.5 cm shallow ascent is not hidden by level deadband
+[TEST] S4-H35 PASS shallow downhill segment is classified as descending
+[TEST] S4-H36 PASS 1 cm up/down hump completes with measured peak near 0.010 m
+[TEST] S4-H37 PASS sub-degree level noise does not create terrain events
+[TEST] S4-H38 PASS 2 cm hump cannot pass endpoint check after only 7 mm descent
+[TEST] S4-H39 PASS actual tilt filter resolves 1 cm shallow hump within 2 mm in ideal data
+[TEST] S4-H40 PASS duplicate motion timestamp identified without inventing distance
+[TEST] S4-H41 PASS distance jump identified independently of wheel speed gate
+[TEST] S4-H42 PASS downhill-start datum loss has a distinct reason
+[TEST] S4-H43 PASS excessive crossing length has a distinct reason
+[TEST] S4-H44 PASS excessive negative rise has a distinct reason
+[TEST] S4-H45 PASS excessive peak height has a distinct reason
+[TEST] S4-H46 PASS controller and motion fusion use the same primary sensor rejection
+[TEST] S4-H47 PASS recovery preserves diagnostic cause but restores healthy sensor status
+[TEST] S4-G01 PASS IMU-side tilt gap preserves crossing but explicitly invalidates live height
+[TEST] S4-G02 PASS pending gap ignores invalid pitch and freezes height without completing
+[TEST] S4-G03 PASS 80 ms constant-slope gap recovers all buffered distance exactly
+[TEST] S4-G04 PASS 250 ms bracket is accepted at duration limit
+[TEST] S4-G05 PASS gap over the limit rejects immediately on IMU path even without new wheel event
+[TEST] S4-G06 PASS gap with more wheel travel than the gap limit is rejected
+[TEST] S4-G07 PASS endpoint pitch change over the gap limit cannot be bridged
+[TEST] S4-G08 PASS repeated small gaps cannot exceed the interpolated-travel budget
+[TEST] S4-G09 PASS sensor failure during gap immediately discards crossing
+[TEST] S4-G10 PASS shock cannot be hidden by tilt-gap handling
+[TEST] S4-G11 PASS clipping cannot be hidden by tilt-gap handling
+[TEST] S4-G12 PASS steering wheel-speed difference does not end a tilt gap
+[TEST] S4-G13 PASS invalid tilt cannot establish initial level baseline
+[TEST] S4-G14 PASS bounded-gap timestamps handle millisecond wrap
+[TEST] S4-G15 PASS stationary tilt gap cannot invent height
+[TEST] S4-G16 PASS ideal 1 cm hump completes with a bounded ascent gap
+[TEST] S4-G17 PASS ideal 1 cm hump completes with a bounded descent gap
+[TEST] S4-G18 PASS changing-slope recovery uses time interpolation rather than held tilt
+[TEST] S4-G19 PASS actual tilt filter and event paths bridge acceleration and transition gaps
+[TEST] S4-G20 PASS interpolated level travel cannot complete hump or count as runout
+[TEST] S4-G21 PASS valid level runout after a recovered gap completes crossing
+[TEST] S4-G22 PASS buffered variable wheel travel is weighted by each segment time
+[TEST] S4-G23 PASS stale IMU data is not accepted as a bridgeable tilt gap
+[TEST] S4-G24 PASS large acceleration cannot be masked by a short tilt gap
+[TEST] S4-G25 PASS low acceleration or freefall cannot be bridged
+[TEST] S4-G26 PASS non-finite gap acceleration rejected
+[TEST] S4-G27 PASS unexpectedly fast motion events cannot overflow gap storage
+[TEST] S4-G28 PASS gap travel limit counts absolute distance even when reversing
+[TEST] S4-R01 PASS rejected active crossing retained separately as invalid diagnostic
+[TEST] S4-R02 PASS event reporting preserves interrupted peak without marking height valid
+[TEST] S4-R03 PASS later idle failures do not overwrite retained crossing or its cause
+[TEST] S4-R04 PASS new completed measurement stays separate from retained rejected crossing
+[TEST] S4-R05 PASS next rejected crossing replaces diagnostic only, never completed result
+[TEST] S4-R06 PASS explicit init clears retained interrupted crossing
+[TEST] S4-N01 PASS 160 ms 1.25 g disturbance preserves active crossing with height frozen
+[TEST] S4-N02 PASS recovery accounts for every buffered wheel segment after moderate acceleration
+[TEST] S4-N03 PASS 650 mg acceleration boundary accepted only as a pending gap
+[TEST] S4-N04 PASS 1350 mg boundary does not complete or silently validate gap
+[TEST] S4-N05 PASS 20 mm bracket accepted at travel boundary
+[TEST] S4-N06 PASS 6 degree crest transition can recover without claiming completion
+[TEST] S4-N07 PASS gap over the limit rejected even if its final tilt is valid
+[TEST] S4-N08 PASS tiny initial downhill increment retains original ground datum
+[TEST] S4-N09 PASS start recovery includes initial negative travel instead of zeroing the dip
+[TEST] S4-N10 PASS unconfirmed start expires after its window even when wheels stop
+[TEST] S4-N11 PASS over 2 mm initial fall rejects before dip recovery can start a hump
+[TEST] S4-N12 PASS initial downhill confirmation is bounded by 40 mm absolute travel
+[TEST] S4-N13 PASS bounded start confirmation handles timer wrap
+[TEST] S4-N14 PASS ideal 1 cm crossing completes with initial transient and 180 ms accelerated crest gap
+[TEST] S4-N15 PASS actual tilt filter completes ideal 1 cm hump through 120 ms 1.25 g crest disturbance
+[TEST] S4-N16 PASS slow encoder increments below 10 micrometres vertical rise are accumulated
+[TEST] S4-N17 PASS slow downhill wheel increments remain classified as descending
+[TEST] S4-N18 PASS slow ideal shallow crossing completes without a per-sample rise deadband
+[TEST] S4-N19 PASS slow downhill dip cannot lose negative increments and become a false hump
+[TEST] S4-N20 PASS tiny dip then 600 ms flat travel preserves datum beyond old start deadline
+[TEST] S4-N21 PASS level pause preserves negative height debt without timeout
+[TEST] S4-N22 PASS first upward increment cannot erase the retained negative debt
+[TEST] S4-N23 PASS 1 cm crossing completes after level pause with initial debt included
+[TEST] S4-N24 PASS dip-flat-recovery cannot invent a hump by renewing start window
+[TEST] S4-N25 PASS interpolated level cannot renew the start confirmation deadline
+[TEST] S4-N26 PASS renewed start window still rejects cumulative fall exceeding 2 mm
+[TEST] S4-T01 PASS recorded 29 mm travel at 32 mm/s in 40 ms cannot inflate peak
+[TEST] S4-T02 PASS real 900 ms unsampled interval is rejected instead of compressed to 40 ms
+[TEST] S4-T03 PASS consistent 1.28 mm travel at 32 mm/s in 40 ms remains supported
+[TEST] S4-T04 PASS speed without matching cumulative displacement is also rejected
+[TEST] S4-T05 PASS recorded 44 ms successful read preserves calibration and is a recoverable timing gap
+[TEST] S4-T06 PASS next normal IMU sample recovers tilt without resetting calibration
+[TEST] S4-T07 PASS actual processor timing gap freezes active crossing instead of sensor rejection
+[TEST] S4-T08 PASS timing recovery replays all wheel distance with valid endpoint tilt
+[TEST] S4-T09 PASS 157 ms stall has explicit timing reason not fabricated sensor failure
+[TEST] S4-T10 PASS unsupported long timing gap retains interrupted peak but cannot certify height
+[TEST] S4-T11 PASS back-to-back sample does not masquerade as normal integration
+[TEST] S4-T12 PASS real failed read takes precedence over simultaneous timing gap
+[TEST] S4-T13 PASS clipping cannot be hidden behind recoverable timing
+[TEST] S4-T14 PASS impact remains immediate during delayed sample
+[TEST] S4-T15 PASS 100 ms delayed sensor endpoint is within timing recovery limit
+[TEST] S4-T16 PASS 101 ms delayed sensor endpoint exceeds timing recovery limit
+[TEST] S4-T17 PASS ideal 1 cm ascent/descent completes after a recoverable timing gap
+[TEST] S4-T18 PASS repeated late samples without normal endpoint cannot indefinitely preserve valid tracking
+[TEST] S4-F01 PASS 1.2 deg level offset learned: ramp hump within 1 mm
+[TEST] S4-F02 PASS steering and 1.2 deg tilt noise keep the level baseline
+[TEST] S4-F03 PASS 12 deg ramp with two 300 ms tilt gaps measured within 5%
+[TEST] S4-T19 PASS nonfinite acceleration remains a hard failure during a timing gap
+[TEST] S4-T20 PASS 80 ms old IMU buffers travel without using stale tilt as a recovery endpoint
+[TEST] S4-T21 PASS fresh endpoint recovers travel buffered while waiting for delayed sensor
+[TEST] subsystem4 LSM303DLHC SUMMARY 172 passed, 0 failed
