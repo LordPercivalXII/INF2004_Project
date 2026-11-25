@@ -1,0 +1,16 @@
+{
+    "barcode":  0,
+    "binary":  true,
+    "fault":  0,
+    "hump_m":  0.025,
+    "junction_action":  null,
+    "junction_char":  "",
+    "junction_count":  0,
+    "line":  0.0,
+    "mission":  1,
+    "obstacle_cm":  40.0,
+    "obstacle_width_cm":  25.0,
+    "obstacle_width_valid":  true,
+    "simulation":  false,
+    "speed":  0.15
+}

@@ -1,0 +1,9 @@
+Buddy 1 - MQTT Payload Size Comparison
+Date: 2026-11-24
+
+Binary packet: 01 0F 80 94
+JSON payload: {"mission":1,"fault":0,"speed":0.15,"line":0.0,"obstacle_cm":40.0}
+
+Binary payload size: 4 bytes
+JSON payload size: 66 bytes
+Payload reduction: 93.94%

@@ -15,21 +15,25 @@ Coding standard: **BARR-C:2018** for everything in `app_program/`.
 
 | # | Subsystem (what it does) | Student ID | GitHub username | Code | Tests |
 |---|---|---|---|---|---|
-| 1 | Buddy 1 — telemetry: JSON snapshots + heartbeat on the console | | | `app_program/subsystem1/` | `testing/subsystem1/` |
-| 2 | Buddy 2 — motion: motors, wheel encoders, per-wheel speed PID | | | `app_program/subsystem2/` | `testing/subsystem2/` |
-| 3 | Buddy 3 — IR line tracking (FR7, NFR6) + Code 39 barcodes (FR8, FR9) | | | `app_program/subsystem3/` | `testing/subsystem3/` |
-| 4 | Buddy 4 — MPU6050 IMU: shock (FR10), hump height (FR11), tilt | | | `app_program/subsystem4/` | `testing/subsystem4/` |
-| 5 | Buddy 5 — ultrasonic obstacle scanner on a servo | | | `app_program/subsystem5/` | `testing/subsystem5/` |
-| — | Vehicle controller: mission state machine, avoidance (whole team) | | | `app_program/controller/` | `testing/integration/` |
+| 1 | Buddy 1 — WiFi, MQTT commands and telemetry (binary frames to the dashboard, heartbeat) | 2502722 | thathmuushweeain | `app_program/subsystem1/` | `testing/subsystem1/` |
+| 2 | Buddy 2 — motion: motors, wheel encoders, per-wheel speed PID | 2502840 | pieter20037 | `app_program/subsystem2/` | `testing/subsystem2/` |
+| 3 | Buddy 3 — IR line tracking (FR7, NFR6) + Code 39 barcodes (FR8, FR9) | 2500197 | LordPercivalXII | `app_program/subsystem3/` | `testing/subsystem3/` |
+| 4 | Buddy 4 — LSM303DLHC IMU: shock (FR10), hump height (FR11), tilt | 2502346 | DarrenTan2003 | `app_program/subsystem4/` | `testing/subsystem4/` |
+| 5 | Buddy 5 — ultrasonic obstacle scanner on a servo | 2502371 | chewhowway17 | `app_program/subsystem5/` | `testing/subsystem5/` |
+| — | Vehicle controller: mission state machine, avoidance (whole team) | all | all | `app_program/controller/` | `testing/integration/` |
 
 ## 2. Pins
+
+Wheel names are the physical wheels on the real car (`SIM=0`, where
+`ROBOT_WHEELS_SWAPPED` is 1 by default; see `common/robot_config.h`). A
+`SIM=1` build keeps the old, swapped names.
 
 | Pin | Owner | Used for |
 |---|---|---|
 | GP23, GP24, GP25, GP29 | *reserved* | Pico W radio |
 | GP0 | | (taken whenever the team builds with `CRASH_REPORT=1`) |
 | GP1 | | (taken whenever the team builds with `CRASH_REPORT=1`) |
-| GP2 | S4 | MPU6050 INT (reserved, not used yet) |
+| GP2 | S4 | LSM303DLHC INT (reserved, not used yet) |
 | GP3 | | |
 | GP4 | S4 | I2C0 SDA (kernel `iica`) |
 | GP5 | S4 | I2C0 SCL (kernel `iica`) |
@@ -39,14 +43,14 @@ Coding standard: **BARR-C:2018** for everything in `app_program/`.
 | GP9 | S2 | left motor direction |
 | GP10 | S2 | right motor PWM (slice 5A) |
 | GP11 | S2 | right motor direction |
-| GP12 | S2 | left encoder A (interrupt) |
-| GP13 | S2 | left encoder B |
-| GP14 | S2 | right encoder A (interrupt) |
+| GP12 | S2 | right encoder A (interrupt) |
+| GP13 | S2 | right encoder B |
+| GP14 | S2 | left encoder A (interrupt) |
 | GP15 | S5 | scan servo PWM (slice 7B) |
 | GP16 | S5 | ultrasonic echo (interrupt) |
 | GP17 | S5 | ultrasonic trigger |
 | GP18 | | |
-| GP19 | S2 | right encoder B |
+| GP19 | S2 | left encoder B |
 | GP20 | | |
 | GP21 | | |
 | GP22 | | |
@@ -98,15 +102,15 @@ The receiver creates the kernel object and publishes its ID in its header.
 | IF-03 | controller → S2 | message buffer (owned by S2) | `gh_motion_cmd_mbf` via `motion_send_command()` | `motion_command_t`, 12 deep; S2 keeps the newest |
 | IF-04 | controller → S1 | message buffer (owned by S1) | `gh_telemetry_mbf` via `telemetry_publish()` | `telemetry_message_t`, 12 deep |
 | IF-05 | controller → any | event flag (owned by controller) | `gh_system_flg` | `SYSTEM_BIT_READY/MISSION_RUN/OBSTACLE/FAULT/WIFI_UP/JUNCTION_BUSY` |
-| IF-07 | S4 → controller | message buffer (owned by controller), `TMO_POL`, **read before every other queue** | `gh_terrain_mbf` via `controller_post_terrain()` | `terrain_packed_t` (1 B: shock:1, height_mm:7), 8 deep |
 | IF-06 | MQTT (WiFi service task) → S3 | message buffer (owned by S3), `TMO_POL` | `gh_route_cfg_mbf` via `mqtt_utk_route_rx()` | route table text from `MQTT_ROUTE_TOPIC`, e.g. `A:L,B:R,C:S,D:U` (format in `subsystem3/route.c`) |
+| IF-07 | S4 → controller | message buffer (owned by controller), `TMO_POL`, **read before every other queue** | `gh_terrain_mbf` via `controller_post_terrain()` | `terrain_packed_t` (1 B: shock:1, height_mm:7), 8 deep |
 
 Packed wire formats (Tribunal 1) live in `common/robot_packed.h`; build
 with `make PACK=0` for the unpacked "before" version. IF-01 messages are
 variable-length (header + the payload actually used); line and obstacle
 payloads travel packed (4 B and 9 B). IF-03 travels packed (4 B) and a
-STOP/BRAKE wakes `motion_task` at once. MQTT telemetry is a 5-byte binary
-packet (`subsystem1/telemetry_codec.h`).
+STOP/BRAKE wakes `motion_task` at once. MQTT telemetry is sent as separate 4-byte
+binary frames: status, ramp, IMU and metadata (`subsystem1/telemetry_codec.h`).
 
 Shared fault mask (`common/fault_mask.h`, 5 bits): S4 IMU, S2 encoder,
 S3 GP28 ISR + controller (line), S5 task + GP16 ISR (no echo), S1 comms.
@@ -116,9 +120,10 @@ snapshot-and-clear into each telemetry packet.
 
 IF-01 line events carry `barcode` (decoded character, ASCII) once per read and, on a junction, `junction_action` (left/right/straight/U-turn) resolved by S3 from the stored character.
 
-Internal (inside one subsystem): S3 `gh_barcode_edge_mbf` (edge ISR → `barcode_task`, 128 deep), S3 `gh_route_mtx` (route table + waypoint memory),
+Internal (inside one subsystem): S3 `gh_barcode_edge_mbf` (edge ISR → `barcode_task`, 512 deep), S3 `gh_route_mtx` (route table + waypoint memory),
 S3 `gh_barcode_result_mtx` + one-slot result (`barcode_task` → `line_task`),
-S5 `gh_echo_mbf` (echo ISR → `obstacle_task`, 4 deep).
+S5 `gh_echo_mbf` (echo ISR → `obstacle_task`, 4 deep),
+S1 `gh_mqtt_telemetry_mbf` (`telemetry_task` → MQTT publisher, 48 deep with bit packing: 4 frames per snapshot).
 
 ## 6. Kernel object budget
 

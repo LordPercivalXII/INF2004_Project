@@ -1,0 +1,79 @@
+[S4] height: rise=0.000 m peak=0.000 m hump=0.000 m count=0 pitch=0.1 tracking=1 active=0 valid=0 gap=0
+[  61.0 s] IDLE   spd=0.150 line=1.000 dist=-0.002m pitch=0.1 roll=0.0 obst=49.0cm bc=- fault=0
+[S4] height: rise=0.000 m peak=0.000 m hump=0.000 m count=0 pitch=0.0 tracking=1 active=0 valid=0 gap=0
+[  62.0 s] IDLE   spd=0.150 line=1.000 dist=-0.002m pitch=0.0 roll=-0.1 obst=49.0cm bc=- fault=0
+[S4] height: rise=0.000 m peak=0.000 m hump=0.000 m count=0 pitch=0.0 tracking=1 active=0 valid=0 gap=0
+[  63.0 s] IDLE   spd=0.150 line=1.000 dist=-0.002m pitch=0.0 roll=-0.1 obst=50.0cm bc=- fault=0
+[S4] height: rise=0.000 m peak=0.000 m hump=0.000 m count=0 pitch=0.2 tracking=1 active=0 valid=0 gap=0
+[  64.0 s] IDLE   spd=0.150 line=1.000 dist=-0.002m pitch=0.2 roll=-0.1 obst=50.0cm bc=- fault=0
+mqtt: RX [inf2004/car/control] "START"
+CTRL: START received, waiting 3 seconds
+S4: LSM303 init=1 read=1 valid=1 cal=200/200 dt_ms=10 accel_mg=-14,4,960
+[S4] height: rise=0.000 m peak=0.000 m hump=0.000 m count=0 pitch=0.0 tracking=1 active=0 valid=0 gap=0
+[  65.0 s] IDLE   spd=0.150 line=1.000 dist=-0.002m pitch=0.0 roll=0.0 obst=50.0cm bc=- fault=0
+mqtt: TX [mtk3smp-pico/heartbeat] "hb 11"
+mqtt: RX [mtk3smp-pico/heartbeat] "hb 11"
+[S4] height: rise=0.000 m peak=0.000 m hump=0.000 m count=0 pitch=0.0 tracking=1 active=0 valid=0 gap=0
+[  66.0 s] IDLE   spd=0.150 line=1.000 dist=-0.002m pitch=0.0 roll=0.0 obst=49.0cm bc=- fault=0
+[S4] height: rise=0.000 m peak=0.000 m hump=0.000 m count=0 pitch=0.0 tracking=1 active=0 valid=0 gap=0
+[  67.0 s] IDLE   spd=0.150 line=1.000 dist=-0.002m pitch=0.0 roll=-0.2 obst=49.0cm bc=- fault=0
+CTRL: Countdown complete, mission STARTED
+S3: line sensor left learned while driving: white 183, black 1237 counts
+[S4] height: rise=0.000 m peak=0.000 m hump=0.000 m count=0 pitch=0.9 tracking=0 active=0 valid=0 gap=0
+[  68.0 s] FOLLOW spd=0.150 line=0.852 dist=-0.002m pitch=0.9 roll=-0.3 obst=50.0cm bc=- fault=0
+S3: line sensor left learned while driving: white 183, black 2941 counts
+S4: bounded tilt gap bridged count=1
+S3: line sensor middle learned while driving: white 171, black 1034 counts
+S3: line sensor middle learned while driving: white 171, black 1938 counts
+S4: bounded tilt gap bridged count=2
+[S4] height: rise=0.000 m peak=0.000 m hump=0.000 m count=0 pitch=-0.4 tracking=1 active=0 valid=0 gap=2
+[  69.0 s] FOLLOW spd=0.150 line=0.663 dist=0.067m pitch=-0.4 roll=-1.7 obst=39.0cm bc=- fault=0
+S3: line sensor middle learned while driving: white 171, black 2401 counts
+S3: line sensor middle learned while driving: white 171, black 2687 counts
+S3: line sensor middle learned while driving: white 171, black 3017 counts
+S4: bounded tilt gap bridged count=3
+S4: bounded tilt gap bridged count=4
+S4: bounded tilt gap bridged count=5
+S3: line sensor left learned while driving: white 170, black 3242 counts
+S4: bounded tilt gap bridged count=6
+S4: LSM303 init=1 read=1 valid=1 cal=200/200 dt_ms=9 accel_mg=-26,66,906
+[S4] height: rise=0.000 m peak=0.000 m hump=0.000 m count=0 pitch=0.2 tracking=1 active=0 valid=0 gap=6
+[  70.0 s] FOLLOW spd=0.150 line=0.995 dist=0.147m pitch=0.2 roll=0.4 obst=29.0cm bc=- fault=0
+mqtt: TX [mtk3smp-pico/heartbeat] "hb 12"
+mqtt: RX [mtk3smp-pico/heartbeat] "hb 12"
+S4: bounded tilt gap bridged count=7
+S4: bounded tilt gap bridged count=8
+[S4] height: rise=0.000 m peak=0.000 m hump=0.000 m count=0 pitch=0.0 tracking=1 active=0 valid=0 gap=8
+[  71.0 s] FOLLOW spd=0.150 line=0.907 dist=0.228m pitch=0.0 roll=0.0 obst=57.0cm bc=- fault=0
+S4: bounded tilt gap bridged count=9
+S4: bounded tilt gap bridged count=10
+S4: bounded tilt gap bridged count=11
+S4: bounded tilt gap bridged count=12
+[S4] height: rise=0.000 m peak=0.000 m hump=0.000 m count=0 pitch=0.6 tracking=0 active=0 valid=0 gap=12
+[  72.0 s] FOLLOW spd=0.150 line=-0.461 dist=0.311m pitch=0.6 roll=-1.7 obst=5.0cm bc=- fault=0
+S4: bounded tilt gap bridged count=13
+S4: bounded tilt gap bridged count=14
+S3: line sensor middle learned while driving: white 170, black 3309 counts
+S3: line sensor middle learned while driving: white 170, black 3653 counts
+[S4] height: rise=0.000 m peak=0.000 m hump=0.000 m count=0 pitch=2.5 tracking=1 active=0 valid=0 gap=14
+[  73.0 s] FOLLOW spd=0.150 line=0.726 dist=0.389m pitch=2.5 roll=1.1 obst=46.0cm bc=- fault=0
+S4: encoder height rejected reason=downhill_start active=0 imu_ms=73285 motion_ms=73293 interval_ms=40 sensor=1 cal=1 tilt=1 saturated=0 shock=0
+S4: rejected wheel data left_m_s=0.049 right_m_s=0.099 left_ticks=1462 right_ticks=1032
+S4: [diagnostic] lost crossing rise=0.000 m peak=0.000 m
+[S4] height: rise=0.000 m peak=0.000 m hump=0.000 m count=0 pitch=5.1 tracking=0 active=0 valid=0 gap=14
+[  74.0 s] FOLLOW spd=0.150 line=0.559 dist=0.464m pitch=5.1 roll=2.0 obst=36.0cm bc=- fault=0
+S4: LSM303 init=1 read=1 valid=1 cal=200/200 dt_ms=10 accel_mg=-42,42,946
+[S4] height: rise=0.000 m peak=0.000 m hump=0.000 m count=0 pitch=1.5 tracking=0 active=0 valid=0 gap=14
+[  75.0 s] FOLLOW spd=0.150 line=0.116 dist=0.550m pitch=1.5 roll=1.4 obst=46.0cm bc=- fault=0
+mqtt: TX [mtk3smp-pico/heartbeat] "hb 13"
+mqtt: RX [mtk3smp-pico/heartbeat] "hb 13"
+[S4] height: rise=0.000 m peak=0.000 m hump=0.000 m count=0 pitch=0.8 tracking=1 active=0 valid=0 gap=14
+[  76.0 s] FOLLOW spd=0.150 line=0.864 dist=0.637m pitch=0.8 roll=0.4 obst=35.0cm bc=- fault=0
+S4: bounded tilt gap bridged count=15
+[S4] height: rise=0.000 m peak=0.000 m hump=0.000 m count=0 pitch=0.0 tracking=1 active=0 valid=0 gap=15
+[  77.0 s] FOLLOW spd=0.150 line=0.815 dist=0.721m pitch=0.0 roll=-0.1 obst=29.0cm bc=- fault=0
+S4: bounded tilt gap bridged count=16
+S4: bounded tilt gap bridged count=17
+[S4] height: rise=0.000 m peak=0.000 m hump=0.000 m count=0 pitch=0.7 tracking=1 active=0 valid=0 gap=17
+[  78.0 s] FOLLOW spd=0.150 line=0.671 dist=0.814m pitch=0.7 roll=0.2 obst=71.0cm bc=- fault=0
+---- Closed the serial port /dev/tty.usbmodemMTK3PICO1 ----
