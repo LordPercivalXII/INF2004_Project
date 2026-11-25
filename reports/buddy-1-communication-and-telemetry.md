@@ -23,10 +23,15 @@ The design separates communication processing from time-critical robot control t
 The main objectives are:
 
 - Establish wireless communication using the Raspberry Pi Pico W.
+
 - Transmit robot telemetry through MQTT.
+
 - Receive and forward supported user commands to the controller.
+
 - Reduce communication overhead through packed binary telemetry.
+
 - Provide live monitoring through the dashboard.
+
 - Support connection monitoring and recovery.
 
 ## 2. Communication architecture
@@ -198,7 +203,7 @@ This confirms that the tested firmware used a configured packed MQTT message siz
 
 The packed representation is intended to reduce application payload size and communication overhead compared with text-based telemetry.
 
-A measured comparison against the JSON representation is still required to quantify the actual payload reduction.
+A host-side comparison of one binary status record (`01 0F 80 94`) against equivalent selected-field JSON measured 4 bytes versus 66 bytes, saving 62 bytes (93.94% reduction; 16.5:1 size ratio). This is not a comparison of complete telemetry snapshots. Evidence: `testing/subsystem1/logs/2026-11-24_payload_comparison.txt`.
 
 The four-byte record size does not include MQTT topic information, protocol headers, TCP/IP headers or Wi-Fi transmission overhead.
 
@@ -348,6 +353,24 @@ All paths below are relative to `testing/subsystem1/logs/`.
 
 The codec evidence was recorded in commit `87e2bb3`; the tested source commit was `e61bdc4`. The new dashboard and host MQTT evidence is collected for the final documentation commit.
 
+### Additional binary MQTT verification (2026-11-24)
+
+Synthetic four-byte records were published to `inf2004/car/telemetry` using Mosquitto at `127.0.0.1:18884`. Flask decoded the records and the dashboard displayed the received fields. The exact source commit for this additional session was not captured; the terminal showed branch `main`. Evidence files were listed locally, but their raw contents were not independently inspected for this documentation update.
+
+| Check | Observed result | Evidence |
+|---|---|---|
+| Four-byte binary status record via local MQTT | Speed 0.150 m/s, Following, distance 40.0 cm; binary=true | `testing/subsystem1/logs/2026-11-24_binary_status.txt`, `testing/subsystem1/logs/2026-11-24_binary_status_dashboard.png` |
+| Obstacle width decoding | 25.0 cm displayed | `testing/subsystem1/logs/2026-11-24_binary_width.txt`, `testing/subsystem1/logs/2026-11-24_binary_width_dashboard.png` |
+| Pickup/collision indication | Warning displayed; subsequent screenshot showed no collision; no physical stop verified | `testing/subsystem1/logs/2026-11-24_binary_pickup.txt`, `testing/subsystem1/logs/2026-11-24_binary_pickup_dashboard.png` |
+| Hump record decoding | Last hump 2.50 cm; previously received width retained | `testing/subsystem1/logs/2026-11-24_binary_hump.txt`, `testing/subsystem1/logs/2026-11-24_binary_hump_dashboard.png` |
+| Ramp and IMU decoding | Pitch 10 degrees, rise 1.50 cm, peak 2.50 cm, count 1, calibrated and valid tracking | `testing/subsystem1/logs/2026-11-24_binary_ramp_imu.txt`, `testing/subsystem1/logs/2026-11-24_binary_ramp_imu_dashboard.png` |
+| Barcode A decoding | A, junction 1, STRAIGHT | `testing/subsystem1/logs/2026-11-24_binary_barcode.txt`, `testing/subsystem1/logs/2026-11-24_binary_barcode_dashboard.png` |
+| Barcode B decoding | B, junction 2, LEFT | `testing/subsystem1/logs/2026-11-24_binary_barcode_b.txt`, `testing/subsystem1/logs/2026-11-24_binary_barcode_b_dashboard.png` |
+| Binary mission event recording and export | Two barcode events A/STRAIGHT and B/LEFT; running mission, peak 2.50 cm, count 1 | `testing/subsystem1/logs/2026-11-24_binary_mission_history.json`, `testing/subsystem1/logs/2026-11-24_binary_mission_history.png` |
+| Application payload comparison | 4 bytes versus 66 bytes; 93.94% reduction | `testing/subsystem1/logs/2026-11-24_payload_comparison.txt` |
+
+The status packet `01 0F 80 94` was compared with the equivalent selected-field JSON `{"mission":1,"fault":0,"speed":0.15,"line":0.0,"obstacle_cm":40.0}`. Reduction = (66 - 4) / 66 × 100 = 93.94%. This is a single status payload comparison, not a full snapshot or network traffic measurement. Route confirmation remained unavailable without the robot. The collision warning appeared while mission status remained Following; physical stopping is not established. The mission history remained running with stale telemetry, and restart persistence was not tested. Additional reset tests were excluded.
+
 ### Pending hardware integration verification
 
 The shared robot is currently unavailable because teammates are conducting other subsystem tests. Remaining hardware-dependent tests are deferred until the robot becomes available. No unexecuted tests are classified as passed.
@@ -359,7 +382,7 @@ The shared robot is currently unavailable because teammates are conducting other
 | S1-M03 to M04: Live telemetry and packed payload | Pending; previous publishing errors observed |
 | S1-M05 to M07: Commands and connection recovery | Pending robot availability |
 | S1-M08 to M11: Live dashboard integration | Pending robot availability |
-| S1-M12 to M15: Additional dashboard features | Proposed; pending verification |
+| S1-M12 to M15: Additional dashboard features | M12/M13 host PASS; M14/M15 skipped |
 | Standalone dashboard and API tests | PASS for recorded host-side checks |
 | Standalone MQTT broker test | PASS (host) |
 
@@ -399,7 +422,7 @@ The MQTT publishing implementation, connection state and available communication
 | MQTT heartbeat | Observed |
 | MQTT telemetry publishing | Errors observed |
 | Host-side binary codec verification | PASS |
-| Actual binary payload transmission | NOT YET VERIFIED |
+| Actual binary payload transmission | PASS (host); Pico W transmission not verified |
 | MQTT command publication | PASS (host) |
 | MQTT command forwarding to controller | NOT YET VERIFIED |
 | Connection recovery | PASS (dashboard/broker); Pico W recovery pending |
@@ -412,26 +435,38 @@ The remaining communication tests are defined in `testing/subsystem1/TEST_LOG.md
 
 ### Standalone dashboard verification outcome
 
-Host-side tests demonstrated broker connection, synthetic telemetry reception, stale-data handling, disconnection indication, reconnection and command publication. Mission history and JSON export were also exercised. Persistence across a Flask process restart and every individual dashboard field were not independently verified by the supplied evidence.
+Host-side tests demonstrated broker connection, synthetic telemetry reception, stale-data handling, disconnection indication, reconnection and command publication. Mission history and JSON export were also exercised. Additional binary tests verified width, hump, ramp/IMU, pickup indication and barcode events. Restart persistence and remaining untested fields were not verified.
 
 ## 9. Recommended remaining hardware communication test procedure
 
 1. Configure the Pico W and MQTT broker on the same accessible
+
    network.
 
 2. Start the MQTT broker and a subscriber before booting the Pico W.
+
 3. Verify Wi-Fi connectivity and MQTT client connection.
+
 4. Capture the published telemetry topic and payload length.
+
 5. Verify that packed telemetry records contain four bytes.
+
 6. Compare decoded telemetry values against the corresponding
+
    robot telemetry snapshots.
 
 7. Send a supported speed command under controlled conditions.
+
 8. Verify that the command reaches the controller.
+
 9. Stop and restart the MQTT broker to evaluate connection recovery.
+
 10. Verify that telemetry publishing resumes after reconnection.
+
 11. Compare the received telemetry with the dashboard display.
+
 12. Save the console output and record the results using the
+
     corresponding test IDs.
 
 The following metrics should be recorded where possible:
@@ -448,29 +483,44 @@ Reconnection time =
   time of restored communication - time of disconnection
 ```
 
-These measurements require dedicated test runs and are not inferred from the existing unit test results.
+The selected status payload reduction was measured locally; the other metrics require dedicated test runs.
 
 ## 10. Limitations
 
 - The recorded on-target automated tests used simulation-enabled firmware.
+
 - Message buffer creation and codec checks do not establish sustained wireless delivery under load.
+
 - The four-byte record size is a configured application payload size, not total network traffic.
-- MQTT delivery latency, message loss, actual payload reduction and reconnection time have not been measured.
+
+- MQTT delivery latency, message loss and reconnection time have not been measured. The measured 93.94% reduction applies only to the selected status payload.
+
 - Telemetry publishing errors were observed on the Pico W; their cause remains unresolved.
+
 - Host-side MQTT tests used a local broker and synthetic telemetry, not physical sensor measurements.
+
 - Dashboard command publication does not establish controller reception or physical execution.
+
 - Dashboard broker recovery does not establish embedded Wi-Fi or MQTT recovery.
-- Obstacle width, pickup/collision transitions, barcode events and other untested fields require further verification. Mission persistence across server restarts is not established by the recorded tests.
+
+- Obstacle width, pickup/collision indication and barcode events passed synthetic host checks; physical sensor accuracy and execution remain unverified. Mission persistence across server restarts is not established by the recorded tests.
+
 - The shared robot was unavailable for dedicated hardware integration testing.
 
 ## 11. Recommendations
 
 - Investigate the recorded Pico W MQTT telemetry publishing errors.
+
 - Capture actual packed telemetry records and verify their decoded values against controller snapshots.
-- Measure payload reduction, sustained delivery rate, latency and network recovery time.
+
+- Measure full-snapshot payload reduction, sustained delivery rate, latency and network recovery time.
+
 - Verify supported commands reach the controller and produce the intended behaviour under safe test conditions.
+
 - Verify embedded Wi-Fi and MQTT reconnection independently of dashboard recovery.
+
 - Validate physical sensor readings and remaining dashboard fields with the other subsystems.
+
 - Verify mission persistence across Flask restarts and record remaining manual test results.
 
 ## 12. Conclusion
@@ -481,4 +531,4 @@ All eight recorded Subsystem 1 automated checks passed on the simulation-enabled
 
 Host-side integration tests verified MQTT publish/subscribe communication, dashboard telemetry display, stale-data handling, broker disconnection and reconnection, command publication, mission history and JSON export using synthetic inputs. The recorded evidence demonstrates the tested software functionality without requiring the shared robot.
 
-MQTT heartbeat activity was observed on the Pico W, but telemetry publishing errors were also recorded. Complete physical robot telemetry delivery, controller command execution and embedded connection recovery remain unverified. The next hardware acceptance criterion is a repeatable, logged end-to-end communication test with the physical robot.
+MQTT heartbeat activity was observed on the Pico W, but telemetry publishing errors were also recorded. Complete physical robot telemetry delivery, controller command execution and embedded connection recovery remain unverified. Additional local binary tests verified decoding, barcode mission events and a 93.94% selected-status payload reduction. The recorded scope totals 33 passing checks and suites (8 on-target, 1 host codec suite, 24 host checks), not full requirement coverage. Further physical verification is deferred because the robot is unavailable; no additional hardware testing is planned for this documentation session.

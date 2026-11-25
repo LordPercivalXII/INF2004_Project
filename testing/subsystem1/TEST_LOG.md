@@ -46,6 +46,12 @@ See `testing/README.md` for how to run tests and record results.
 | S1-M22 | Dashboard start command publishing |  | manual (host) | Click Start robot | START received |
 | S1-M23 | Dashboard stop command publishing |  | manual (host) | Click Stop robot | STOP received |
 | S1-M24 | Dashboard barcode route publishing |  | manual (host) | Publish default mappings | CLEAR,A:S,B:L,C:R,D:U received |
+| S1-M25 | Hump record decoding | | manual (host) | Publish synthetic binary records or compare payload lengths | Last hump 2.50 cm; previously received width retained |
+| S1-M26 | Ramp and IMU decoding | | manual (host) | Publish synthetic binary records or compare payload lengths | Pitch 10 degrees, rise 1.50 cm, peak 2.50 cm, count 1, calibrated and valid tracking |
+| S1-M27 | Barcode A decoding | | manual (host) | Publish synthetic binary records or compare payload lengths | A, junction 1, STRAIGHT |
+| S1-M28 | Barcode B decoding | | manual (host) | Publish synthetic binary records or compare payload lengths | B, junction 2, LEFT |
+| S1-M29 | Binary mission event recording and export | | manual (host) | Publish synthetic binary records or compare payload lengths | Two barcode events A/STRAIGHT and B/LEFT; running mission, peak 2.50 cm, count 1 |
+| S1-M30 | Application payload comparison | | manual (host) | Publish synthetic binary records or compare payload lengths | 4 bytes versus 66 bytes; 93.94% reduction |
 
 ## Results
 
@@ -77,6 +83,15 @@ Add a new row for every test run. Never edit or delete previous results.
 | 2026-11-24 | S1-M22 | `87e2bb3` | That Hmuu Shwe Eain | PASS (host) | `logs/2026-11-24_dashboard_commands.png` | inf2004/car/control: START |
 | 2026-11-24 | S1-M23 | `87e2bb3` | That Hmuu Shwe Eain | PASS (host) | `logs/2026-11-24_dashboard_commands.png` | inf2004/car/control: STOP |
 | 2026-11-24 | S1-M24 | `87e2bb3` | That Hmuu Shwe Eain | PASS (host) | `logs/2026-11-24_dashboard_commands.png` | inf2004/car/route: CLEAR,A:S,B:L,C:R,D:U |
+| 2026-11-24 | S1-M04 | Not captured (main) | That Hmuu Shwe Eain | PASS (host) | `logs/2026-11-24_binary_status.txt`, `logs/2026-11-24_binary_status_dashboard.png` | Speed 0.150 m/s, Following, distance 40.0 cm; binary=true |
+| 2026-11-24 | S1-M12 | Not captured (main) | That Hmuu Shwe Eain | PASS (host) | `logs/2026-11-24_binary_width.txt`, `logs/2026-11-24_binary_width_dashboard.png` | 25.0 cm displayed |
+| 2026-11-24 | S1-M13 | Not captured (main) | That Hmuu Shwe Eain | PASS (host) | `logs/2026-11-24_binary_pickup.txt`, `logs/2026-11-24_binary_pickup_dashboard.png` | Warning displayed; subsequent screenshot showed no collision; no physical stop verified |
+| 2026-11-24 | S1-M25 | Not captured (main) | That Hmuu Shwe Eain | PASS (host) | `logs/2026-11-24_binary_hump.txt`, `logs/2026-11-24_binary_hump_dashboard.png` | Last hump 2.50 cm; previously received width retained |
+| 2026-11-24 | S1-M26 | Not captured (main) | That Hmuu Shwe Eain | PASS (host) | `logs/2026-11-24_binary_ramp_imu.txt`, `logs/2026-11-24_binary_ramp_imu_dashboard.png` | Pitch 10 degrees, rise 1.50 cm, peak 2.50 cm, count 1, calibrated and valid tracking |
+| 2026-11-24 | S1-M27 | Not captured (main) | That Hmuu Shwe Eain | PASS (host) | `logs/2026-11-24_binary_barcode.txt`, `logs/2026-11-24_binary_barcode_dashboard.png` | A, junction 1, STRAIGHT |
+| 2026-11-24 | S1-M28 | Not captured (main) | That Hmuu Shwe Eain | PASS (host) | `logs/2026-11-24_binary_barcode_b.txt`, `logs/2026-11-24_binary_barcode_b_dashboard.png` | B, junction 2, LEFT |
+| 2026-11-24 | S1-M29 | Not captured (main) | That Hmuu Shwe Eain | PASS (host) | `logs/2026-11-24_binary_mission_history.json`, `logs/2026-11-24_binary_mission_history.png` | Two barcode events A/STRAIGHT and B/LEFT; running mission, peak 2.50 cm, count 1 |
+| 2026-11-24 | S1-M30 | Not captured (main) | That Hmuu Shwe Eain | PASS (host) | `logs/2026-11-24_payload_comparison.txt` | 4 bytes versus 66 bytes; 93.94% reduction |
 
 ## Test environment
 
@@ -121,29 +136,19 @@ Add a new row for every test run. Never edit or delete previous results.
 Run the following commands from the repository root:
 
 ```bash
-
 cd app_program/subsystem1
-
-gcc -std=c99 -Wall -Wextra \\
-
-    test_telemetry_codec.c \\
-
-    telemetry_codec.c \\
-
-    ../common/robot_packed.c \\
-
+gcc -std=c99 -Wall -Wextra \\\\
+    test_telemetry_codec.c \\\\
+    telemetry_codec.c \\\\
+    ../common/robot_packed.c \\\\
     -o /tmp/test_codec
-
 /tmp/test_codec
-
 ```
 
 Observed output:
 
 ```text
-
 test_telemetry_codec: all tests passed
-
 ```
 
 The test executable completed successfully with all codec assertions passing.
@@ -197,8 +202,8 @@ These results verify the implemented automated checks and tested binary encoding
 |---|---:|---:|---:|
 | On-target Subsystem 1 automated checks | 8 | 8 | 0 |
 | Host codec suites | 1 | 1 | 0 |
-| Host MQTT and dashboard checks | 15 | 15 | 0 |
-| Total | 24 | 24 | 0 |
+| Host MQTT and dashboard checks (including payload comparison) | 24 | 24 | 0 |
+| Total | 33 | 33 | 0 |
 
 These counts cover recorded checks and suites, not independent hardware experiments or full requirement coverage. Runtime MQTT publishing errors remain unresolved. Host-side command publication does not verify controller receipt or physical execution.
 
@@ -273,9 +278,30 @@ Actual transmission of packed telemetry records remains subject to manual commun
 ### Host MQTT and dashboard test run
 
 - Local publish/subscribe, dashboard connection, synthetic telemetry display, stale-data handling, disconnection and reconnection were verified.
+
 - Mission recording was observed using synthetic MQTT telemetry. The exported development test mission contained eight events from nine samples; its generic source label does not establish physical robot provenance. The export also contains earlier mission summaries, which are not counted as successful test runs.
+
 - Speed, start, stop and route command payloads were observed at the local MQTT subscriber.
+
 - SQLite persistence across Flask restarts was not tested.
+
+### Additional binary MQTT verification (2026-11-24)
+
+Synthetic four-byte records were published to `inf2004/car/telemetry` using Mosquitto at `127.0.0.1:18884`. Flask decoded the records and the dashboard displayed the received fields. The exact source commit for this additional session was not captured; the terminal showed branch `main`. Evidence files were listed locally, but their raw contents were not independently inspected for this documentation update.
+
+| Check | Observed result | Evidence |
+|---|---|---|
+| Four-byte binary status record via local MQTT | Speed 0.150 m/s, Following, distance 40.0 cm; binary=true | `logs/2026-11-24_binary_status.txt`, `logs/2026-11-24_binary_status_dashboard.png` |
+| Obstacle width decoding | 25.0 cm displayed | `logs/2026-11-24_binary_width.txt`, `logs/2026-11-24_binary_width_dashboard.png` |
+| Pickup/collision indication | Warning displayed; subsequent screenshot showed no collision; no physical stop verified | `logs/2026-11-24_binary_pickup.txt`, `logs/2026-11-24_binary_pickup_dashboard.png` |
+| Hump record decoding | Last hump 2.50 cm; previously received width retained | `logs/2026-11-24_binary_hump.txt`, `logs/2026-11-24_binary_hump_dashboard.png` |
+| Ramp and IMU decoding | Pitch 10 degrees, rise 1.50 cm, peak 2.50 cm, count 1, calibrated and valid tracking | `logs/2026-11-24_binary_ramp_imu.txt`, `logs/2026-11-24_binary_ramp_imu_dashboard.png` |
+| Barcode A decoding | A, junction 1, STRAIGHT | `logs/2026-11-24_binary_barcode.txt`, `logs/2026-11-24_binary_barcode_dashboard.png` |
+| Barcode B decoding | B, junction 2, LEFT | `logs/2026-11-24_binary_barcode_b.txt`, `logs/2026-11-24_binary_barcode_b_dashboard.png` |
+| Binary mission event recording and export | Two barcode events A/STRAIGHT and B/LEFT; running mission, peak 2.50 cm, count 1 | `logs/2026-11-24_binary_mission_history.json`, `logs/2026-11-24_binary_mission_history.png` |
+| Application payload comparison | 4 bytes versus 66 bytes; 93.94% reduction | `logs/2026-11-24_payload_comparison.txt` |
+
+The status packet `01 0F 80 94` was compared with the equivalent selected-field JSON `{"mission":1,"fault":0,"speed":0.15,"line":0.0,"obstacle_cm":40.0}`. Reduction = (66 - 4) / 66 × 100 = 93.94%. This is a single status payload comparison, not a full snapshot or network traffic measurement. Route confirmation remained unavailable without the robot. The collision warning appeared while mission status remained Following; physical stopping is not established. The mission history remained running with stale telemetry, and restart persistence was not tested. Additional reset tests were excluded.
 
 ## Remaining verification
 
@@ -285,7 +311,7 @@ Actual transmission of packed telemetry records remains subject to manual commun
 | S1-M01 | Wi-Fi connectivity | Partial evidence |
 | S1-M02 | MQTT broker connection | Partial evidence |
 | S1-M03 | MQTT telemetry publishing | Pending verification; errors observed |
-| S1-M04 | Actual four-byte MQTT payload transmission | Pending |
+| S1-M04 | Four-byte MQTT payload transmission | Host PASS; Pico W transmission not verified |
 | S1-M05 | MQTT speed command forwarding | Pending |
 | S1-M06 | MQTT disconnection detection | Host PASS; physical robot pending |
 | S1-M07 | MQTT reconnection and recovery | Host PASS; physical robot pending |
@@ -293,11 +319,11 @@ Actual transmission of packed telemetry records remains subject to manual commun
 | S1-M09 | Dashboard mission status | Host PASS; physical robot pending |
 | S1-M10 | Dashboard speed display | Host PASS; physical robot pending |
 | S1-M11 | Dashboard obstacle distance | Host PASS; physical robot pending |
-| S1-M12 | Dashboard obstacle width | Proposed |
-| S1-M13 | Dashboard pickup and collision indication | Proposed |
-| S1-M14 | Dashboard width reset | Proposed |
-| S1-M15 | Dashboard collision display reset | Proposed |
-| S1-M16 to S1-M24 | Host MQTT and dashboard checks | PASS (host) |
+| S1-M12 | Dashboard obstacle width | PASS (host) |
+| S1-M13 | Dashboard pickup and collision indication | PASS (host); physical response not verified |
+| S1-M14 | Dashboard width reset | Skipped |
+| S1-M15 | Dashboard collision display reset | Skipped |
+| S1-M16 to S1-M30 | Host MQTT, dashboard and payload checks | PASS (host) |
 
 SQLite restart persistence was excluded from the executed scope.
 

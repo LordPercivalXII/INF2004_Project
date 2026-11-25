@@ -1,0 +1,67 @@
+{
+  "events": [
+    {
+      "at": 1795521233.216598,
+      "details": {
+        "mission_state": 1,
+        "speed_m_s": 0.15
+      },
+      "message": "Robot reported mission started",
+      "type": "MISSION"
+    },
+    {
+      "at": 1795521978.0613022,
+      "details": {
+        "action": "STRAIGHT",
+        "code": "A",
+        "junction_count": 1
+      },
+      "message": "Barcode A reported",
+      "type": "BARCODE"
+    },
+    {
+      "at": 1795522033.6248875,
+      "details": {
+        "action": "LEFT",
+        "code": "B",
+        "junction_count": 2
+      },
+      "message": "Barcode B reported",
+      "type": "BARCODE"
+    }
+  ],
+  "limits": {
+    "events_per_mission": 100,
+    "missions": 30
+  },
+  "mission": {
+    "barcode_count": 2,
+    "ended_at": null,
+    "final_distance_m": null,
+    "hump_count": 1,
+    "id": 1,
+    "initial_speed": 0.15,
+    "last_speed": 0.15,
+    "obstacle_count": 0,
+    "peak_hump_m": 0.025,
+    "started_at": 1795521233.216598,
+    "status": "Running"
+  },
+  "missions": [
+    {
+      "barcode_count": 2,
+      "ended_at": null,
+      "final_distance_m": null,
+      "hump_count": 1,
+      "id": 1,
+      "initial_speed": 0.15,
+      "last_speed": 0.15,
+      "obstacle_count": 0,
+      "peak_hump_m": 0.025,
+      "started_at": 1795521233.216598,
+      "status": "Running"
+    }
+  ],
+  "note": "Saved in local SQLite. Only reported telemetry is recorded; unknown values remain unknown.",
+  "source": "received MQTT telemetry"
+}
